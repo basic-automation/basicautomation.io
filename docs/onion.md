@@ -60,35 +60,89 @@ would actually be given, with the crate's own defences in front of it.
   lowercase names, which RFC 9110 makes equivalent), and bodies byte-identical
   by SHA-256 including the PNG cards and the woff2.
 
-- **Slice 2 — the onion binding.** Replace the `TcpListener` block in `main.rs`
-  with `OnionService::builder().router(app).nickname("basicautomation").serve()`.
-  One block, but it brings its own questions:
-  - **Does Tor bootstrap from the DeepStack network at all?** Unknown, and it
-    is the real risk. `arti` is embedded, so there is no `tor` daemon to
-    configure, but the container needs outbound access that nothing else in the
-    stack currently needs. This has to be answered before anything is deployed.
-  - **Keystore persistence.** The onion address is stable only if the keystore
-    is; that means a named volume, and the address is then a secret-ish thing
-    that leaks by being in a backup.
-  - **Absolute URLs.** The site renders canonical links, `og:url` and JSON-LD
-    from `runtimeConfig.public.siteUrl`, so an onion visitor is served HTML
-    pointing at `https://basicautomation.io/`. Decide whether that is right —
-    it is the same site, and cross-linking the clearnet name from an onion page
-    is a real privacy question, not a formatting one — before slice 3.
+- **Slice 2 — the onion binding. Landed.** The `TcpListener` block in `main.rs`
+  is now `OnionService::builder().router(app).nickname(...).serve()`. The three
+  questions it raised, answered:
 
-- **Slice 3 — deploy.** A compose service on the DeepStack network, the
-  keystore volume, and an `Onion-Location` header on the clearnet site so Tor
-  Browser offers the onion address. Not before slice 2 answers the bootstrap
-  question.
+  - **Does Tor bootstrap from the DeepStack network at all?** Yes, and it was
+    never a network question. Tested from the host and from inside a container
+    on `caddy-shared-network`: identical egress, and `arti` fetched a consensus,
+    fetched microdescriptors, built circuits, launched a service and published a
+    descriptor in about six seconds cold. No `tor` daemon, no ports to open —
+    `arti` dials out, so there is nothing inbound to map.
+
+    The one thing that *did* fail was `fs-mistrust`, which walks the whole
+    ancestor chain of the state directory and refused because `/mnt/deepmem` is
+    `0777` on this workstation. That is a host-layout problem, not a Tor one,
+    and it does not exist in the container, where the chain is `/` → `/app` →
+    `/app/tor`. **Do not "fix" a future instance of this with
+    `ARTI_FS_DISABLE_PERMISSION_CHECKS=1`** — it was used once, locally, to get
+    past the bootstrap test, and it turns off a real check on the directory
+    holding the identity key. Fix the directory.
+
+  - **Keystore persistence.** A named volume, `basicautomation-onion`, mounted
+    at `/app/tor`. Named rather than bound into `${DOCKER_ROOT}` for a
+    permissions reason as much as a lifecycle one: the image creates `/app/tor`
+    at `0700` owned by the container's unprivileged user and Docker seeds the
+    volume from that, whereas a bind mount arrives root-owned `0755` and fails
+    the check above. The volume *is* the address — the `.onion` name is derived
+    from the key inside it, so losing it does not restart the site, it replaces
+    it with a different one that nothing links to. Worth saying plainly in the
+    backup story.
+
+  - **Absolute URLs.** Resolved in favour of answering in whatever name the
+    request arrived under. `server/middleware/site-origin.ts` makes that call
+    once per request; `siteOrigin(event)` and its client twin `useSiteOrigin()`
+    are the accessors. `og:url`, the `SoftwareSourceCode` JSON-LD,
+    `sitemap.xml`, `robots.txt` and the releases feed all go through them.
+
+    Two things about it are less obvious than they look, and both were caught by
+    fetching the onion service over Tor rather than by reading the code:
+
+    **The proxy has to put the name back.** `Host` is hop-by-hop and the proxy
+    drops it — correctly, it describes the connection being made, which is to
+    loopback. But dropping it leaves the site seeing `127.0.0.1:3000` and no
+    trace of the onion name, so the first version of this change did nothing at
+    all: the page still said `basicautomation.io` everywhere. The proxy now sets
+    `x-forwarded-host`, from the HTTP/1.1 `Host` header or the HTTP/2
+    `:authority`, whichever the visitor's client used.
+
+    **A forwarded header is not evidence.** Anyone can send `X-Forwarded-Host:
+    whatever.onion` to the clearnet site. The middleware therefore does not
+    parse the header as a name — it compares it against the address the gateway
+    actually published, read from `/run/onion/address`, which no visitor can
+    influence. Shape-checking it (`looks like a v3 onion`) would have stopped it
+    being a redirect but would still have let a visitor choose the address this
+    site prints as its own. Everything that is not our own address falls back to
+    the configured domain, including the reverse proxy and the loopback
+    healthcheck, neither of which is a name the public site has.
+
+- **Slice 3 — deploy. Landed, in one container rather than two.** The gateway
+  ships in the site's own image and `docker-entrypoint.sh` runs the two
+  processes side by side. Two containers would have made a loopback proxy hop
+  into a network hop and the address file into a shared volume, for nothing:
+  the gateway is a front for this exact site and has no life without it.
+
+  `Onion-Location` on the clearnet site is **not** done. It is the standard way
+  Tor Browser offers an onion address, but it changes what every clearnet
+  visitor using Tor Browser is shown, which is a bigger decision than the page
+  copy that advertises the address today.
 
 ## Building it
 
 ```sh
 cd onion
 cargo test
-cargo run          # proxies http://basicautomation-site:3000 on 127.0.0.1:3080
 ONION_UPSTREAM=http://127.0.0.1:3000 cargo run
 ```
+
+`cargo run` now launches a real onion service against a real keystore under
+`./tor/onyums`, so it takes an identity and a few seconds to bootstrap. Use a
+throwaway `ONION_NICKNAME` when testing; the nickname names the key, so reusing
+`basicautomation` locally means signing the production address from a laptop.
+
+The proxy half is still testable with no Tor in the way — `cargo test` covers
+it directly, which is why it lives in its own module.
 
 On the DeepThought workstation a global `~/.cargo/config.toml` sets
 `build.rustflags = ["-Z", "threads=8"]`, which is nightly-only. The crate pins

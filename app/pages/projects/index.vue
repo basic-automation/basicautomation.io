@@ -1,12 +1,14 @@
 <script setup lang="ts">
 const { projects } = await useProjects()
 
+const siteUrl = useSiteOrigin()
+
 useSeoMeta({
   title: 'projects — basic automation',
   description:
     'Every public project from Basic Automation: Rust crates for the Tor network and '
     + 'desktop apps for catalogs and image conversion.',
-  ogImage: 'https://basicautomation.io/og.png',
+  ogImage: () => `${siteUrl}/og.png`,
   twitterCard: 'summary_large_image',
 })
 </script>

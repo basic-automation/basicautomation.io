@@ -7,6 +7,11 @@ publish = false
 description = "Serves basicautomation.io as a Tor onion service, via onyums."
 
 [dependencies]
+# The org's own crate, serving the org's own site. It embeds arti, so there is
+# no tor daemon in the image — and it brings TLS inside the circuit and the
+# Skin abuse gate with it, which is the whole reason to use it over a raw
+# tunnel.
+onyums = "0.5"
 axum = "0.8"
 tokio = { version = "1", features = ["rt-multi-thread", "macros", "net", "signal"] }
 # The upstream is plain HTTP on the container network, so the whole TLS stack is

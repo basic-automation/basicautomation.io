@@ -107,9 +107,16 @@ The runtime image is plain Alpine with the node binary copied in rather than
 `node:24-alpine`: Nitro bundles its dependencies into `.output`, so npm, yarn
 and the addon headers exist only to build something.
 
-`onion/` is a separate Rust crate that will serve the site as a Tor onion
-service through the organization's own `onyums`. It is not deployed yet —
-`docs/onion.md` says what is done and what is next.
+`onion/` is a small Rust crate that serves the same site as a Tor onion service
+through the organization's own `onyums`. It is built into this image by a second
+stage and started beside Nitro by `docker-entrypoint.sh`: it proxies to the site
+over loopback and writes its `.onion` address to `/run/onion/address`, which the
+site reads back through `/api/onion` to advertise the address on the onyums
+project page. The identity key lives in the named volume `basicautomation-onion`
+— that volume *is* the address, so losing it renames the service.
+
+`docs/onion.md` is the design note: why a forwarding `Router` rather than a raw
+TCP tunnel, and what each slice actually answered.
 
 ## Theme
 

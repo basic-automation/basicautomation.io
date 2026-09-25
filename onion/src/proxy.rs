@@ -78,6 +78,17 @@ async fn forward(State(upstream): State<Upstream>, req: Request) -> Response {
 	headers.remove("x-forwarded-for");
 	headers.insert("x-forwarded-proto", HeaderValue::from_static("https"));
 
+	// `host` was just dropped as hop-by-hop — correctly, it describes the
+	// connection being made, and the one being made is to loopback. But that
+	// leaves the site with no way to know it was reached on the onion name, and
+	// it needs to know: it renders `og:url`, JSON-LD and its sitemap absolute,
+	// and without this it hands an onion visitor a page whose every absolute
+	// link points at the clearnet domain. So the name goes back on as
+	// `x-forwarded-host`, which is what the site already reads behind Caddy.
+	if let Some(host) = original_host(&parts) {
+		headers.insert("x-forwarded-host", host);
+	}
+
 	let stream = body_to_stream(body);
 
 	let upstream_res = upstream.client.request(parts.method, &target).headers(headers).body(reqwest::Body::wrap_stream(stream)).send().await;
@@ -110,6 +121,19 @@ async fn forward(State(upstream): State<Upstream>, req: Request) -> Response {
 	})
 }
 
+/// The name the visitor asked for, from whichever place this HTTP version put it.
+///
+/// HTTP/1.1 sends a `Host` header; HTTP/2 sends `:authority`, which hyper puts in
+/// the request URI instead. A visitor arriving over either has to look the same to
+/// the site, so both are checked.
+fn original_host(parts: &axum::http::request::Parts) -> Option<HeaderValue> {
+	parts
+		.headers
+		.get(axum::http::header::HOST)
+		.cloned()
+		.or_else(|| parts.uri.authority().and_then(|a| HeaderValue::from_str(a.host()).ok()))
+}
+
 fn upstream_res_status(res: &reqwest::Response) -> StatusCode {
 	StatusCode::from_u16(res.status().as_u16()).unwrap_or(StatusCode::BAD_GATEWAY)
 }
@@ -140,6 +164,23 @@ mod tests {
 			let header = HeaderName::from_static(name);
 			assert!(!is_hop_by_hop(&header), "{name} should be forwarded");
 		}
+	}
+
+	#[test]
+	fn the_visitors_host_survives_as_x_forwarded_host() {
+		// The point of the header: `host` is dropped, so this is the only thing
+		// left telling the site which name it was reached on.
+		let req = Request::builder().uri("/").header("host", "example.onion").body(Body::empty()).unwrap();
+		let (parts, _) = req.into_parts();
+		assert!(is_hop_by_hop(&HeaderName::from_static("host")));
+		assert_eq!(original_host(&parts).unwrap(), "example.onion");
+	}
+
+	#[test]
+	fn an_http2_authority_counts_as_the_host() {
+		let req = Request::builder().uri("https://example.onion/projects/onyums").body(Body::empty()).unwrap();
+		let (parts, _) = req.into_parts();
+		assert_eq!(original_host(&parts).unwrap(), "example.onion");
 	}
 
 	#[test]

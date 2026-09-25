@@ -19,9 +19,15 @@
 **/.env
 **/.env.*
 
-# Not needed to build the site: the onion gateway is its own crate and its own
-# image, the deploy manifest is documentation, and scratch is run output.
-onion
+# Not needed to build the site: the deploy manifest is documentation and scratch
+# is run output.
 docs
 deploy
 scratch
+
+# `onion` itself is IN the context — it builds the gateway that ships in this
+# image. Only its outputs are excluded: `target` is gigabytes of build cache,
+# and `tor` is a live onion identity key, which has no business in a build
+# context that gets shipped around and cached.
+onion/target
+onion/tor

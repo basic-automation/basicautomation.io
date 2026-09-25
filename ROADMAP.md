@@ -75,22 +75,26 @@ record. There is no run log.
 
 ## Phase 4 — Reach
 
-- [ ] Serve the site as a Tor onion service too, via `onyums` — the org's own crate, on the org's own site
+- [x] Serve the site as a Tor onion service too, via `onyums` — the org's own crate, on the org's own site
       - [x] **Slice 1** — the reverse proxy `onyums` will serve (`onion/`), tested
             over plain TCP against the real server. See `docs/onion.md`.
-      - [ ] **Slice 2 — next** — swap the `TcpListener` in `onion/src/main.rs` for
-            `OnionService::builder().router(app)`. The real risk is whether arti
-            bootstraps from the DeepStack network at all; answer that before any
-            deploy. Also needs a decision on keystore persistence (the onion
-            address is only stable if the keystore is) and on whether an onion
-            visitor should be served HTML whose canonical links point at the
-            clearnet domain.
-      - [ ] **Slice 3** — compose service, keystore volume, and an
-            `Onion-Location` header on the clearnet site. Tor Browser only
-            honours that header when the page is served over HTTPS, is not itself
-            an onion site, and the value is a valid `http(s)://…onion` URL; a
-            subdomain in the onion address suppresses the banner.
-            <https://community.torproject.org/onion-services/advanced/onion-location/>
+      - [x] **Slice 2** — `OnionService::builder().router(app)` in
+            `onion/src/main.rs`. arti bootstraps fine from this network (about
+            six seconds cold); the keystore is the named volume
+            `basicautomation-onion` at `/app/tor`; and absolute URLs now follow
+            the request's own host via `siteOrigin()` / `useSiteOrigin()`, so an
+            onion visitor is not handed clearnet links.
+      - [x] **Slice 3** — the gateway ships in the site's own image, started
+            beside Nitro by `docker-entrypoint.sh`, with the keystore volume in
+            `compose-linux/infra.yaml`. The onyums project page advertises the
+            address, read live from `/api/onion`.
+- [ ] `Onion-Location` on the clearnet site, so Tor Browser offers the onion address
+      in its own banner rather than only the onyums page's copy. Deliberately left
+      out of the deploy above: it changes what every clearnet visitor using Tor
+      Browser is shown. Tor Browser only honours the header when the page is served
+      over HTTPS, is not itself an onion site, and the value is a valid
+      `http(s)://…onion` URL; a subdomain in the onion address suppresses the banner.
+      <https://community.torproject.org/onion-services/advanced/onion-location/>
 - [ ] Decide what happens to `basic-automation.github.io`, which still serves the old page.
       This is now load-bearing: the Skidbladnir README embeds a screenshot from
       `https://basicautomation.io/ba-nextGenIMG/…`, a path the old site served and

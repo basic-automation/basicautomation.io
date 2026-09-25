@@ -26,7 +26,7 @@ function urlEntry(loc: string, lastmod?: string | null): string {
 }
 
 export default defineEventHandler(async (event) => {
-  const base = useRuntimeConfig().public.siteUrl.replace(/\/$/, '')
+  const base = siteOrigin(event)
   const projects = await getProjects()
 
   const entries = [

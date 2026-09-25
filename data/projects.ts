@@ -48,6 +48,9 @@ export interface Project {
   logo?: string
   /** Screenshot in public/projects/shots/, shown on the card and the page */
   screenshot?: string
+  /** This project serves basicautomation.io itself — show the site's own
+   *  onion address on its page, as evidence rather than as a claim */
+  servesThisSite?: boolean
   /** One line, sentence case, no trailing period — cards, lists and <title> */
   tagline: string
   /** The headline claim. Short, declarative, the one thing to remember. */
@@ -149,6 +152,7 @@ async fn main() {
     repo: 'onyums',
     name: 'onyums',
     logo: '/projects/onyums.svg',
+    servesThisSite: true,
     tagline: 'Publish a private web service, protected from the first minute',
     hero: 'Your app, reachable only through Tor.',
     summary:

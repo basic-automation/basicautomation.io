@@ -16,3 +16,4 @@ onion/target/
 
 # Worktrees created by tooling alongside the repo.
 .worktrees/
+onion/tor/

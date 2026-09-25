@@ -7,7 +7,7 @@
  */
 
 export default defineEventHandler((event) => {
-  const base = useRuntimeConfig().public.siteUrl.replace(/\/$/, '')
+  const base = siteOrigin(event)
 
   setResponseHeader(event, 'content-type', 'text/plain; charset=utf-8')
   setResponseHeader(event, 'cache-control', 'public, max-age=86400')

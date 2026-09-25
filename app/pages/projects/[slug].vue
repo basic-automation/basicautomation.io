@@ -14,6 +14,15 @@ if (error.value || !project.value) {
 
 const meta = computed(() => project.value?.meta ?? null)
 
+// Only the project that serves this site asks for the address; every other
+// page would be paying for a request whose answer it never renders.
+const { data: onionData } = await useFetch<{ address: string | null }>('/api/onion', {
+  key: 'onion-address',
+  immediate: project.value?.servesThisSite === true,
+  default: () => ({ address: null }),
+})
+const onion = computed(() => onionData.value?.address ?? null)
+
 const links = computed(() => {
   const p = project.value
   if (!p) return []
@@ -59,7 +68,7 @@ const facts = computed(() => {
  * field is something the page already states; nothing is asserted here that a
  * reader could not also see.
  */
-const siteUrl = useRuntimeConfig().public.siteUrl.replace(/\/$/, '')
+const siteUrl = useSiteOrigin()
 
 const orgLd = {
   '@type': 'Organization',
@@ -198,6 +207,25 @@ useSeoMeta({
         :alt="`${project.name} screenshot`"
         class="mt-8 w-full max-w-5xl"
       >
+    </section>
+
+    <!-- ── Served by this ───────────────────────────────────────────────── -->
+    <!-- Only on the project that serves this site, and only once the gateway
+         has an address to show. The point is that it is running, not that it
+         could. -->
+    <section v-if="project.servesThisSite && onion" class="mb-32">
+      <TermRule label="running here" />
+      <p class="mt-7 max-w-3xl text-base leading-relaxed text-pn-fg sm:text-lg">
+        This site is served over {{ project.name }}. The same pages you are
+        reading now are also reachable as a Tor onion service, behind its TLS
+        and its abuse gate, on the address below.
+      </p>
+      <CodeLine class="mt-7 max-w-4xl" :code="onion" />
+      <p class="mt-4 max-w-3xl text-sm leading-relaxed text-pn-muted">
+        Open it in Tor Browser. Expect a certificate warning — the service
+        presents a self-signed certificate for its own address, which is normal
+        for an onion service and explained in the README below.
+      </p>
     </section>
 
     <!-- ── Why ──────────────────────────────────────────────────────────── -->

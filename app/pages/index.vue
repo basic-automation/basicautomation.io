@@ -16,16 +16,18 @@ const description
   = 'Basic Automation designs and builds software tools for businesses. Open-source '
     + 'Rust crates for the Tor network, and desktop apps for catalogs and image pipelines.'
 
+const siteUrl = useSiteOrigin()
+
 useSeoMeta({
   title: 'basic automation — software for the productive',
   description,
   ogTitle: 'basic automation — software for the productive',
   ogDescription: description,
   ogType: 'website',
-  ogUrl: 'https://basicautomation.io',
-  ogImage: 'https://basicautomation.io/og.png',
+  ogUrl: () => siteUrl,
+  ogImage: () => `${siteUrl}/og.png`,
   twitterCard: 'summary_large_image',
-  twitterImage: 'https://basicautomation.io/og.png',
+  twitterImage: () => `${siteUrl}/og.png`,
 })
 </script>
 
