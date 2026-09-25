@@ -352,15 +352,61 @@ body {
   border-radius: 0 0 1.25rem 1.25rem !important;
   overflow: hidden;
 
+  /* How far the chamfer runs before it meets the flat face. Matched to the
+     band the bevel map displaces over (BAND in scripts/build-bevel-map.mjs) so
+     the lit line and the bent strip are the same feature — mismatch them and
+     the glass reads as two unrelated effects rather than one edge. */
+  --crt-bevel: 13px;
+
+  /* How far the pane runs past the top of the screen. The masthead is meant to
+     read as a sheet that is taller than the window rather than a bar sitting in
+     it, and the way you know a thing continues past an edge is that its own
+     edge never arrives. So the top of the pane — its top corners, its top
+     catch — is simply not on screen, and only the sides and the bottom close.
+
+     Paid back by `margin-top`, so the header still occupies its visible height
+     in the flow and nothing below it moves. */
+  --crt-overhang: 96px;
+
+  /* The height is here rather than an `h-32` utility on the element, because
+     the overhang has to be added to it and a utility would fix the total —
+     `h-32` plus this padding does not make a taller pane, it makes the same
+     pane with nowhere to put the logo. The visible part stays 8rem; the
+     overhang is extra, paid back by the negative margin so the flow is
+     unchanged. */
+  height: calc(8rem + var(--crt-overhang));
+  margin-top: calc(-1 * var(--crt-overhang));
+  padding-top: var(--crt-overhang);
+
+  /* Where inside that band the surface turns over — the crest — which is where
+     the catch goes. Not at the outer contour, which faces the viewer square-on
+     and transmits rather than reflects, and not at the inner boundary either:
+     look at the polished edge of a glass tabletop and the bright line sits just
+     inboard of the outline, with a thin dark contour outside it. About halfway
+     through the chamfer. */
+  --crt-crest: 6px;
+
   /* The pane hovers. Two shadows rather than one: a tight contact shadow that
      sits right under the edge, and a wide soft one that gives it height. A
      single shadow reads as a sticker; the pair reads as an object with a gap
      under it. Alongside the blur this is the other place the flat rule is set
      aside on purpose — a slab of glass with nothing beneath it is just a
-     rectangle. */
+     rectangle.
+
+     Then a whisper of dark at the very edge, all the way round. That is the
+     right sign: the outermost edge of a bevel is close to perpendicular to the
+     viewer, so it transmits rather than reflects and reads dark. The bright
+     part is set back, at the top of the chamfer — see `.crt-rim`. Putting a
+     bright line here instead is the obvious move and it is wrong; it makes the
+     pane look like it has a stroke rather than a thickness. Kept far too faint
+     to become the bottom border this masthead deliberately does not have. */
   box-shadow:
     0 2px 6px -2px color-mix(in srgb, var(--color-pn-fg) 22%, transparent),
-    0 20px 44px -16px color-mix(in srgb, var(--color-pn-fg) 26%, transparent);
+    0 20px 44px -16px color-mix(in srgb, var(--color-pn-fg) 26%, transparent),
+    inset 0 1px 0 0 color-mix(in srgb, var(--color-pn-fg) 10%, transparent),
+    inset 1px 0 0 0 color-mix(in srgb, var(--color-pn-fg) 8%, transparent),
+    inset -1px 0 0 0 color-mix(in srgb, var(--color-pn-fg) 8%, transparent),
+    inset 0 -1px 0 0 color-mix(in srgb, var(--color-pn-fg) 8%, transparent);
 
   /* No `position` here. This file is loaded after Tailwind's utilities, so a
      position declared on this class would beat `.sticky` on the same element
@@ -482,6 +528,100 @@ body {
   z-index: 3;
 }
 
+/* The bevel's catch. Four things about it are deliberate.
+
+   It is set BACK from the edge. Up to here the bevel was refraction only, and
+   refraction against a quiet backdrop is nearly invisible — a smear of
+   low-contrast parchment looks like slightly blurrier parchment. But the fix is
+   not a bright line at the perimeter. Look at the polished edge of a glass
+   tabletop: the outermost contour reads dark, because it faces the viewer
+   square-on and transmits rather than reflects, and the bright line sits just
+   inboard of it, at the crest where the surface turns. A line drawn at the
+   perimeter instead gives you a stroked box, which is the thing this masthead
+   has spent some effort not being.
+
+   It is SHARP. A blurred version reads as a glow sitting on the glass rather
+   than as a feature of its geometry, and glass edges are not soft.
+
+   It is CONCENTRATED AT THE CORNERS, not run round the whole perimeter. A rim
+   of constant brightness is a border. On a real pane the catch is where the
+   curvature is, so it pools at the corners and falls away along the straights —
+   which is why these are four radial gradients pinned to the corners rather
+   than one conic sweep. On a pane this wide the left and right edges are almost
+   all corner, so they stay lit; the long top and bottom go dark in the middle,
+   and that dark middle is what stops it reading as an outline.
+
+   It MOVES with the page. A fixed highlight on a pane that things slide behind
+   is a painted-on one. `--crt-glint` is driven from the scroll position by
+   SiteHeader.vue and does two things here: it swings the balance between the
+   corners, and it carries a small travelling glint along the top edge one way
+   and the bottom edge the other, so the pane looks like it is turning under a
+   light rather than being repainted. It defaults to 0 when nothing sets it, so
+   a reduced-motion visitor — and the server-rendered first paint — get the
+   same rim, just still.
+
+   Drawn as a ring by masking the element's own padding box out of its border
+   box, which is the one way to get a gradient that follows a rounded corner. */
+.crt-glass > .crt-rim {
+  position: absolute;
+  z-index: 2;
+  pointer-events: none;
+
+  /* Both rings are drawn the same way: mask the element's own padding box out
+     of its border box, which is the one way to get a gradient that follows a
+     rounded corner. The padding IS the thickness. */
+  -webkit-mask:
+    linear-gradient(#000 0 0) content-box,
+    linear-gradient(#000 0 0);
+  mask:
+    linear-gradient(#000 0 0) content-box,
+    linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+}
+
+/* The wide ring: the light that pools at the corners.
+   Thick and short. `--crt-wobble` fattens it, and the same variable pulls its
+   reach along the edge IN, because a catch that gets thicker without getting
+   shorter is just more paint. The two move against each other so the highlight
+   looks like it is being squeezed and stretched round the turn rather than
+   scaled. */
+.crt-glass > .crt-rim--wide {
+  inset: var(--crt-crest);
+  border-radius: 0 0 calc(1.25rem - var(--crt-crest)) calc(1.25rem - var(--crt-crest)) !important;
+  padding: calc(5px + var(--crt-wobble, 0.5) * 8px);
+
+  background:
+    radial-gradient(calc(250px - var(--crt-wobble, 0.5) * 130px) 250px at calc(-4% + var(--crt-glint, 0) * 8%) 0%, color-mix(in srgb, white calc(var(--crt-c1, 0.78) * 34%), transparent), transparent 68%),
+    radial-gradient(calc(270px - var(--crt-wobble, 0.5) * 140px) 250px at calc(104% - var(--crt-glint, 0) * 8%) 0%, color-mix(in srgb, white calc(var(--crt-c2, 0.5) * 38%), transparent), transparent 68%),
+    radial-gradient(calc(255px - var(--crt-wobble, 0.5) * 130px) 150px at calc(103% - var(--crt-glint, 0) * 9%) 100%, color-mix(in srgb, white calc(var(--crt-c3, 0.22) * 26%), transparent), transparent 66%),
+    radial-gradient(calc(240px - var(--crt-wobble, 0.5) * 125px) 150px at calc(-3% + var(--crt-glint, 0) * 9%) 100%, color-mix(in srgb, white calc(var(--crt-c4, 0.5) * 28%), transparent), transparent 66%);
+}
+
+/* The fine ring: the glints that travel the long edges.
+   Thin and long, and it runs the wobble the other way — at its thinnest it
+   stretches furthest, so the middle of a long edge is where the catch is at its
+   finest and most drawn out. That taper from fat corner to fine straight is the
+   thing that stops a rim reading as an outline, and it is why this is two rings
+   rather than one: a mask applies to a whole subtree, so a single ring is one
+   thickness everywhere by construction. Set 3px deeper than the wide ring so
+   the two overlap into one edge instead of reading as two concentric lines. */
+.crt-glass > .crt-rim--fine {
+  inset: calc(var(--crt-crest) + 3px);
+  border-radius: 0 0 calc(1.25rem - var(--crt-crest) - 3px) calc(1.25rem - var(--crt-crest) - 3px) !important;
+  padding: calc(4px - var(--crt-wobble, 0.5) * 2px);
+
+  background:
+    /* Overshoots both ends (-12% to 112%) so each glint arrives and leaves off
+       the edge of the pane rather than materialising in the middle of it, and
+       they run opposite ways so the pane reads as turning rather than sliding.
+       The one on the bottom edge is the one you will see; its partner rides the
+       top edge, which is off screen, and surfaces only where the two meet on
+       the short stretch of side rim. */
+    radial-gradient(calc(90px + var(--crt-wobble, 0.5) * 130px) 60px at calc(var(--crt-glint, 0) * 124% - 12%) 0%, color-mix(in srgb, white 40%, transparent), transparent 70%),
+    radial-gradient(calc(80px + var(--crt-wobble, 0.5) * 120px) 60px at calc(112% - var(--crt-glint, 0) * 124%) 100%, color-mix(in srgb, white 30%, transparent), transparent 70%);
+}
+
 @media (prefers-reduced-motion: reduce) {
   .crt-glass {
     backdrop-filter: blur(2px) saturate(118%);
@@ -504,4 +644,7 @@ body {
     -webkit-backdrop-filter: none;
   }
   .crt-glass::after { display: none; }
+  /* Nothing is refracting any more, so a lone highlight line would be a stroke
+     around a flat panel rather than the top of a chamfer. */
+  .crt-glass > .crt-rim { display: none; }
 }
