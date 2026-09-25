@@ -12,7 +12,7 @@ const nav = [
         <BrandMark title="Basic Automation" class="h-24 w-24 shrink-0 text-pn-fg" />
       </NuxtLink>
 
-      <nav class="ml-auto flex items-center gap-5 text-xs sm:gap-6">
+      <nav aria-label="Site" class="ml-auto flex items-center gap-5 text-xs sm:gap-6">
         <NuxtLink
           v-for="item in nav"
           :key="item.to"

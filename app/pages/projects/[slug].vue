@@ -130,13 +130,19 @@ useSeoMeta({
       </p>
 
       <!-- The wordmark IS the title on projects that have one, so it is set at
-           display scale rather than treated as a badge beside the name. -->
+           display scale rather than treated as a badge beside the name — and it
+           is marked up as the h1 it is, with the alt text carrying the name.
+           Every project has a wordmark, so without this no project page has a
+           heading of its own and the only h1 on the page comes out of the
+           fetched README. -->
       <div v-if="project.logo" class="mt-10">
-        <img
-          :src="project.logo"
-          :alt="project.name"
-          class="h-24 w-auto max-w-full sm:h-36 lg:h-44"
-        >
+        <h1>
+          <img
+            :src="project.logo"
+            :alt="project.name"
+            class="h-24 w-auto max-w-full sm:h-36 lg:h-44"
+          >
+        </h1>
         <StatusDot :status="project.status" class="mt-6" />
       </div>
       <div v-else class="mt-10 flex flex-wrap items-center gap-x-5 gap-y-3">
@@ -158,7 +164,7 @@ useSeoMeta({
         <CodeLine :code="project.install.code" />
       </div>
 
-      <nav class="mt-7 flex flex-wrap gap-x-6 gap-y-2 text-xs">
+      <nav aria-label="Project links" class="mt-7 flex flex-wrap gap-x-6 gap-y-2 text-xs">
         <a
           v-for="link in links"
           :key="link.href"
