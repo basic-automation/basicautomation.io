@@ -395,24 +395,6 @@ body {
     );
 }
 
-/* The glass has an edge: a hairline of accent where it meets the page. */
-.crt-glass::before {
-  content: "";
-  position: absolute;
-  inset-inline: 0;
-  bottom: 0;
-  height: 1px;
-  z-index: 2;
-  pointer-events: none;
-  background: linear-gradient(
-    to right,
-    transparent,
-    color-mix(in srgb, var(--color-pn-accent) 50%, transparent) 16%,
-    color-mix(in srgb, var(--color-pn-accent) 50%, transparent) 84%,
-    transparent
-  );
-}
-
 /* The masthead's own content sits above the grille, not behind it. */
 .crt-glass > * {
   position: relative;
