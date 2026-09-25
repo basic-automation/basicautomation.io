@@ -28,6 +28,16 @@ const links = computed(() => {
   return out
 })
 
+/**
+ * The changelog strip: the most recent releases GitHub reports, newest first.
+ * Pre-releases are in — for enlil, nisaba and Skidbladnir that is the whole
+ * history — and marked, so "v0.1.1" doesn't read as a finished thing.
+ */
+const releases = computed(() => meta.value?.releases ?? [])
+
+const releasesUrl = computed(() =>
+  `https://github.com/basic-automation/${project.value?.repo}/releases`)
+
 /** Kept deliberately small and late: this is a pitch, not a package listing. */
 const facts = computed(() => {
   const m = meta.value
@@ -168,6 +178,46 @@ useSeoMeta({
       <p v-if="meta?.topics?.length" class="mt-4 flex flex-wrap gap-x-4 gap-y-1 text-xs text-pn-muted">
         <span v-for="topic in meta.topics" :key="topic">#{{ topic }}</span>
       </p>
+    </section>
+
+    <!-- ── Releases ─────────────────────────────────────────────────────── -->
+    <!-- A strip, not a changelog: the tags, when they landed, and what each one
+         was called. The notes themselves live on GitHub, one click away. -->
+    <section v-if="releases.length" class="mb-32">
+      <TermRule label="releases" />
+      <ol class="mt-8 max-w-4xl space-y-6">
+        <li v-for="release in releases" :key="release.tag" class="bar">
+          <a
+            :href="release.url"
+            target="_blank"
+            rel="noreferrer noopener"
+            class="group block"
+          >
+            <span class="flex flex-wrap items-baseline gap-x-4 gap-y-1">
+              <span
+                class="text-sm transition-colors group-hover:text-pn-fg-bright"
+                :style="{ color: 'var(--accent)' }"
+              >{{ release.tag }}</span>
+              <time
+                class="text-xs text-pn-muted"
+                :datetime="release.publishedAt"
+                :title="relativeTime(release.publishedAt)"
+              >{{ isoDate(release.publishedAt) }}</time>
+              <span v-if="release.prerelease" class="text-xs text-pn-muted">pre-release</span>
+            </span>
+            <span
+              v-if="release.title"
+              class="mt-1 block text-sm leading-relaxed text-pn-dim transition-colors group-hover:text-pn-fg"
+            >{{ release.title }}</span>
+          </a>
+        </li>
+      </ol>
+      <a
+        :href="releasesUrl"
+        target="_blank"
+        rel="noreferrer noopener"
+        class="mt-8 inline-block text-xs text-pn-muted transition-colors hover:text-pn-fg-bright"
+      >→ full release history</a>
     </section>
 
     <!-- ── README ───────────────────────────────────────────────────────── -->

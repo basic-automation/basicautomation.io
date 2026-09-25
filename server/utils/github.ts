@@ -18,7 +18,7 @@ import { Marked } from 'marked'
 // directly — it is the same client without the internal-route inference.
 import { ofetch } from 'ofetch'
 import { projects, type Project } from '~~/data/projects'
-import type { EnrichedProject, RepoMeta } from '~~/shared/types/project'
+import type { EnrichedProject, Release, RepoMeta } from '~~/shared/types/project'
 import snapshot from '~~/data/projects.generated.json'
 
 const ORG = 'basic-automation'
@@ -28,8 +28,22 @@ const UA = 'basicautomation.io'
 const CACHE_TTL = 60 * 15 // 15 minutes
 /** Serve stale while revalidating for this much longer, so no visitor waits. */
 const STALE_TTL = 60 * 60 * 6 // 6 hours
+/**
+ * How many releases the changelog strip keeps. One list call replaces the old
+ * `releases/latest` call, so the history is free against the rate limit — but
+ * the payload still has to stay small enough to hydrate without thinking.
+ */
+const MAX_RELEASES = 5
 
-const snapshotRepos = (snapshot as { repos: Record<string, Omit<RepoMeta, 'source'>> }).repos ?? {}
+/**
+ * The snapshot on disk was written by whatever version of `npm run sync` last
+ * ran, so a field added since then may simply be absent. Anything optional here
+ * is a field `fromSnapshot` has to fill in — declaring it that way means adding
+ * a field without a fallback fails the typecheck instead of the render.
+ */
+type SnapshotRepo = Omit<RepoMeta, 'source' | 'releases'> & { releases?: Release[] }
+
+const snapshotRepos = (snapshot as { repos: Record<string, SnapshotRepo> }).repos ?? {}
 
 const marked = new Marked({ gfm: true, breaks: false, async: false })
 
@@ -112,6 +126,33 @@ function stripLeadingLogo(markdown: string): string {
     .replace(/^(?:\s*<br\s*\/?>\s*)+/i, '')
 }
 
+/**
+ * GitHub's releases list, trimmed to what the strip prints. Drafts are dropped:
+ * they are not public, and the site only shows what a visitor could download.
+ */
+function normaliseReleases(raw: any[]): Release[] {
+  return raw
+    .filter((r) => r && !r.draft && r.tag_name)
+    .map((r) => ({
+      tag: r.tag_name as string,
+      // A release whose title is just its tag says nothing twice.
+      title: r.name && r.name !== r.tag_name ? (r.name as string) : null,
+      url: r.html_url as string,
+      publishedAt: (r.published_at || r.created_at) as string,
+      prerelease: !!r.prerelease,
+    }))
+}
+
+/**
+ * The newest full release, matching what `/releases/latest` used to return:
+ * drafts and pre-releases don't count. A repo that has only tagged
+ * pre-releases gets null here and relies on the strip to show its history.
+ */
+function pickLatest(releases: Release[]): RepoMeta['latestRelease'] {
+  const r = releases.find((x) => !x.prerelease)
+  return r ? { tag: r.tag, url: r.url, publishedAt: r.publishedAt } : null
+}
+
 async function fetchRepo(project: Project): Promise<RepoMeta> {
   const { repo } = project
 
@@ -140,13 +181,16 @@ async function fetchRepo(project: Project): Promise<RepoMeta> {
     archived: !!meta.archived,
     readmeHtml: null,
     latestRelease: null,
+    releases: [],
   }
 
   // README, latest release and crate data are all optional — a failure in any
   // one of them leaves that field empty rather than sinking the whole repo.
   const [readme, release, crate] = await Promise.allSettled([
     gh<string>(`/repos/${ORG}/${repo}/readme`, 'application/vnd.github.raw', 'text'),
-    gh<any>(`/repos/${ORG}/${repo}/releases/latest`),
+    // One list call, not `releases/latest` plus a history call: `latestRelease`
+    // is derived from the same page, so the changelog costs no extra request.
+    gh<any[]>(`/repos/${ORG}/${repo}/releases?per_page=${MAX_RELEASES}`),
     project.crate
       ? ofetch<any>(`https://crates.io/api/v1/crates/${project.crate}`, {
           headers: { 'user-agent': UA },
@@ -161,12 +205,9 @@ async function fetchRepo(project: Project): Promise<RepoMeta> {
     )
   }
 
-  if (release.status === 'fulfilled' && release.value?.tag_name) {
-    out.latestRelease = {
-      tag: release.value.tag_name,
-      url: release.value.html_url,
-      publishedAt: release.value.published_at,
-    }
+  if (release.status === 'fulfilled' && Array.isArray(release.value)) {
+    out.releases = normaliseReleases(release.value)
+    out.latestRelease = pickLatest(out.releases)
   }
 
   if (crate.status === 'fulfilled' && crate.value?.crate && project.crate) {
@@ -181,7 +222,9 @@ async function fetchRepo(project: Project): Promise<RepoMeta> {
 
 function fromSnapshot(repo: string): RepoMeta | null {
   const s = snapshotRepos[repo]
-  return s ? { ...s, source: 'snapshot' } : null
+  // A snapshot written before `releases` existed has no such key; the strip
+  // renders nothing rather than throwing on an undefined array.
+  return s ? { ...s, source: 'snapshot', releases: s.releases ?? [] } : null
 }
 
 /**

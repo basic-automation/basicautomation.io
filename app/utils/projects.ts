@@ -52,5 +52,13 @@ export function relativeTime(iso: string | null | undefined): string {
   return rtf.format(Math.round(seconds), 'second')
 }
 
+/**
+ * `2026-09-24` — unambiguous and sortable, the way a terminal prints a date.
+ * Sliced off the ISO string rather than parsed, so the date shown is the one
+ * GitHub published under and not the viewer's timezone shifted a day either way.
+ */
+export const isoDate = (iso: string | null | undefined): string =>
+  iso ? (iso.split('T')[0] ?? '') : ''
+
 export const compactNumber = (n: number | undefined | null): string =>
   n === undefined || n === null ? '' : new Intl.NumberFormat('en', { notation: 'compact' }).format(n)

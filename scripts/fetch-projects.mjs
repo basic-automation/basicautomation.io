@@ -23,6 +23,8 @@ const HERE = dirname(fileURLToPath(import.meta.url))
 const OUT = resolve(HERE, '../data/projects.generated.json')
 const ORG = 'basic-automation'
 const UA = 'basicautomation.io-build'
+/** Keep this in step with MAX_RELEASES in server/utils/github.ts. */
+const MAX_RELEASES = 5
 
 const token = process.env.GITHUB_TOKEN || process.env.GH_TOKEN || ''
 
@@ -116,12 +118,31 @@ async function fetchRepo(project) {
     console.warn(`  · ${repo}: no README`)
   }
 
-  // Latest release — most of these repos don't cut releases.
+  // Release history. One list call, not `releases/latest` plus a history call:
+  // the newest full release is derived from the same page, so the changelog
+  // costs nothing extra against the rate limit. Drafts are dropped — they are
+  // not public. Pre-releases stay: for several of these repos that is all
+  // there is, and the strip marks them.
   try {
-    const rel = await getJSON(`https://api.github.com/repos/${ORG}/${repo}/releases/latest`)
-    out.latestRelease = { tag: rel.tag_name, url: rel.html_url, publishedAt: rel.published_at }
+    const list = await getJSON(
+      `https://api.github.com/repos/${ORG}/${repo}/releases?per_page=${MAX_RELEASES}`,
+    )
+    out.releases = list
+      .filter((r) => r && !r.draft && r.tag_name)
+      .map((r) => ({
+        tag: r.tag_name,
+        title: r.name && r.name !== r.tag_name ? r.name : null,
+        url: r.html_url,
+        publishedAt: r.published_at || r.created_at,
+        prerelease: !!r.prerelease,
+      }))
+    const full = out.releases.find((r) => !r.prerelease)
+    out.latestRelease = full
+      ? { tag: full.tag, url: full.url, publishedAt: full.publishedAt }
+      : null
   }
   catch {
+    out.releases = []
     out.latestRelease = null
   }
 
