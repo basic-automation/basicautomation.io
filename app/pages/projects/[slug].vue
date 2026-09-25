@@ -53,6 +53,59 @@ const facts = computed(() => {
   return rows
 })
 
+/**
+ * Structured data for the page, as `SoftwareSourceCode` — which is what this
+ * is: a page about a published body of source, not a product listing. Every
+ * field is something the page already states; nothing is asserted here that a
+ * reader could not also see.
+ */
+const siteUrl = useRuntimeConfig().public.siteUrl.replace(/\/$/, '')
+
+const orgLd = {
+  '@type': 'Organization',
+  'name': 'Basic Automation',
+  'url': siteUrl,
+  'logo': `${siteUrl}/logo.svg`,
+}
+
+const jsonLd = computed(() => {
+  const p = project.value
+  if (!p) return ''
+  const m = p.meta
+
+  const data: Record<string, unknown> = {
+    '@context': 'https://schema.org',
+    '@type': 'SoftwareSourceCode',
+    'name': p.name,
+    'alternateName': p.repo,
+    'headline': p.hero,
+    'description': p.summary,
+    'url': `${siteUrl}/projects/${p.slug}`,
+    'codeRepository': m?.htmlUrl ?? `https://github.com/basic-automation/${p.repo}`,
+    'author': orgLd,
+    'publisher': orgLd,
+    'isAccessibleForFree': true,
+  }
+
+  if (m?.language) data.programmingLanguage = m.language
+  if (m?.license) data.license = `https://spdx.org/licenses/${m.license}.html`
+  if (m?.createdAt) data.dateCreated = m.createdAt
+  if (m?.pushedAt) data.dateModified = m.pushedAt
+  if (m?.topics?.length) data.keywords = m.topics.join(', ')
+  // The crate version is the one a reader can actually install; a release tag
+  // is the fallback for the projects that aren't published to crates.io.
+  if (m?.crateVersion) data.version = m.crateVersion
+  else if (m?.latestRelease) data.version = m.latestRelease.tag
+  if (m?.crateUrl) data.downloadUrl = m.crateUrl
+  if (m?.docsUrl) data.documentation = m.docsUrl
+
+  return ldJson(data)
+})
+
+useHead({
+  script: [{ type: 'application/ld+json', innerHTML: () => jsonLd.value }],
+})
+
 useSeoMeta({
   title: () => `${project.value?.name} — ${project.value?.tagline}`,
   description: () => project.value?.summary,
