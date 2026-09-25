@@ -23,7 +23,24 @@ import { createSlugger } from '~~/shared/markdown/slug'
 import snapshot from '~~/data/projects.generated.json'
 
 const ORG = 'basic-automation'
-const UA = 'basicautomation.io'
+
+/**
+ * crates.io requires a user agent that identifies the bot rather than the HTTP
+ * client, and asks for contact information with it — its own guidance grades
+ * `my_crawler` as "Better" and `my_crawler (my_crawler.com/info)` as "Best",
+ * and says a bot without one may be blocked.
+ * https://github.com/rust-lang/crates.io/blob/main/src/middleware/no_user_agent_message.txt
+ */
+const UA = 'basicautomation.io (+https://basicautomation.io)'
+
+/**
+ * GitHub's REST API is versioned by header, and a request without one silently
+ * rides the `2022-11-28` default — supported only until 10 March 2028. Pinning
+ * it makes the version this site is already using a decision rather than a
+ * default that will move on its own one day.
+ * https://docs.github.com/en/rest/about-the-rest-api/api-versions
+ */
+const GH_API_VERSION = '2022-11-28'
 
 /** How long upstream responses are reused. Short enough to feel live. */
 const CACHE_TTL = 60 * 15 // 15 minutes
@@ -102,7 +119,11 @@ async function gh<T>(
    */
   responseType: 'json' | 'text' = 'json',
 ): Promise<T> {
-  const headers: Record<string, string> = { 'user-agent': UA, accept }
+  const headers: Record<string, string> = {
+    'user-agent': UA,
+    'accept': accept,
+    'x-github-api-version': GH_API_VERSION,
+  }
   const t = token()
   if (t) headers.authorization = `Bearer ${t}`
   return ofetch(`https://api.github.com${path}`, {

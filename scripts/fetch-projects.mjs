@@ -23,7 +23,11 @@ import { createSlugger } from '../shared/markdown/slug.ts'
 const HERE = dirname(fileURLToPath(import.meta.url))
 const OUT = resolve(HERE, '../data/projects.generated.json')
 const ORG = 'basic-automation'
-const UA = 'basicautomation.io-build'
+// crates.io asks for a user agent that identifies the bot and carries contact
+// information, and GitHub asks that the API version be stated rather than
+// defaulted. Same reasoning as server/utils/github.ts, which has the sources.
+const UA = 'basicautomation.io-build (+https://basicautomation.io)'
+const GH_API_VERSION = '2022-11-28'
 /** Keep this in step with MAX_RELEASES in server/utils/github.ts. */
 const MAX_RELEASES = 5
 
@@ -32,6 +36,7 @@ const token = process.env.GITHUB_TOKEN || process.env.GH_TOKEN || ''
 /** Nothing here is fatal: a failed fetch falls back to the committed snapshot. */
 async function getJSON(url, { accept = 'application/vnd.github+json', auth = true } = {}) {
   const headers = { 'user-agent': UA, accept }
+  if (auth) headers['x-github-api-version'] = GH_API_VERSION
   if (auth && token) headers.authorization = `Bearer ${token}`
   const res = await fetch(url, { headers })
   if (!res.ok) throw new Error(`${res.status} ${res.statusText} — ${url}`)
@@ -39,7 +44,7 @@ async function getJSON(url, { accept = 'application/vnd.github+json', auth = tru
 }
 
 async function getText(url, accept) {
-  const headers = { 'user-agent': UA, accept }
+  const headers = { 'user-agent': UA, accept, 'x-github-api-version': GH_API_VERSION }
   if (token) headers.authorization = `Bearer ${token}`
   const res = await fetch(url, { headers })
   if (!res.ok) throw new Error(`${res.status} ${res.statusText} — ${url}`)
