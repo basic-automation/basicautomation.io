@@ -345,6 +345,13 @@ body {
    because the browser composites it on the GPU against live DOM underneath,
    which a canvas overlay cannot do without re-rendering the page into it. */
 .crt-glass {
+  /* The one exception to the global `border-radius: 0`. A class beats the
+     universal selector on specificity, so this wins even though both are
+     !important — the pane needs a bottom edge that reads as glass, and glass
+     has corners. Clipped, so the overdrawn grille cannot spill past them. */
+  border-radius: 0 0 1.25rem 1.25rem !important;
+  overflow: hidden;
+
   /* No `position` here. This file is loaded after Tailwind's utilities, so a
      position declared on this class would beat `.sticky` on the same element
      by source order and quietly unpin the masthead. Sticky already establishes
