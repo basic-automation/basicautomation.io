@@ -355,12 +355,15 @@ body {
 }
 
 /* Where the browser can point backdrop-filter at an SVG filter, the backdrop
-   is displaced along the scanlines as well as blurred — the picture smears
-   sideways and never settles. Chrome and Firefox can; the blur above is what
+   gets both passes: the CRT warp smears it sideways along the scanlines, then
+   the glass slab refracts it vertically toward the centre line. They are
+   chained rather than merged because each owns one axis — the CRT takes X,
+   the slab takes Y — and a single filter would make them fight for the same
+   displacement. Chrome and Firefox can do this; the plain blur above is what
    everyone else gets. */
 @supports (backdrop-filter: url("#crt-warp")) {
   .crt-glass {
-    backdrop-filter: blur(1.5px) saturate(118%) url("#crt-warp");
+    backdrop-filter: blur(2px) saturate(126%) brightness(1.02) url("#crt-warp") url("#glass-refract");
   }
 }
 
@@ -395,6 +398,35 @@ body {
     );
 }
 
+/* The specular sheen. A slab of glass catches the light unevenly and the
+   catch moves; this is a soft diagonal wash that drifts across the pane and
+   back. It is a gradient, never a line — the masthead has no edge drawn on
+   it, and this must not become one. */
+.crt-glass::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  pointer-events: none;
+  background:
+    linear-gradient(
+      104deg,
+      transparent 0%,
+      color-mix(in srgb, white 26%, transparent) 38%,
+      color-mix(in srgb, white 40%, transparent) 47%,
+      color-mix(in srgb, white 14%, transparent) 56%,
+      transparent 72%
+    );
+  background-size: 260% 100%;
+  animation: glass-sheen 19s ease-in-out infinite;
+  mix-blend-mode: soft-light;
+}
+
+@keyframes glass-sheen {
+  0%, 100% { background-position: 8% 0; }
+  50% { background-position: 92% 0; }
+}
+
 /* The masthead's own content sits above the grille, not behind it. */
 .crt-glass > * {
   position: relative;
@@ -409,6 +441,10 @@ body {
   .crt-glass::after {
     inset: 0;
     filter: none;
+  }
+  .crt-glass::before {
+    animation: none;
+    background-position: 50% 0;
   }
 }
 
