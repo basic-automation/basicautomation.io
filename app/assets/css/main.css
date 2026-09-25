@@ -420,12 +420,17 @@ body {
 .crt-glass::after {
   content: "";
   position: absolute;
-  /* Flush with the pane, NOT overdrawn. The bevel acts at the edges of this
-     box, so an overdrawn box put the bevel bands outside the pane where the
-     overflow clip removed them — the grille stayed flat at exactly the edges
-     the effect was meant to show. The displacement pulls inward, so nothing
-     samples past the edge and no bare margin appears. */
-  inset: 0;
+  /* A small, even overdraw. Two constraints pull against each other here.
+     The filter region is this box, and a filter clips its output to that
+     region — so flush with the pane, the outermost pixels of the grille were
+     dropped and the lines stopped a dozen pixels short of the right and
+     bottom edges. But overdraw too far and the bevel bands, which sit at the
+     edges of this same box, land outside the pane entirely and the overflow
+     clip removes the effect instead.
+
+     12px satisfies both: the clipped margin falls outside the pane, while the
+     bands are wide enough (~28px) to still straddle the pane's own edge. */
+  inset: -12px;
   pointer-events: none;
   z-index: 1;
   filter: url("#crt-grille") url("#glass-bevel-grille");
