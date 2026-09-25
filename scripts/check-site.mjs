@@ -119,6 +119,34 @@ while (queue.length) {
   }
   console.log(`  200  ${path}`)
 
+  // A social card lives only in a `<meta>` tag, so nothing above would ever
+  // fetch it — and an `og:image` pointing at a 404 fails silently, in someone
+  // else's preview, where nobody sees it. These carry the public origin, so
+  // check the same path here the way the sitemap's `<loc>` entries are checked.
+  const socialImages = new Set([...res.body.matchAll(
+    /<meta[^>]+(?:property|name)=["'](?:og:image|twitter:image)["'][^>]+content=["']([^"']+)["']/gi,
+  )].map((m) => m[1]))
+
+  // A page names the same card as both `og:image` and `twitter:image`; report
+  // a broken one once, not once per tag.
+  for (const ref of socialImages) {
+    let image
+    try {
+      image = new URL(ref, BASE + path)
+    }
+    catch {
+      fail(path, `unparseable social image ${ref}`)
+      continue
+    }
+    const asset = await fetchOnce(BASE + image.pathname)
+    if (asset.status !== 200) {
+      fail(path, `social image ${image.pathname} answered ${asset.status || 'nothing'}`)
+    }
+    else if (asset.type && !asset.type.startsWith('image/')) {
+      fail(path, `social image ${image.pathname} is ${asset.type}, not an image`)
+    }
+  }
+
   // Fragment links point at an id on the page that emitted them.
   const ids = new Set([...res.body.matchAll(/\bid=["']([^"']+)["']/g)].map((m) => m[1]))
 

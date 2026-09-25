@@ -85,6 +85,7 @@ const jsonLd = computed(() => {
     'author': orgLd,
     'publisher': orgLd,
     'isAccessibleForFree': true,
+    'image': `${siteUrl}/projects/og/${p.slug}.png`,
   }
 
   if (m?.language) data.programmingLanguage = m.language
@@ -106,15 +107,27 @@ useHead({
   script: [{ type: 'application/ld+json', innerHTML: () => jsonLd.value }],
 })
 
+/**
+ * The project's own social card, generated from this same editorial data by
+ * `npm run og` and committed under `public/projects/og/`. The dimensions are
+ * declared because several networks lay the preview out before they have
+ * fetched the image.
+ */
+const ogImage = computed(() => `${siteUrl}/projects/og/${slug.value}.png`)
+
 useSeoMeta({
   title: () => `${project.value?.name} — ${project.value?.tagline}`,
   description: () => project.value?.summary,
   ogTitle: () => `${project.value?.name} — ${project.value?.hero}`,
   ogDescription: () => project.value?.summary,
   ogType: 'article',
-  ogUrl: () => `https://basicautomation.io/projects/${slug.value}`,
-  ogImage: 'https://basicautomation.io/og.png',
+  ogUrl: () => `${siteUrl}/projects/${slug.value}`,
+  ogImage: () => ogImage.value,
+  ogImageWidth: 1200,
+  ogImageHeight: 630,
+  ogImageAlt: () => `${project.value?.name} — ${project.value?.hero}`,
   twitterCard: 'summary_large_image',
+  twitterImage: () => ogImage.value,
 })
 </script>
 
