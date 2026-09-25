@@ -219,6 +219,66 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     crate: 'onyums',
   },
   {
+    slug: 'weftdb',
+    repo: 'weftdb',
+    name: 'WeftDB',
+    tagline: 'A time-series database for data that never arrived on schedule',
+    hero: 'Gaps, filled. And labelled.',
+    summary:
+      'A database for readings that come in irregularly — sensors that drop out, '
+      + 'markets that trade in bursts, devices that batch-upload after hours offline. '
+      + 'Ask for any resolution and it returns a continuous series, with every point '
+      + 'marked as observed or reconstructed.',
+    problem:
+      'Most time-series databases assume the readings arrive on a clean, regular beat. '
+      + 'Real ones do not. Ask for a value between two samples and you get a gap, a null '
+      + 'or a zero — and the job of rebuilding the signal lands back in your own code, '
+      + 'written slightly differently in every place that needs it. WeftDB does that '
+      + 'reconstruction where the data already is, and tells you which numbers it made up.',
+    kind: 'Database',
+    status: 'alpha',
+    accent: 'red',
+    order: 3,
+    features: [
+      {
+        title: 'Ask for any resolution',
+        body: 'Want it per second when the readings came every few minutes? Ask. You get a continuous series back, not a list of holes to patch yourself.',
+      },
+      {
+        title: 'Made-up numbers say so',
+        body: 'Every point is marked observed, interpolated or extrapolated. You can filter or refuse reconstructed values deliberately, rather than discovering one in a report later.',
+      },
+      {
+        title: 'Precision you declare, not hope for',
+        body: 'You state the accuracy each measurement needs. A value that cannot be stored within it is rejected outright instead of quietly rounded — the difference between books you can audit and books you cannot.',
+      },
+      {
+        title: 'The work happens next to the data',
+        body: 'Resampling and gap-filling run inside the database rather than in a loop on your machine pulling raw rows across the network. Less waiting, less code to maintain.',
+      },
+      {
+        title: 'Three ways in',
+        body: 'An HTTP API for anything that speaks JSON, a Rust library if you want it embedded, and a terminal interface for looking around.',
+      },
+      {
+        title: 'Every claim has a benchmark',
+        body: 'Performance numbers come with the benchmark that produced them, and you can run it yourself. Over a thousand tests pass; the storage format is checksummed and versioned.',
+      },
+    ],
+    example: {
+      label: 'two readings a minute apart, returned as sixty-one',
+      lang: 'shellscript',
+      code: `curl -s -X POST http://127.0.0.1:8080/api/v1/interpolate \\
+  -H 'content-type: application/json' \\
+  -d '{"spline":"linear","resolution":"seconds",
+       "points":[{"timestamp":"1970-01-01T00:00:00Z","value":0.0},
+                 {"timestamp":"1970-01-01T00:01:00Z","value":60.0}]}'
+
+# The two you gave it come back marked "raw".
+# The fifty-nine between them come back marked "interpolated".`,
+    },
+  },
+  {
     slug: 'enlil',
     repo: 'enlil',
     name: 'Enlil',
@@ -237,7 +297,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     kind: 'Operating software',
     status: 'alpha',
     accent: 'yellow',
-    order: 3,
+    order: 4,
     features: [
       {
         title: 'Try it, lose nothing',
@@ -285,7 +345,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     kind: 'Desktop app',
     status: 'active',
     accent: 'blue',
-    order: 4,
+    order: 5,
     features: [
       {
         title: 'Sell in four places, maintain one list',
@@ -369,7 +429,7 @@ default_low_stock_threshold = 5    # overridable per product in the app
     kind: 'Desktop app',
     status: 'active',
     accent: 'green',
-    order: 5,
+    order: 6,
     features: [
       {
         title: 'A batch at a time',

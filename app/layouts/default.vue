@@ -10,8 +10,8 @@ const onHome = computed(() => route.path === '/' || route.path === '')
  * disc is a backdrop on the right-hand side, not a wash behind the text.
  */
 const FADE = [
-  'linear-gradient(to bottom, black 0%, black 52%, transparent 100%)',
-  'linear-gradient(to right, transparent 0%, transparent 34%, black 62%)',
+  'linear-gradient(to bottom, black 0%, black 58%, transparent 100%)',
+  'linear-gradient(to right, transparent 0%, transparent 30%, black 58%)',
 ].join(', ')
 </script>
 
@@ -35,9 +35,12 @@ const FADE = [
       aria-hidden="true"
       class="pointer-events-none absolute inset-x-0 top-0 h-[32rem] bg-no-repeat sm:h-[40rem]"
       :style="{
+        // The lamp is pulled up so its centre lands on the headline's. Both
+        // are laid out in fixed terms, so a pixel offset holds; a percentage
+        // would drift as the band changes height.
         backgroundImage: 'url(/bg/hero.webp)',
-        backgroundSize: 'auto 100%',
-        backgroundPosition: 'right center',
+        backgroundSize: 'auto 148%',
+        backgroundPosition: 'right 0 top -168px',
         maskImage: FADE,
         WebkitMaskImage: FADE,
         maskComposite: 'intersect',
