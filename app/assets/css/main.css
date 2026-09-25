@@ -376,12 +376,12 @@ body {
 .crt-glass::after {
   content: "";
   position: absolute;
-  /* Overdrawn past the edges so the displacement pulls grille into view rather
-     than pulling it away and leaving a bare margin. */
-  inset: -24px -32px;
+  /* A little overdraw so the displacement pulls grille into view at the edges
+     rather than leaving a bare margin. Small, because the shift is small. */
+  inset: -6px -10px;
   pointer-events: none;
   z-index: 1;
-  filter: url("#crt-warp");
+  filter: url("#crt-grille");
   background-image:
     repeating-linear-gradient(
       to bottom,
