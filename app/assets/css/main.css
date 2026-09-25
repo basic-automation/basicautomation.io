@@ -352,6 +352,16 @@ body {
   border-radius: 0 0 1.25rem 1.25rem !important;
   overflow: hidden;
 
+  /* The pane hovers. Two shadows rather than one: a tight contact shadow that
+     sits right under the edge, and a wide soft one that gives it height. A
+     single shadow reads as a sticker; the pair reads as an object with a gap
+     under it. Alongside the blur this is the other place the flat rule is set
+     aside on purpose — a slab of glass with nothing beneath it is just a
+     rectangle. */
+  box-shadow:
+    0 2px 6px -2px color-mix(in srgb, var(--color-pn-fg) 22%, transparent),
+    0 20px 44px -16px color-mix(in srgb, var(--color-pn-fg) 26%, transparent);
+
   /* No `position` here. This file is loaded after Tailwind's utilities, so a
      position declared on this class would beat `.sticky` on the same element
      by source order and quietly unpin the masthead. Sticky already establishes
@@ -370,7 +380,7 @@ body {
    everyone else gets. */
 @supports (backdrop-filter: url("#crt-warp")) {
   .crt-glass {
-    backdrop-filter: blur(2px) saturate(126%) brightness(1.02) url("#crt-warp") url("#glass-refract");
+    backdrop-filter: blur(2.5px) saturate(128%) brightness(1.03) url("#crt-warp") url("#glass-refract");
   }
 }
 
@@ -386,12 +396,13 @@ body {
 .crt-glass::after {
   content: "";
   position: absolute;
-  /* A little overdraw so the displacement pulls grille into view at the edges
-     rather than leaving a bare margin. Small, because the shift is small. */
-  inset: -6px -10px;
+  /* Overdraw well past the box: between the CRT shiver and the bevel the
+     grille is displaced by up to about half the bevel's scale, and without
+     slack the filter samples past its own edge and leaves a bare margin. */
+  inset: -20px -24px;
   pointer-events: none;
   z-index: 1;
-  filter: url("#crt-grille");
+  filter: url("#crt-grille") url("#glass-refract");
   background-image:
     repeating-linear-gradient(
       to bottom,

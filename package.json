@@ -13,7 +13,8 @@
     "sync": "node scripts/fetch-projects.mjs",
     "check": "node scripts/check-site.mjs",
     "og": "node scripts/build-og.mjs",
-    "typecheck": "nuxt typecheck"
+    "typecheck": "nuxt typecheck",
+    "bevel": "node scripts/build-bevel-map.mjs"
   },
   "dependencies": {
     "@nuxt/ui": "^4.11.2",
