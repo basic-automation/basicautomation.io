@@ -1,14 +1,21 @@
 <script setup lang="ts">
-/** A labelled separator: `── label ────────────────────`, as a TUI draws one. */
+/**
+ * A labelled section rule. Backed by USeparator so it carries a real
+ * `role="separator"` rather than being a decorative div — the label starts the
+ * line, as a TUI draws one, and everything visual comes from the theme.
+ */
 const { label } = defineProps<{ label?: string }>()
 </script>
 
 <template>
-  <div class="flex items-center gap-3 select-none">
-    <span aria-hidden="true" class="w-6 rule-dashed" />
-    <span v-if="label" class="shrink-0 text-xs tracking-widest text-pn-muted lowercase">
-      {{ label }}
-    </span>
-    <span aria-hidden="true" class="flex-1 rule-dashed" />
-  </div>
+  <USeparator
+    type="dashed"
+    :label="label"
+    :position="label ? 'start' : 'center'"
+    :ui="{
+      border: 'border-pn-rule/70',
+      container: 'font-mono',
+      label: 'font-mono text-xs tracking-widest text-pn-muted lowercase pe-4',
+    }"
+  />
 </template>

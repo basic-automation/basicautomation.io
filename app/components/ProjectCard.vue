@@ -10,24 +10,26 @@ const { project } = defineProps<{ project: EnrichedProject }>()
     :style="accentVar(project.accent)"
     class="group block"
   >
-    <!-- Media. A screenshot when there is one, the wordmark when there isn't,
-         and the project's name set large when there is neither — the point is
-         that every card occupies the same block so the grid stays even. No
-         frame, no fill: the media sits straight on the page's ground. -->
+    <!-- Media. The mark comes first: the grid reads as a set of brands, and a
+         screenshot sitting among wordmarks looks like a different kind of
+         object. The screenshot still gets its own section on the project page,
+         where it is evidence rather than identity. The name set large when
+         there is neither, so every card occupies the same block and the grid
+         stays even. No frame, no fill — the media sits on the page's ground. -->
     <div class="relative aspect-16/10 overflow-hidden">
       <img
-        v-if="project.screenshot"
-        :src="project.screenshot"
-        :alt="`${project.name} screenshot`"
-        loading="lazy"
-        class="absolute inset-0 h-full w-full object-cover object-top transition-opacity duration-300 group-hover:opacity-90"
-      >
-      <img
-        v-else-if="project.logo"
+        v-if="project.logo"
         :src="project.logo"
         :alt="project.name"
         loading="lazy"
         class="absolute inset-0 h-full w-full object-contain p-10 transition-transform duration-300 group-hover:scale-[1.03] sm:p-14"
+      >
+      <img
+        v-else-if="project.screenshot"
+        :src="project.screenshot"
+        :alt="`${project.name} screenshot`"
+        loading="lazy"
+        class="absolute inset-0 h-full w-full object-cover object-top transition-opacity duration-300 group-hover:opacity-90"
       >
       <span
         v-else

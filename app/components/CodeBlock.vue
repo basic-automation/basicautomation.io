@@ -29,14 +29,14 @@ onBeforeUnmount(() => clearTimeout(timer))
   <figure class="bar" style="--accent: var(--color-pn-rule)">
     <figcaption v-if="label" class="flex items-baseline gap-4 pb-2 text-xs text-pn-muted">
       <span class="truncate"># {{ label }}</span>
-      <button
-        type="button"
-        class="ml-auto shrink-0 transition-colors hover:text-pn-fg-bright"
+      <UButton
+        :ui="{ base: 'bg-transparent! p-0! ring-0! font-mono text-xs cursor-pointer hover:bg-transparent!' }"
+        class="ml-auto shrink-0 text-pn-muted hover:text-pn-fg-bright"
         :aria-label="`Copy ${label}`"
         @click="copy"
       >
         {{ copied ? '[copied]' : '[copy]' }}
-      </button>
+      </UButton>
     </figcaption>
 
     <!-- Highlighted on the server by Shiki, in the site's own palette. -->

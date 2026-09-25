@@ -16,6 +16,7 @@
     "typecheck": "nuxt typecheck"
   },
   "dependencies": {
+    "@nuxt/ui": "^4.11.2",
     "marked": "^18.0.14",
     "nuxt": "^4.5.2",
     "shiki": "^4.4.3",
@@ -31,6 +32,7 @@
     "typescript": "^7.0.2"
   },
   "allowScripts": {
-    "esbuild@0.28.2": true
+    "esbuild@0.28.2": true,
+    "vue-demi@0.14.10": true
   }
 }

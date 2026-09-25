@@ -1,6 +1,17 @@
-import tailwindcss from '@tailwindcss/vite'
-
 export default defineNuxtConfig({
+  // Nuxt UI carries its own Tailwind v4 pipeline, so the standalone
+  // @tailwindcss/vite plugin is gone — running both processed main.css twice.
+  modules: ['@nuxt/ui'],
+
+  // The library's components are used for behaviour (focus, keyboard, ARIA),
+  // never for their looks; app.config.ts strips them back to the flat house
+  // style. `ui.theme.colors` maps Nuxt UI's semantic slots onto Paleday.
+  ui: {
+    theme: {
+      colors: ['primary', 'neutral', 'success', 'info', 'warning', 'error'],
+    },
+  },
+
   compatibilityDate: '2026-09-24',
   devtools: { enabled: false },
 
@@ -10,10 +21,6 @@ export default defineNuxtConfig({
   ssr: true,
 
   css: ['~/assets/css/main.css'],
-
-  vite: {
-    plugins: [tailwindcss()],
-  },
 
   runtimeConfig: {
     // Optional. Lifts GitHub's anonymous 60 req/hour limit — set GITHUB_TOKEN
