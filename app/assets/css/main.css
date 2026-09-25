@@ -372,23 +372,23 @@ body {
      whisper of the accent through the pane, concentrated into the bevels. */
   background-color: color-mix(
     in srgb,
-    color-mix(in srgb, var(--color-pn-accent) 8%, var(--color-pn-bg)) 58%,
+    color-mix(in srgb, var(--color-pn-accent) 1%, var(--color-pn-bg)) 58%,
     transparent
   );
   background-image:
     linear-gradient(
       to right,
-      color-mix(in srgb, var(--color-pn-accent) 26%, transparent) 0,
+      color-mix(in srgb, var(--color-pn-accent) 3%, transparent) 0,
       transparent 6%,
       transparent 94%,
-      color-mix(in srgb, var(--color-pn-accent) 26%, transparent) 100%
+      color-mix(in srgb, var(--color-pn-accent) 3%, transparent) 100%
     ),
     linear-gradient(
       to bottom,
-      color-mix(in srgb, var(--color-pn-accent) 12%, transparent) 0,
+      color-mix(in srgb, var(--color-pn-accent) 1%, transparent) 0,
       transparent 16%,
       transparent 72%,
-      color-mix(in srgb, var(--color-pn-accent) 20%, transparent) 100%
+      color-mix(in srgb, var(--color-pn-accent) 2%, transparent) 100%
     );
   backdrop-filter: blur(2px) saturate(118%);
   -webkit-backdrop-filter: blur(2px) saturate(118%);
@@ -412,9 +412,11 @@ body {
    It carries two filters, the pair the backdrop gets. #crt-grille is the
    shiver — same bands and same clock as the backdrop's warp, a fraction of the
    pull, because a working tube does not tear its own raster. Then
-   #glass-refract bends it at the edges along with everything else: the grille
-   is printed on the glass, so the slab's thickness distorts it exactly as it
-   distorts the picture behind. */
+   #glass-bevel-grille bends it at the edges along with everything else — the
+   grille is printed on the glass, so the slab's thickness has to distort it
+   too. Same map and same edges as the backdrop's bevel, a quarter of the
+   pull: these lines are 1px on a 3px period, and the backdrop's ±13px would
+   stretch four periods across one and wash them out entirely. */
 .crt-glass::after {
   content: "";
   position: absolute;
@@ -426,7 +428,7 @@ body {
   inset: 0;
   pointer-events: none;
   z-index: 1;
-  filter: url("#crt-grille") url("#glass-refract");
+  filter: url("#crt-grille") url("#glass-bevel-grille");
   background-image:
     repeating-linear-gradient(
       to bottom,

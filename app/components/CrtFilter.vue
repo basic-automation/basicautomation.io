@@ -118,6 +118,33 @@
         </feDisplacementMap>
       </filter>
 
+      <filter
+        id="glass-bevel-grille"
+        filterUnits="objectBoundingBox"
+        x="0%"
+        y="0%"
+        width="100%"
+        height="100%"
+        color-interpolation-filters="sRGB"
+      >
+        <!-- The same map and the same edges, at a quarter of the pull.
+             The backdrop can take ±13px because it is a photograph; the
+             grille cannot. Its lines are 1px on a 3px period, so a shift of
+             that size stretches four periods of pattern across one and smears
+             them into a wash — which read as the scanlines stopping before
+             the edge. At ±3px they bend and stay lines. -->
+        <feImage href="/bg/bevel-map.png" result="bevel" preserveAspectRatio="none" />
+        <feDisplacementMap
+          in="SourceGraphic"
+          in2="bevel"
+          scale="6"
+          x-channel-selector="R"
+          y-channel-selector="G"
+        >
+          <animate attributeName="scale" dur="13s" values="6; 7; 5; 6" repeatCount="indefinite" />
+        </feDisplacementMap>
+      </filter>
+
     </defs>
   </svg>
 </template>
