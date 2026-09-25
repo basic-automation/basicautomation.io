@@ -36,6 +36,13 @@ export default defineNuxtConfig({
         { rel: 'icon', type: 'image/png', sizes: '32x32', href: '/favicon-32.png' },
         { rel: 'icon', href: '/favicon.ico', sizes: '48x48' },
         { rel: 'apple-touch-icon', href: '/apple-touch-icon.png' },
+        // So a reader finds the releases feed from any page on the site.
+        {
+          rel: 'alternate',
+          type: 'application/atom+xml',
+          title: 'Basic Automation — releases',
+          href: '/releases.xml',
+        },
         {
           rel: 'preload',
           as: 'font',

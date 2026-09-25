@@ -55,6 +55,13 @@ const year = new Date().getFullYear()
               class="text-pn-dim transition-colors hover:text-pn-fg-bright"
             >crates.io</a>
           </li>
+          <li>
+            <!-- Not a NuxtLink: this is a server route, not a page to route to. -->
+            <a
+              href="/releases.xml"
+              class="text-pn-dim transition-colors hover:text-pn-fg-bright"
+            >releases feed</a>
+          </li>
         </ul>
       </div>
     </div>
