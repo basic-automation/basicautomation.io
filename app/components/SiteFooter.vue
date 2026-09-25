@@ -68,7 +68,10 @@ const year = new Date().getFullYear()
 
     <div class="mt-10 flex flex-col gap-1.5 text-xs text-pn-muted sm:flex-row sm:justify-between">
       <span># © {{ year }} basic automation</span>
-      <span># data live from github &amp; crates.io</span>
+      <!-- The claim and the evidence for it, in the same place. -->
+      <NuxtLink to="/status" class="transition-colors hover:text-pn-fg-bright">
+        # data live from github &amp; crates.io
+      </NuxtLink>
     </div>
   </footer>
 </template>

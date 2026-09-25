@@ -9,40 +9,74 @@
  * restarted. It is degraded, not down, and the two need different words.
  */
 
+import type { Health } from '~~/shared/types/health'
+
+/**
+ * Stale for this long stops being a blip and starts being something someone
+ * should look at. Upstream is cached for fifteen minutes and served stale for
+ * six hours, so an hour of snapshot-only answers means several refresh windows
+ * have come and gone with GitHub still unreachable.
+ */
+const STALE_ALERT_AFTER = 60 * 60 * 1000 // 1 hour
+
 const startedAt = Date.now()
 
 let liveCount = 0
 let snapshotCount = 0
 /** When the current run of snapshot-only answers began. Null while any is live. */
 let degradedSince: number | null = null
+/** So the alert below is an hourly line, not one per request. */
+let lastAlertAt = 0
 
 /** Called once per resolved repo, by the cached fetch in `github.ts`. */
 export function recordSource(source: 'live' | 'snapshot'): void {
   if (source === 'live') {
     liveCount++
+    if (degradedSince !== null) {
+      console.warn(JSON.stringify({
+        t: new Date().toISOString(),
+        level: 'warn',
+        event: 'upstream.recovered',
+        degradedForSeconds: Math.round((Date.now() - degradedSince) / 1000),
+        message: 'upstream reachable again; serving live data',
+      }))
+    }
     degradedSince = null
+    lastAlertAt = 0
   }
   else {
     snapshotCount++
     degradedSince ??= Date.now()
+    alertIfStale()
   }
 }
 
-export interface Health {
-  status: 'ok' | 'degraded'
-  uptimeSeconds: number
-  startedAt: string
-  data: {
-    /** 'live' until a fetch falls back; 'snapshot' until one succeeds again. */
-    source: 'live' | 'snapshot' | 'unknown'
-    liveResolutions: number
-    snapshotResolutions: number
-    degradedSince: string | null
-    degradedForSeconds: number | null
-  }
+/**
+ * One line an hour, for as long as the site is answering from the snapshot.
+ * It shares the request log's shape, so whatever reads that reads this too and
+ * nothing new has to be wired up to notice.
+ */
+function alertIfStale(): void {
+  if (degradedSince === null) return
+  const now = Date.now()
+  const degradedFor = now - degradedSince
+  if (degradedFor < STALE_ALERT_AFTER) return
+  if (now - lastAlertAt < STALE_ALERT_AFTER) return
+
+  lastAlertAt = now
+  console.warn(JSON.stringify({
+    t: new Date().toISOString(),
+    level: 'warn',
+    event: 'upstream.stale',
+    degradedSince: new Date(degradedSince).toISOString(),
+    degradedForSeconds: Math.round(degradedFor / 1000),
+    message: 'serving from the committed snapshot; GitHub has been unreachable for over an hour',
+  }))
 }
 
 export function health(): Health {
+  alertIfStale()
+
   const now = Date.now()
   const source = degradedSince !== null
     ? 'snapshot'

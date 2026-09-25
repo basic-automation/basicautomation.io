@@ -8,7 +8,7 @@
  * does. The static pages carry no `lastmod` rather than a made-up one.
  */
 
-const STATIC_ROUTES = ['/', '/projects']
+const STATIC_ROUTES = ['/', '/projects', '/status']
 
 /** Only five characters are ever wrong inside XML text, and these are them. */
 function xmlEscape(value: string): string {
