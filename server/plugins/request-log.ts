@@ -13,6 +13,29 @@
 
 const SILENT = [/^\/healthz$/, /^\/_nuxt\//, /^\/fonts\//, /\.(?:ico|png|webp|svg|woff2?)$/]
 
+/**
+ * Rendering a page server-side calls the site's own `/api/projects` through
+ * Nitro's internal `$fetch`, which never opens a socket. Counted as a request
+ * it doubles every page view and invents traffic on routes nobody asked for:
+ * one visit to `/` logged as a visit to `/` AND a visit to `/api/projects`,
+ * and one 404 on `/projects/nope` logged twice.
+ *
+ * Measured rather than assumed — an internal call arrives with a mock socket
+ * whose `remoteAddress` is the empty string, a real one carries its peer:
+ *
+ *   internal  { hasSocket: true, remote: "",          ctor: "A"      }
+ *   external  { hasSocket: true, remote: "127.0.0.1", ctor: "Socket" }
+ *
+ * A real request always has either a peer address — Nitro listens on TCP here,
+ * in the container and out of it — or an `x-forwarded-for` from Caddy, so
+ * "neither" means internal. A request arriving through the onion proxy has no
+ * forwarded address by design but does have a peer, and is still logged.
+ */
+function isInternal(event: InstanceType<typeof H3Event>): boolean {
+  const socket = event.node?.req?.socket
+  return !socket || (!socket.remoteAddress && !getRequestHeader(event, 'x-forwarded-for'))
+}
+
 export default defineNitroPlugin((nitro) => {
   nitro.hooks.hook('request', (event) => {
     event.context.startedAt = performance.now()
@@ -21,6 +44,7 @@ export default defineNitroPlugin((nitro) => {
   nitro.hooks.hook('afterResponse', (event) => {
     const path = event.path.split('?')[0] ?? event.path
     if (SILENT.some((re) => re.test(path))) return
+    if (isInternal(event)) return
 
     const started = event.context.startedAt as number | undefined
 
@@ -43,6 +67,7 @@ export default defineNitroPlugin((nitro) => {
   // line carrying a status. Same shape as the line above, so one jq filter
   // reads both.
   nitro.hooks.hook('error', (error, { event }) => {
+    if (event && isInternal(event)) return
     const started = event?.context.startedAt as number | undefined
     const status = (error as { statusCode?: number }).statusCode ?? 500
 
