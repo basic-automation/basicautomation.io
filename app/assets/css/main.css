@@ -366,18 +366,40 @@ body {
      position declared on this class would beat `.sticky` on the same element
      by source order and quietly unpin the masthead. Sticky already establishes
      the containing block the pseudo-elements below need. */
-  background-color: color-mix(in srgb, var(--color-pn-bg) 58%, transparent);
+  /* Glass is green. Real glass takes its colour from iron in the melt, and you
+     see it where the light travels furthest — through the thick part at the
+     edges, which is why a cut sheet looks green end-on and clear face-on. A
+     whisper of the accent through the pane, concentrated into the bevels. */
+  background-color: color-mix(
+    in srgb,
+    color-mix(in srgb, var(--color-pn-accent) 8%, var(--color-pn-bg)) 58%,
+    transparent
+  );
+  background-image:
+    linear-gradient(
+      to right,
+      color-mix(in srgb, var(--color-pn-accent) 26%, transparent) 0,
+      transparent 6%,
+      transparent 94%,
+      color-mix(in srgb, var(--color-pn-accent) 26%, transparent) 100%
+    ),
+    linear-gradient(
+      to bottom,
+      color-mix(in srgb, var(--color-pn-accent) 12%, transparent) 0,
+      transparent 16%,
+      transparent 72%,
+      color-mix(in srgb, var(--color-pn-accent) 20%, transparent) 100%
+    );
   backdrop-filter: blur(2px) saturate(118%);
   -webkit-backdrop-filter: blur(2px) saturate(118%);
 }
 
 /* Where the browser can point backdrop-filter at an SVG filter, the backdrop
    gets both passes: the CRT warp smears it sideways along the scanlines, then
-   the glass slab refracts it vertically toward the centre line. They are
-   chained rather than merged because each owns one axis — the CRT takes X,
-   the slab takes Y — and a single filter would make them fight for the same
-   displacement. Chrome and Firefox can do this; the plain blur above is what
-   everyone else gets. */
+   the glass slab pulls it toward the centre of the pane wherever it nears an
+   edge. Chained rather than merged, so the warp keeps its own animation while
+   the bevel stays still. Chrome and Firefox can do this; the plain blur above
+   is what everyone else gets. */
 @supports (backdrop-filter: url("#crt-warp")) {
   .crt-glass {
     backdrop-filter: blur(2.5px) saturate(128%) brightness(1.03) url("#crt-warp") url("#glass-refract");
@@ -387,19 +409,21 @@ body {
 /* The phosphor grille. Full height of the glass, no fade — the lines are the
    screen, not a decoration on it.
 
-   It carries the SAME filter as the backdrop, so the grille is displaced by
-   the same turbulence, on the same clock: the lines ripple in step with the
-   picture rather than sitting flat on top of a moving image. That is what a
-   real tube does — the raster IS the picture, so whatever bends one bends
-   both. Referencing one animated filter from both places is what keeps them
-   in sync; two filters would drift apart. */
+   It carries two filters, the pair the backdrop gets. #crt-grille is the
+   shiver — same bands and same clock as the backdrop's warp, a fraction of the
+   pull, because a working tube does not tear its own raster. Then
+   #glass-refract bends it at the edges along with everything else: the grille
+   is printed on the glass, so the slab's thickness distorts it exactly as it
+   distorts the picture behind. */
 .crt-glass::after {
   content: "";
   position: absolute;
-  /* Overdraw well past the box: between the CRT shiver and the bevel the
-     grille is displaced by up to about half the bevel's scale, and without
-     slack the filter samples past its own edge and leaves a bare margin. */
-  inset: -20px -24px;
+  /* Flush with the pane, NOT overdrawn. The bevel acts at the edges of this
+     box, so an overdrawn box put the bevel bands outside the pane where the
+     overflow clip removed them — the grille stayed flat at exactly the edges
+     the effect was meant to show. The displacement pulls inward, so nothing
+     samples past the edge and no bare margin appears. */
+  inset: 0;
   pointer-events: none;
   z-index: 1;
   filter: url("#crt-grille") url("#glass-refract");
