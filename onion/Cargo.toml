@@ -1,0 +1,22 @@
+[package]
+name = "basicautomation-onion"
+version = "0.1.0"
+edition = "2021"
+license = "MIT"
+publish = false
+description = "Serves basicautomation.io as a Tor onion service, via onyums."
+
+[dependencies]
+axum = "0.8"
+tokio = { version = "1", features = ["rt-multi-thread", "macros", "net", "signal"] }
+# The upstream is plain HTTP on the container network, so the whole TLS stack is
+# turned off rather than pulled in and left unused.
+reqwest = { version = "0.12", default-features = false, features = ["stream"] }
+http = "1"
+http-body-util = "0.1"
+futures-util = "0.3"
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter", "json"] }
+
+[dev-dependencies]
+tokio = { version = "1", features = ["full"] }

@@ -54,6 +54,31 @@ jobs:
           done
           npm run check
 
+  onion:
+    name: onion gateway
+    runs-on: ubuntu-latest
+    # A crate in the repo that CI does not build is a crate that is broken by
+    # next week. It is not deployed yet (see docs/onion.md), but it compiles,
+    # it is linted and its tests run on every change.
+    defaults:
+      run:
+        working-directory: onion
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: clippy
+      # rustfmt.toml uses unstable options, which only nightly rustfmt reads.
+      - uses: dtolnay/rust-toolchain@nightly
+        with:
+          components: rustfmt
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: onion
+      - run: cargo +nightly fmt --check
+      - run: cargo clippy --all-targets -- -D warnings
+      - run: cargo test
+
   image:
     name: image builds
     runs-on: ubuntu-latest
