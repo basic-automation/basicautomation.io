@@ -385,12 +385,12 @@ body {
   background-image:
     repeating-linear-gradient(
       to bottom,
-      color-mix(in srgb, var(--color-pn-fg) 16%, transparent) 0 1px,
+      color-mix(in srgb, var(--color-pn-fg) 8%, transparent) 0 1px,
       transparent 1px 3px
     ),
     linear-gradient(
       to bottom,
-      color-mix(in srgb, var(--color-pn-fg-bright) 20%, transparent) 0,
+      color-mix(in srgb, var(--color-pn-fg-bright) 10%, transparent) 0,
       transparent 42%
     );
 }
