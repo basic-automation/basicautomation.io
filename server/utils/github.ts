@@ -246,11 +246,17 @@ function fromSnapshot(repo: string): RepoMeta | null {
 const cachedRepo = defineCachedFunction(
   async (project: Project): Promise<RepoMeta | null> => {
     try {
-      return await fetchRepo(project)
+      const meta = await fetchRepo(project)
+      recordSource('live')
+      return meta
     }
     catch (err) {
       console.warn(`[github] ${project.repo} fetch failed, using snapshot:`, (err as Error).message)
-      return fromSnapshot(project.repo)
+      const meta = fromSnapshot(project.repo)
+      // Only a fetch that actually produced a page's worth of data counts as
+      // degraded. A repo with no snapshot either is a different problem.
+      if (meta) recordSource('snapshot')
+      return meta
     }
   },
   {
