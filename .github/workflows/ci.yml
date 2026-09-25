@@ -39,8 +39,11 @@ jobs:
       - name: Build
         run: npm run build
       # The build is only half the claim — prove the server actually starts and
-      # renders a page, which a successful bundle does not guarantee.
-      - name: Smoke test the rendered site
+      # renders, which a successful bundle does not guarantee. `npm run check`
+      # crawls every page, follows every internal link and asset, walks the
+      # sitemap, and asserts the 404s are 404s. External links are not followed:
+      # somebody else's uptime must not decide whether this PR is green.
+      - name: Check the rendered site
         run: |
           node .output/server/index.mjs &
           server=$!
@@ -49,10 +52,7 @@ jobs:
             curl -sf -o /dev/null http://127.0.0.1:3000/healthz && break
             sleep 0.5
           done
-          curl -sf http://127.0.0.1:3000/healthz >/dev/null
-          curl -sf http://127.0.0.1:3000/ | grep -q "Software for the"
-          curl -sf http://127.0.0.1:3000/projects/artiqwest | grep -q "artiqwest"
-          test "$(curl -s -o /dev/null -w '%{http_code}' http://127.0.0.1:3000/projects/nope)" = "404"
+          npm run check
 
   image:
     name: image builds

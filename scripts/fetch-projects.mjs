@@ -18,6 +18,7 @@ import { fileURLToPath } from 'node:url'
 import { dirname, resolve } from 'node:path'
 import { Marked } from 'marked'
 import { projects } from '../data/projects.ts'
+import { createSlugger } from '../shared/markdown/slug.ts'
 
 const HERE = dirname(fileURLToPath(import.meta.url))
 const OUT = resolve(HERE, '../data/projects.generated.json')
@@ -78,8 +79,32 @@ function stripLeadingLogo(markdown) {
     .replace(/^(?:\s*<br\s*\/?>\s*)+/i, '')
 }
 
-/** These repos are first-party, so the README's own HTML is rendered as-is. */
-const marked = new Marked({ gfm: true, breaks: false, async: false })
+/**
+ * These repos are first-party, so the README's own HTML is rendered as-is.
+ *
+ * One renderer per README, because the slugger has to number duplicate heading
+ * text from 1 within a document rather than across the whole run. Headings get
+ * GitHub's own anchor so a README's table of contents still works here — the
+ * same treatment the live renderer in server/utils/github.ts gives them.
+ */
+function markdownRenderer() {
+  const slug = createSlugger()
+  return new Marked({
+    gfm: true,
+    breaks: false,
+    async: false,
+    renderer: {
+      // The slug comes from the heading's raw text, never from the rendered
+      // inline HTML: `Identity & address helpers` renders as `&amp;`, and
+      // slugging that gives `identity-amp-address-helpers` instead of the
+      // `identity--address-helpers` GitHub minted and the README links to.
+      heading({ tokens, depth, text }) {
+        const inner = this.parser.parseInline(tokens)
+        return `<h${depth} id="${slug(text)}">${inner}</h${depth}>\n`
+      },
+    },
+  })
+}
 
 async function fetchRepo(project) {
   const { repo } = project
@@ -111,7 +136,7 @@ async function fetchRepo(project) {
       'application/vnd.github.raw',
     )
     const prepared = absolutize(stripLeadingLogo(md), repo, out.defaultBranch)
-    out.readmeHtml = marked.parse(prepared)
+    out.readmeHtml = markdownRenderer().parse(prepared)
   }
   catch {
     out.readmeHtml = null

@@ -73,14 +73,19 @@ async function fetchOnce(url) {
   return promise
 }
 
-/** Every `href` and `src` in the markup, plus the `srcset` candidates. */
+/**
+ * Every `href` and `src` in the markup, plus the `srcset` candidates, each with
+ * the offset it was found at — so a reference can be told apart from one inside
+ * the rendered README, which is somebody else's content.
+ */
 function extractRefs(html) {
-  const out = new Set()
-  for (const m of html.matchAll(/\b(?:href|src)=["']([^"']+)["']/gi)) out.add(m[1])
+  const out = new Map()
+  const add = (url, index) => { if (!out.has(url)) out.set(url, index) }
+  for (const m of html.matchAll(/\b(?:href|src)=["']([^"']+)["']/gi)) add(m[1], m.index)
   for (const m of html.matchAll(/\bsrcset=["']([^"']+)["']/gi)) {
     for (const candidate of m[1].split(',')) {
       const url = candidate.trim().split(/\s+/)[0]
-      if (url) out.add(url)
+      if (url) add(url, m.index)
     }
   }
   return [...out]
@@ -117,12 +122,21 @@ while (queue.length) {
   // Fragment links point at an id on the page that emitted them.
   const ids = new Set([...res.body.matchAll(/\bid=["']([^"']+)["']/g)].map((m) => m[1]))
 
-  for (const ref of extractRefs(res.body)) {
+  // Everything from the rendered README onwards is a repo's own markdown, not
+  // this site's markup. A stale contents link in there is upstream's to fix and
+  // must not turn this check red, so it warns.
+  const readmeAt = res.body.indexOf('class="readme')
+  const isUpstream = (index) => readmeAt !== -1 && index >= readmeAt
+
+  for (const [ref, index] of extractRefs(res.body)) {
     if (/^(mailto|tel|data|javascript):/i.test(ref)) continue
 
     if (ref.startsWith('#')) {
       const id = decodeURIComponent(ref.slice(1))
-      if (id && !ids.has(id)) fail(path, `fragment link ${ref} has no matching id on the page`)
+      if (!id || ids.has(id)) continue
+      const report = isUpstream(index) ? warn : fail
+      report(path, `fragment link ${ref} has no matching id on the page${
+        isUpstream(index) ? " — it is in the repo's own README" : ''}`)
       continue
     }
 

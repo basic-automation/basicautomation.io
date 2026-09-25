@@ -19,6 +19,7 @@ import { Marked } from 'marked'
 import { ofetch } from 'ofetch'
 import { projects, type Project } from '~~/data/projects'
 import type { EnrichedProject, Release, RepoMeta } from '~~/shared/types/project'
+import { createSlugger } from '~~/shared/markdown/slug'
 import snapshot from '~~/data/projects.generated.json'
 
 const ORG = 'basic-automation'
@@ -45,16 +46,19 @@ type SnapshotRepo = Omit<RepoMeta, 'source' | 'releases'> & { releases?: Release
 
 const snapshotRepos = (snapshot as { repos: Record<string, SnapshotRepo> }).repos ?? {}
 
-const marked = new Marked({ gfm: true, breaks: false, async: false })
-
 /**
  * README code fences go through the same highlighter as the site's own
  * examples, so a repo's code reads the same as the code beside it. Shiki is
  * async to initialise, so fences are collected on the first pass and swapped in
  * on a second — `marked` itself stays synchronous.
+ *
+ * Headings carry GitHub's own anchor, so a README's table of contents still
+ * works once it is rendered here. The slugger is per-document: duplicate
+ * heading text numbers from 1 within one README, not across all of them.
  */
 async function renderMarkdown(md: string): Promise<string> {
   const fences: { lang: string | undefined, code: string }[] = []
+  const slug = createSlugger()
 
   const collecting = new Marked({
     gfm: true,
@@ -64,6 +68,14 @@ async function renderMarkdown(md: string): Promise<string> {
       code({ text, lang }) {
         fences.push({ lang, code: text })
         return `\u0000FENCE${fences.length - 1}\u0000`
+      },
+      // The slug comes from the heading's raw text, never from the rendered
+      // inline HTML: `Identity & address helpers` renders as `&amp;`, and
+      // slugging that gives `identity-amp-address-helpers` instead of the
+      // `identity--address-helpers` GitHub minted and the README links to.
+      heading({ tokens, depth, text }) {
+        const inner = this.parser.parseInline(tokens)
+        return `<h${depth} id="${slug(text)}">${inner}</h${depth}>\n`
       },
     },
   })
