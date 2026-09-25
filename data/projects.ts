@@ -222,6 +222,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     slug: 'weftdb',
     repo: 'weftdb',
     name: 'WeftDB',
+    logo: '/projects/weftdb.svg',
     tagline: 'A time-series database for data that never arrived on schedule',
     hero: 'Gaps, filled. And labelled.',
     summary:

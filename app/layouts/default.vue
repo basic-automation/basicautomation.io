@@ -39,8 +39,8 @@ const FADE = [
         // are laid out in fixed terms, so a pixel offset holds; a percentage
         // would drift as the band changes height.
         backgroundImage: 'url(/bg/hero.webp)',
-        backgroundSize: 'auto 148%',
-        backgroundPosition: 'right 0 top -168px',
+        backgroundSize: 'auto 132%',
+        backgroundPosition: 'right 0 top -116px',
         maskImage: FADE,
         WebkitMaskImage: FADE,
         maskComposite: 'intersect',
