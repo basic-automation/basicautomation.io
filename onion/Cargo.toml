@@ -25,3 +25,6 @@ tracing-subscriber = { version = "0.3", features = ["env-filter", "json"] }
 
 [dev-dependencies]
 tokio = { version = "1", features = ["full"] }
+# Only to assert, in a test, that the WAF rule `gate.rs` disables still has the
+# defect it is disabled for. Not linked into the binary.
+regex = "1"

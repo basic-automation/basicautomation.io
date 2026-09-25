@@ -11,6 +11,7 @@
 //!
 //!   ONION_UPSTREAM=http://127.0.0.1:3000 cargo run
 
+mod gate;
 mod proxy;
 
 use std::path::Path;
@@ -50,7 +51,9 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 	// The identity key lives in a persistent keystore under ./tor/onyums, so
 	// the address survives restarts. That directory is a volume in the image —
 	// lose it and the site gets a new name.
-	let handle = OnionService::builder().router(app).nickname(&nickname).serve().await?;
+	// `.skin(...)` rather than the default gate: see `gate.rs`. The default one
+	// blocks every web browser on this site's front page.
+	let handle = OnionService::builder().router(app).nickname(&nickname).skin(gate::build()?).serve().await?;
 
 	let address = handle.onion_address().as_str().to_string();
 	tracing::info!(%address, "onion service launched");

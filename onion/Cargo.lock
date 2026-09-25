@@ -379,6 +379,7 @@ dependencies = [
  "http",
  "http-body-util",
  "onyums",
+ "regex",
  "reqwest",
  "tokio",
  "tracing",
