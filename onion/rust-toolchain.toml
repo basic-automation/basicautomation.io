@@ -1,0 +1,7 @@
+# Stable, matching CI and the rest of the organization's crates. Note that a
+# global `~/.cargo/config.toml` carrying nightly-only `build.rustflags` (such as
+# `-Z threads=8`) breaks every cargo command here with E0554, and cargo merges
+# rustflags across config files rather than overriding them — so a repo-local
+# config cannot clear it. The environment variable can: `RUSTFLAGS="" cargo …`.
+[toolchain]
+channel = "stable"

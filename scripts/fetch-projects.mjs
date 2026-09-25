@@ -18,17 +18,25 @@ import { fileURLToPath } from 'node:url'
 import { dirname, resolve } from 'node:path'
 import { Marked } from 'marked'
 import { projects } from '../data/projects.ts'
+import { createSlugger } from '../shared/markdown/slug.ts'
 
 const HERE = dirname(fileURLToPath(import.meta.url))
 const OUT = resolve(HERE, '../data/projects.generated.json')
 const ORG = 'basic-automation'
-const UA = 'basicautomation.io-build'
+// crates.io asks for a user agent that identifies the bot and carries contact
+// information, and GitHub asks that the API version be stated rather than
+// defaulted. Same reasoning as server/utils/github.ts, which has the sources.
+const UA = 'basicautomation.io-build (+https://basicautomation.io)'
+const GH_API_VERSION = '2022-11-28'
+/** Keep this in step with MAX_RELEASES in server/utils/github.ts. */
+const MAX_RELEASES = 5
 
 const token = process.env.GITHUB_TOKEN || process.env.GH_TOKEN || ''
 
 /** Nothing here is fatal: a failed fetch falls back to the committed snapshot. */
 async function getJSON(url, { accept = 'application/vnd.github+json', auth = true } = {}) {
   const headers = { 'user-agent': UA, accept }
+  if (auth) headers['x-github-api-version'] = GH_API_VERSION
   if (auth && token) headers.authorization = `Bearer ${token}`
   const res = await fetch(url, { headers })
   if (!res.ok) throw new Error(`${res.status} ${res.statusText} — ${url}`)
@@ -36,7 +44,7 @@ async function getJSON(url, { accept = 'application/vnd.github+json', auth = tru
 }
 
 async function getText(url, accept) {
-  const headers = { 'user-agent': UA, accept }
+  const headers = { 'user-agent': UA, accept, 'x-github-api-version': GH_API_VERSION }
   if (token) headers.authorization = `Bearer ${token}`
   const res = await fetch(url, { headers })
   if (!res.ok) throw new Error(`${res.status} ${res.statusText} — ${url}`)
@@ -76,8 +84,32 @@ function stripLeadingLogo(markdown) {
     .replace(/^(?:\s*<br\s*\/?>\s*)+/i, '')
 }
 
-/** These repos are first-party, so the README's own HTML is rendered as-is. */
-const marked = new Marked({ gfm: true, breaks: false, async: false })
+/**
+ * These repos are first-party, so the README's own HTML is rendered as-is.
+ *
+ * One renderer per README, because the slugger has to number duplicate heading
+ * text from 1 within a document rather than across the whole run. Headings get
+ * GitHub's own anchor so a README's table of contents still works here — the
+ * same treatment the live renderer in server/utils/github.ts gives them.
+ */
+function markdownRenderer() {
+  const slug = createSlugger()
+  return new Marked({
+    gfm: true,
+    breaks: false,
+    async: false,
+    renderer: {
+      // The slug comes from the heading's raw text, never from the rendered
+      // inline HTML: `Identity & address helpers` renders as `&amp;`, and
+      // slugging that gives `identity-amp-address-helpers` instead of the
+      // `identity--address-helpers` GitHub minted and the README links to.
+      heading({ tokens, depth, text }) {
+        const inner = this.parser.parseInline(tokens)
+        return `<h${depth} id="${slug(text)}">${inner}</h${depth}>\n`
+      },
+    },
+  })
+}
 
 async function fetchRepo(project) {
   const { repo } = project
@@ -109,19 +141,38 @@ async function fetchRepo(project) {
       'application/vnd.github.raw',
     )
     const prepared = absolutize(stripLeadingLogo(md), repo, out.defaultBranch)
-    out.readmeHtml = marked.parse(prepared)
+    out.readmeHtml = markdownRenderer().parse(prepared)
   }
   catch {
     out.readmeHtml = null
     console.warn(`  · ${repo}: no README`)
   }
 
-  // Latest release — most of these repos don't cut releases.
+  // Release history. One list call, not `releases/latest` plus a history call:
+  // the newest full release is derived from the same page, so the changelog
+  // costs nothing extra against the rate limit. Drafts are dropped — they are
+  // not public. Pre-releases stay: for several of these repos that is all
+  // there is, and the strip marks them.
   try {
-    const rel = await getJSON(`https://api.github.com/repos/${ORG}/${repo}/releases/latest`)
-    out.latestRelease = { tag: rel.tag_name, url: rel.html_url, publishedAt: rel.published_at }
+    const list = await getJSON(
+      `https://api.github.com/repos/${ORG}/${repo}/releases?per_page=${MAX_RELEASES}`,
+    )
+    out.releases = list
+      .filter((r) => r && !r.draft && r.tag_name)
+      .map((r) => ({
+        tag: r.tag_name,
+        title: r.name && r.name !== r.tag_name ? r.name : null,
+        url: r.html_url,
+        publishedAt: r.published_at || r.created_at,
+        prerelease: !!r.prerelease,
+      }))
+    const full = out.releases.find((r) => !r.prerelease)
+    out.latestRelease = full
+      ? { tag: full.tag, url: full.url, publishedAt: full.publishedAt }
+      : null
   }
   catch {
+    out.releases = []
     out.latestRelease = null
   }
 

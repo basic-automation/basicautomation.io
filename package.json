@@ -11,6 +11,8 @@
     "start": "node .output/server/index.mjs",
     "postinstall": "nuxt prepare",
     "sync": "node scripts/fetch-projects.mjs",
+    "check": "node scripts/check-site.mjs",
+    "og": "node scripts/build-og.mjs",
     "typecheck": "nuxt typecheck"
   },
   "dependencies": {

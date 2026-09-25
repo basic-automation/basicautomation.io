@@ -55,13 +55,23 @@ const year = new Date().getFullYear()
               class="text-pn-dim transition-colors hover:text-pn-fg-bright"
             >crates.io</a>
           </li>
+          <li>
+            <!-- Not a NuxtLink: this is a server route, not a page to route to. -->
+            <a
+              href="/releases.xml"
+              class="text-pn-dim transition-colors hover:text-pn-fg-bright"
+            >releases feed</a>
+          </li>
         </ul>
       </div>
     </div>
 
     <div class="mt-10 flex flex-col gap-1.5 text-xs text-pn-muted sm:flex-row sm:justify-between">
       <span># © {{ year }} basic automation</span>
-      <span># data live from github &amp; crates.io</span>
+      <!-- The claim and the evidence for it, in the same place. -->
+      <NuxtLink to="/status" class="transition-colors hover:text-pn-fg-bright">
+        # data live from github &amp; crates.io
+      </NuxtLink>
     </div>
   </footer>
 </template>

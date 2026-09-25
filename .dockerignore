@@ -1,11 +1,27 @@
-node_modules
-.nuxt
-.output
+# Docker matches these against the path from the context root, so a bare
+# `node_modules` excludes only the top-level one — a nested copy (a git
+# worktree beside the repo, say) sails straight into the build context. `**/`
+# is what makes a rule mean "anywhere".
+**/node_modules
+**/.nuxt
+**/.output
+**/dist
+**/.data
+**/*.log
+
+# Worktrees created by tooling alongside the repo.
+.worktrees
+
 .git
 .github
-.data
-dist
-*.log
-.env
-.env.*
+
+# Secrets never belong in a build context, at any depth.
+**/.env
+**/.env.*
+
+# Not needed to build the site: the onion gateway is its own crate and its own
+# image, the deploy manifest is documentation, and scratch is run output.
+onion
+docs
 deploy
+scratch

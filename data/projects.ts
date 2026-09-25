@@ -274,9 +274,9 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     tagline: 'One product list that keeps every storefront you sell on in step',
     hero: 'One catalog. Every marketplace.',
     summary:
-      'Keep a single product list and let it publish everywhere you sell. Stock levels, prices, '
-      + 'photos and descriptions stay in step across eBay, Squarespace, Amazon and XMR Bazaar, '
-      + 'so a sale in one place is reflected in all of them.',
+      'Keep a single product list and let it publish everywhere you sell. Prices, descriptions '
+      + 'and stock levels stay in step across eBay, Squarespace, XMR Bazaar and Amazon, so a '
+      + 'sale in one place is reflected in all of them.',
     problem:
       'Selling the same products in four places means keeping four product lists, and every sale '
       + 'quietly pulls them apart. You find out at the worst moment — when something sells twice '
@@ -289,11 +289,15 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     features: [
       {
         title: 'Sell in four places, maintain one list',
-        body: 'Edit a price, a photo or a description once. Every storefront that carries the product picks it up.',
+        body: 'Edit a price or a description once. Every storefront that carries the product picks up the change on the next sync.',
       },
       {
         title: 'Stock that stays honest',
         body: 'A sale anywhere counts down everywhere, so you stop selling things you no longer have.',
+      },
+      {
+        title: 'See the sync before it runs',
+        body: 'A dry run resolves a whole cycle and reports every change it would make — to your storefronts and to your own records — before anything is written.',
       },
       {
         title: 'Supplier catalogs, imported',
@@ -312,6 +316,37 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         body: 'History and trends per product, so restocking is a decision rather than a guess.',
       },
     ],
+    install: {
+      label: 'no binaries yet — build it from source',
+      lang: 'shellscript',
+      code: 'cargo tauri build',
+    },
+    // The real worked example for a desktop app is not code you write, it is
+    // the one file you fill in before it can reach a storefront. Taken from
+    // the repo's own config.example.toml.
+    example: {
+      label: 'connecting your storefronts',
+      lang: 'toml',
+      code: `[general]
+sync_schedule = "0 */5 * * * *"    # every five minutes
+max_retries = 3
+
+[ebay]
+enabled = true
+client_id = ""
+client_secret = ""
+environment = "production"
+
+[squarespace]
+enabled = true
+api_key = ""
+
+[alerts]
+default_low_stock_threshold = 5    # overridable per product in the app
+
+# Products are not configured here. They live in the catalog on your machine,
+# and you edit them in the app.`,
+    },
     links: [{ label: 'Built with Tauri', href: 'https://v2.tauri.app' }],
   },
   {
@@ -321,34 +356,59 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     logo: '/projects/skidbladnir.svg',
     screenshot: '/projects/shots/skidbladnir-screenshot.webp',
     tagline: 'Smaller images for the web, without touching a command line',
-    hero: 'Modern image formats, without the flags.',
+    hero: 'The whole WebP encoder, in a window.',
     summary:
-      'Convert images to the formats that make pages load faster, through a window instead of '
-      + 'a command line. Same output as the tools the professionals use, none of the syntax.',
+      'Convert images to WebP through a window instead of a command line — the encoder\'s full '
+      + 'control surface, not just a quality slider. Queue a batch, set it up once, and get '
+      + 'exactly what the reference tool produces. Windows today; a rewrite for Linux and '
+      + 'macOS is in progress.',
     problem:
-      'The official converters for these formats are excellent and almost unusable — a wall of '
-      + 'options you relearn every time you need them, and one wrong flag away from a ruined '
-      + 'batch. Skidbladnir puts a window in front of them and gets the same result.',
+      'The official WebP converter is excellent and almost unusable — a wall of options you '
+      + 'relearn every time you need them, and one wrong flag away from a ruined batch. '
+      + 'Skidbladnir puts a window in front of it and gets the same result.',
     kind: 'Desktop app',
     status: 'active',
     accent: 'green',
     order: 5,
     features: [
       {
-        title: 'Point it at a folder and go',
-        body: 'Convert a whole batch at once. Pick your settings in a window; it handles the rest.',
+        title: 'A batch at a time',
+        body: 'Queue up a whole set of images and convert them in one go. It reports the original and the converted size for each one, so you can see what you actually saved.',
       },
       {
         title: 'Lighter pages, same picture',
-        body: 'Modern formats carry the same image in a fraction of the file size — faster pages for your visitors, less bandwidth on your bill.',
+        body: 'WebP carries the same image in a fraction of the file size — faster pages for your visitors, less bandwidth on your bill.',
       },
       {
-        title: 'The professionals\' output',
-        body: 'It drives the official encoders rather than reimplementing them, so what comes out is what the reference tools produce.',
+        title: 'Aim at a size, not a number',
+        body: 'Ask for a target file size or a target quality score and let the encoder find the settings, instead of guessing at a quality slider.',
       },
       {
-        title: 'Nothing to install first',
-        body: 'Everything it needs ships with it. Download, open, convert — no setup, no toolchain, no terminal.',
+        title: 'The reference encoder\'s output',
+        body: 'It drives Google\'s own converter rather than reimplementing it, so what comes out is what the reference tool produces.',
+      },
+      {
+        title: 'Expert dials, out of the way',
+        body: 'Noise shaping, filter strength, multi-pass, sharp colour conversion, segment count — every control the encoder has, folded behind a disclosure so the simple path stays simple.',
+      },
+      {
+        title: 'Presets for the usual jobs',
+        body: 'Photo, drawing, icon, text: pick the kind of image you have and start from settings that already suit it.',
+      },
+    ],
+    // The argument for a GUI over a CLI is the command line it replaces, so
+    // show it. Every flag here is one the app exposes in its own window.
+    example: {
+      label: 'the command line you no longer have to remember',
+      lang: 'shellscript',
+      code: `cwebp -q 80 -m 6 -sharp_yuv -sns 80 -f 60 -segments 4 \\
+      -mt -resize 1600 0 \\
+      hero-banner.png -o hero-banner.webp`,
+    },
+    links: [
+      {
+        label: 'Download for Windows',
+        href: 'https://github.com/basic-automation/Skidbladnir/releases',
       },
     ],
   },

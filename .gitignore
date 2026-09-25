@@ -9,3 +9,10 @@ dist/
 .DS_Store
 *.log
 scratch/
+
+# The onion gateway builds into the shared target dir set by ~/.cargo/config.toml,
+# but keep a local one out of the tree too.
+onion/target/
+
+# Worktrees created by tooling alongside the repo.
+.worktrees/

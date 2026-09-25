@@ -20,10 +20,17 @@ bars the way a terminal does it.
 | --- | --- |
 | `/` | The pitch, live project stats, and the catalogue |
 | `/projects` | Every public project |
-| `/projects/<slug>` | A marketing page per project: hero, why it exists, features, a worked example, and the repo's README folded away underneath |
+| `/projects/<slug>` | A marketing page per project: hero, why it exists, features, a worked example, the recent releases, and the repo's README folded away underneath |
+| `/status` | Whether the site is rendering live data or the fallback snapshot, and how long it has been up |
+| `/releases.xml` | An Atom feed of every release across every project |
+| `/sitemap.xml` | Built from the same project list the pages render from |
+| `/robots.txt` | Allows everything, points at the sitemap |
 | `/api/projects` | Card-level JSON for every project |
-| `/api/projects/<slug>` | One project, README included |
-| `/healthz` | Liveness, for the container healthcheck |
+| `/api/projects/<slug>` | One project, README and release history included |
+| `/healthz` | Liveness for the container healthcheck, plus the data source and uptime |
+
+Each project page also carries `SoftwareSourceCode` JSON-LD and its own Open
+Graph card, so a link to it previews as itself rather than as the organization.
 
 ## How the data works
 
@@ -44,13 +51,22 @@ An upstream outage degrades the numbers, not the site.
 Set `GITHUB_TOKEN` (or `NUXT_GITHUB_TOKEN`) in the environment to lift the
 anonymous rate limit. It is optional; nothing needs it to work.
 
+`/status` shows which of the two is happening right now, per project. The server
+also logs one JSON object per request on stdout — `docker logs
+basicautomation-site | jq 'select(.status >= 400)'` — and warns once an hour for
+as long as it has been answering from the snapshot.
+
 ## Adding a project
 
 1. Add an entry to `data/projects.ts`. That file is the editorial layer: the
    pitch, the feature copy, and the code sample that shows what the thing feels
    like to use. Everything that moves on its own is fetched, not typed.
 2. If it has a wordmark, drop it in `public/projects/<slug>.svg` and set `logo`.
-3. Run `npm run sync` to refresh the offline fallback snapshot.
+3. Run `npm run og` to render its social card into `public/projects/og/`, and
+   commit it. Cards are generated rather than rendered per request: everything
+   on one is editorial, and nothing live belongs in an image a social network
+   caches for a month.
+4. Run `npm run sync` to refresh the offline fallback snapshot.
 
 ## Development
 
@@ -59,7 +75,20 @@ npm install
 npm run dev          # http://localhost:3000
 npm run build        # .output/ — a self-contained Nitro node server
 npm run start        # serve the build
+npm run typecheck
 npm run sync         # refresh data/projects.generated.json
+npm run og           # re-render the per-project social cards (needs Chromium)
+```
+
+`npm run check` walks a running build: every page, every internal link and
+asset, every URL the sitemap promises, and every social card, plus three paths
+that must answer 404. It is what CI runs after the build, because a bundle that
+compiles is not the same as a site that renders.
+
+```sh
+npm run start &
+npm run check                      # against http://127.0.0.1:3000
+npm run check -- --external        # also follow links off the site
 ```
 
 ## Deployment
@@ -73,6 +102,14 @@ docker run --rm -p 3000:3000 ghcr.io/basic-automation/basicautomation.io:latest
 ```
 
 `deploy/compose.yaml` holds the service definition as it appears in DeepStack.
+
+The runtime image is plain Alpine with the node binary copied in rather than
+`node:24-alpine`: Nitro bundles its dependencies into `.output`, so npm, yarn
+and the addon headers exist only to build something.
+
+`onion/` is a separate Rust crate that will serve the site as a Tor onion
+service through the organization's own `onyums`. It is not deployed yet —
+`docs/onion.md` says what is done and what is next.
 
 ## Theme
 
