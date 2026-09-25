@@ -88,16 +88,21 @@ pub fn build() -> Result<Skin, Box<dyn std::error::Error>> {
 /// `disable_rule` takes a `&str` and silently does nothing when no rule has that
 /// id, so an upstream rename would put the site back behind the block with no
 /// signal at all. Fail at startup instead.
+///
+/// The count is what does that job, and it is the only thing that can.
+/// `is_rule_enabled` returns `false` for an id that does not exist — by
+/// construction, it is `any(|(rule_id, on)| rule_id == id && on)` — so asserting
+/// on it alone would pass vacuously after exactly the rename it is supposed to
+/// catch. It is kept because it states the intent at the call site, but it is
+/// not the check; if you ever have to choose one, keep the count.
 fn assert_disabled(waf: &Waf) {
-	assert!(
-		!waf.is_rule_enabled(DISABLED_RULE),
-		"{DISABLED_RULE} is not in onyums-skin's ruleset under that name any more — re-check whether it still \
-		 misfires on the Accept header before deleting this gate, and read the module docs either way",
-	);
+	assert!(!waf.is_rule_enabled(DISABLED_RULE), "{DISABLED_RULE} is enabled");
 	assert_eq!(
 		waf.enabled_rule_count(),
 		Waf::starter().rule_count() - 1,
-		"expected to disable exactly one rule",
+		"expected to disable exactly one rule — if this fails, `{DISABLED_RULE}` is not in onyums-skin's \
+		 ruleset under that name any more. Re-check whether it still misfires on the Accept header before \
+		 deleting this gate, and read the module docs either way",
 	);
 }
 
@@ -135,5 +140,15 @@ mod tests {
 	#[test]
 	fn the_rule_is_actually_disabled() {
 		assert_disabled(&Waf::starter().disable_rule(DISABLED_RULE));
+	}
+
+	/// Pins why `assert_disabled` leans on the count and not on the flag: asking
+	/// whether a rule that does not exist is enabled answers "no", which is the
+	/// same answer you get when you have successfully disabled it.
+	#[test]
+	fn is_rule_enabled_cannot_tell_disabled_from_absent() {
+		let waf = Waf::starter();
+		assert!(!waf.is_rule_enabled("no-such-rule-was-ever-shipped"));
+		assert_eq!(waf.enabled_rule_count(), Waf::starter().rule_count(), "disabling nothing must not change the count");
 	}
 }
