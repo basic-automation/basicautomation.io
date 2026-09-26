@@ -56,8 +56,22 @@ const UA = 'basicautomation.io (+https://basicautomation.io)'
  */
 const GH_API_VERSION = '2026-03-10'
 
-/** How long upstream responses are reused. Short enough to feel live. */
-const CACHE_TTL = 60 * 15 // 15 minutes
+/**
+ * How long upstream responses are reused. Short enough to feel live, long
+ * enough that the site does not out-run GitHub's anonymous rate limit.
+ *
+ * That limit is 60 requests an hour, and a refresh costs three GitHub calls per
+ * repo — the repo, its README and its releases. Six repos is 18 calls per
+ * refresh window, so the arithmetic that matters is how many windows fit in an
+ * hour: at 15 minutes it was four of them, 72 calls, and the site spent part of
+ * every hour rate-limited and quietly serving pages with no README and no
+ * release strip. At 20 minutes it is three, 54 calls, with headroom.
+ *
+ * Anything that changes this, adds a project, or adds a call per repo has to do
+ * that arithmetic again — or ship `BASICAUTOMATION_GITHUB_TOKEN`, which lifts
+ * the limit to 5,000 an hour and makes the whole question go away.
+ */
+const CACHE_TTL = 60 * 20 // 20 minutes
 /** Serve stale while revalidating for this much longer, so no visitor waits. */
 const STALE_TTL = 60 * 60 * 6 // 6 hours
 /**
@@ -189,15 +203,27 @@ async function fetchRepo(project: Project): Promise<RepoMeta> {
       : Promise.reject(new Error('not a crate')),
   ])
 
+  // Each of these is allowed to fail without sinking the repo — but a failure
+  // is recorded rather than swallowed, so a page rendering with no README is
+  // something the status page can say out loud instead of something only a
+  // visitor notices.
+  const incomplete: NonNullable<RepoMeta['incomplete']> = []
+
   if (readme.status === 'fulfilled' && typeof readme.value === 'string') {
     out.readmeHtml = await renderMarkdown(
       absolutize(stripLeadingLogo(readme.value), ORG, repo, defaultBranch),
     )
   }
+  else {
+    incomplete.push('readme')
+  }
 
   if (release.status === 'fulfilled' && Array.isArray(release.value)) {
     out.releases = normaliseReleases(release.value)
     out.latestRelease = pickLatest(out.releases)
+  }
+  else {
+    incomplete.push('releases')
   }
 
   if (crate.status === 'fulfilled' && crate.value?.crate && project.crate) {
@@ -206,6 +232,13 @@ async function fetchRepo(project: Project): Promise<RepoMeta> {
     out.crateUrl = `https://crates.io/crates/${project.crate}`
     out.docsUrl = `https://docs.rs/${project.crate}`
   }
+  // A project that is not published to crates.io has nothing to fetch, and a
+  // rejection there is this function's own `not a crate`, not an outage.
+  else if (project.crate) {
+    incomplete.push('crate')
+  }
+
+  if (incomplete.length) out.incomplete = incomplete
 
   return out
 }
@@ -226,6 +259,7 @@ const cachedRepo = defineCachedFunction(
     try {
       const meta = await fetchRepo(project)
       recordSource('live')
+      recordIncomplete(project.repo, meta.incomplete ?? [])
       return meta
     }
     catch (err) {

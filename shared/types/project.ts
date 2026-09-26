@@ -18,6 +18,16 @@ export interface RepoMeta {
   fetchedAt: string
   /** 'snapshot' means upstream was unreachable and the committed fallback was used. */
   source: 'live' | 'snapshot'
+  /**
+   * Which of the optional upstream calls failed for this repo, if any.
+   *
+   * `source: 'live'` only says the repo itself resolved. The README, the
+   * release history and the crate data are each fetched separately and each
+   * allowed to fail without sinking the repo — which is right, and which used
+   * to mean a page could render with no README and no releases while every
+   * health signal on the site said everything was fine.
+   */
+  incomplete?: ('readme' | 'releases' | 'crate')[]
   description: string | null
   htmlUrl: string
   homepage: string | null

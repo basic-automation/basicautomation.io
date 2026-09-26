@@ -44,12 +44,29 @@ record. There is no run log.
       site block exists and validates, but the name does not resolve yet, so
       Glance is only reachable on the LAN at `:5188` since it moved off the apex
 
-- [ ] Ship `GITHUB_TOKEN` to the container so the rate limit stops being a factor
+- [ ] Ship `GITHUB_TOKEN` to the container so the rate limit stops being a factor.
+      More urgent than it reads: even at 54 calls an hour the site is at 90% of
+      the anonymous limit, so one more project or one more call per repo puts it
+      back over. A token lifts the limit to 5,000 an hour.
       (the wiring is already there — `deploy/compose.yaml` reads
       `BASICAUTOMATION_GITHUB_TOKEN`; what is missing is the secret itself, which
       is the owner's to create)
 - [x] Structured request logging, and a `status` page fed by `/healthz`
 - [x] Alert when the site has been serving from the fallback snapshot for more than an hour
+- [x] …and notice the failure that alert could not see. `source: 'live'` only
+      ever meant the repo call succeeded; its README and its release history are
+      separate calls that are each allowed to fail without sinking the repo. So a
+      page could render live with no README and no release strip while `/healthz`
+      and the status page both said everything was fine. `/healthz` now carries
+      `data.incomplete`, the status becomes `degraded`, an `upstream.incomplete`
+      line goes to the request log, and the status page says which repo is
+      missing what.
+- [x] Stop the site out-running GitHub's own rate limit. Six repos × three calls
+      is 18 per refresh, and a 15-minute TTL is four refresh windows an hour — 72
+      calls against an anonymous limit of 60, so the site spent part of every hour
+      rate-limited and quietly serving pages with no README. `CACHE_TTL` is 20
+      minutes: three windows, 54 calls, with headroom. The arithmetic is written
+      into the constant so the next edit has to face it.
 - [x] Trim the image: the runtime layer is no longer a full `node:24-alpine`
 - [x] The Dockerfile's `alpine:3.24` runtime must stay in step with whatever base
       `node:24-alpine` uses, because the node binary is copied out of that image

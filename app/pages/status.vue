@@ -83,7 +83,8 @@ useSeoMeta({
         <p class="mt-8 text-2xl text-pn-fg-bright sm:text-3xl">
           <span aria-hidden="true" :class="health.status === 'ok' ? 'text-pn-bright-green' : 'text-pn-yellow'">● </span>
           <span v-if="health.status === 'ok'">Serving live data.</span>
-          <span v-else>Serving the fallback snapshot.</span>
+          <span v-else-if="health.data.degradedSince">Serving the fallback snapshot.</span>
+          <span v-else>Serving live data, with pieces missing.</span>
         </p>
 
         <p
@@ -94,6 +95,24 @@ useSeoMeta({
           since {{ health.data.degradedSince }}. The pages are correct; the stars, versions
           and download counts on them are as old as the snapshot.
         </p>
+
+        <!-- `source: live` only ever meant the repo call succeeded. Its README
+             and its release history are separate calls that are each allowed to
+             fail, so a page can render live with a whole section absent — which
+             used to be visible only to whoever was reading that page. -->
+        <div v-if="health.data.incomplete.length" class="mt-4 max-w-2xl text-sm leading-relaxed text-pn-dim">
+          <p>
+            Upstream answered for the repositories below but refused part of what
+            those pages show, so the page is rendering without it. The usual cause
+            is GitHub's anonymous rate limit, which is 60 requests an hour.
+          </p>
+          <ul class="mt-3 space-y-1 text-xs">
+            <li v-for="row in health.data.incomplete" :key="row.repo">
+              <span class="text-pn-yellow">{{ row.repo }}</span>
+              <span class="text-pn-muted"> — no {{ row.missing.join(', no ') }}</span>
+            </li>
+          </ul>
+        </div>
 
         <dl class="mt-8 flex flex-wrap gap-x-10 gap-y-3 text-xs">
           <div v-for="row in rows" :key="row.label" class="flex items-baseline gap-2">
