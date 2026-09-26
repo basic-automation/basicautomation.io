@@ -148,6 +148,93 @@ function checkAccessibility(path, html, isUpstream) {
   }
 }
 
+/**
+ * The two XML documents, checked the way the HTML pages are.
+ *
+ * Nobody looks at a feed. It is read by software, and when it breaks it breaks
+ * silently for every subscriber at once — so the failure that matters is the
+ * one a person would never notice. Both documents carry text this site did not
+ * write (a GitHub release title, an editorial tagline), which is exactly where
+ * an unescaped `&`, or a control character XML forbids outright, comes from.
+ *
+ * Not a schema validator: these are the assertions that catch a document no
+ * reader can parse, plus the Atom elements a reader actually needs.
+ */
+function checkXml(path, xml) {
+  // XML 1.0 forbids these characters outright — they cannot be escaped into
+  // legality, so one of them means the document simply does not parse.
+  // eslint-disable-next-line no-control-regex
+  const illegal = xml.match(/[\u0000-\u0008\u000B\u000C\u000E-\u001F\uFFFE\uFFFF]/)
+  if (illegal) {
+    fail(path, `contains U+${illegal[0].codePointAt(0).toString(16).padStart(4, '0').toUpperCase()}, which XML 1.0 forbids — no reader can parse this`)
+  }
+
+  // An unescaped `&` is the classic one: `&` that is not the start of an entity.
+  for (const m of xml.matchAll(/&(?!(?:[a-zA-Z][a-zA-Z0-9]*|#\d+|#x[0-9a-fA-F]+);)/g)) {
+    fail(path, `unescaped & at offset ${m.index}`)
+    break
+  }
+
+  // A tag opened and never closed, the other way a document stops parsing.
+  const opens = [...xml.matchAll(/<([a-zA-Z][\w:-]*)(?:\s[^>]*?)?(\/?)>/g)]
+  const stack = []
+  for (const m of opens) {
+    if (m[2] === '/') continue
+    stack.push(m[1])
+  }
+  const closes = [...xml.matchAll(/<\/([a-zA-Z][\w:-]*)>/g)].map((m) => m[1])
+  for (const name of closes) {
+    const at = stack.lastIndexOf(name)
+    if (at === -1) fail(path, `closing </${name}> with nothing open`)
+    else stack.splice(at, 1)
+  }
+  if (stack.length) fail(path, `unclosed <${stack[stack.length - 1]}>`)
+
+  if (path.endsWith('releases.xml')) {
+    // What a reader needs to identify the feed and to de-duplicate entries.
+    for (const el of ['title', 'id', 'updated']) {
+      if (!new RegExp(`<${el}>`).test(xml)) fail(path, `the feed has no <${el}>`)
+    }
+    if (!/<link\b[^>]*rel="self"/.test(xml)) fail(path, 'the feed has no rel="self" link')
+
+    const ids = []
+    for (const entry of xml.matchAll(/<entry>([\s\S]*?)<\/entry>/g)) {
+      const body = entry[1]
+      for (const el of ['title', 'id', 'updated']) {
+        if (!new RegExp(`<${el}>`).test(body)) fail(path, `an <entry> has no <${el}>`)
+      }
+      const id = body.match(/<id>([^<]*)<\/id>/)?.[1]
+      if (id) ids.push(id)
+      const updated = body.match(/<updated>([^<]*)<\/updated>/)?.[1]
+      // A reader sorts on this. "Recently" is not a date.
+      if (updated && Number.isNaN(Date.parse(updated))) {
+        fail(path, `<updated>${updated}</updated> is not a date a reader can parse`)
+      }
+    }
+    // Two entries sharing an id is how a reader loses one of them.
+    const seenIds = new Set()
+    for (const id of ids) {
+      if (seenIds.has(id)) fail(path, `two entries share the id ${id}`)
+      seenIds.add(id)
+    }
+    notes.push(`${ids.length} feed entries, each with an id, a title and a date`)
+  }
+
+  if (path.endsWith('sitemap.xml')) {
+    for (const m of xml.matchAll(/<lastmod>([^<]*)<\/lastmod>/g)) {
+      // Sitemaps take W3C Datetime; a bare date is the shortest legal form.
+      if (!/^\d{4}-\d{2}-\d{2}(T|$)/.test(m[1])) fail(path, `<lastmod>${m[1]}</lastmod> is not a W3C date`)
+    }
+    const locs = [...xml.matchAll(/<loc>([^<]*)<\/loc>/g)].map((m) => m[1])
+    const seenLocs = new Set()
+    for (const loc of locs) {
+      if (!/^https:\/\//.test(loc)) fail(path, `<loc>${loc}</loc> is not an absolute https URL`)
+      if (seenLocs.has(loc)) fail(path, `<loc>${loc}</loc> appears twice`)
+      seenLocs.add(loc)
+    }
+  }
+}
+
 const isCrawlable = (url) =>
   url.origin === new URL(BASE).origin
   && !UNLINKED_ROUTES.includes(url.pathname)
@@ -258,8 +345,12 @@ console.log('')
 // ── Routes nothing links to ─────────────────────────────────────────────────
 for (const path of UNLINKED_ROUTES) {
   const res = await fetchOnce(BASE + path)
-  if (res.status !== 200) fail(path, `expected 200, got ${res.status}`)
-  else console.log(`  200  ${path}`)
+  if (res.status !== 200) {
+    fail(path, `expected 200, got ${res.status}`)
+    continue
+  }
+  console.log(`  200  ${path}`)
+  if (path.endsWith('.xml') && res.body) checkXml(path, res.body)
 }
 
 // ── Every URL the sitemap promises ──────────────────────────────────────────
@@ -268,8 +359,17 @@ if (sitemap.status === 200 && sitemap.body) {
   const locs = [...sitemap.body.matchAll(/<loc>([^<]+)<\/loc>/g)].map((m) => m[1])
   if (!locs.length) fail('/sitemap.xml', 'contains no <loc> entries')
   for (const loc of locs) {
-    // The sitemap carries the public origin; check the same path here.
-    const path = new URL(loc).pathname
+    // The sitemap carries the public origin; check the same path here. A `<loc>`
+    // that is not an absolute URL is a sitemap error, not a crash: `new URL`
+    // throws on one, and this used to take the whole check down with it.
+    let path
+    try {
+      path = new URL(loc).pathname
+    }
+    catch {
+      fail('/sitemap.xml', `<loc>${loc}</loc> is not a URL — a sitemap carries absolute ones`)
+      continue
+    }
     const res = await fetchOnce(BASE + path)
     if (res.status !== 200) fail('/sitemap.xml', `promises ${path}, which answered ${res.status}`)
   }

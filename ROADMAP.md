@@ -201,6 +201,17 @@ record. There is no run log.
       sit in the script's `BASELINE`, which records the number each was measured
       at, not an endorsement of it.
 - [x] A real 404 check: every internal link, every render, on every route — `npm run check`
+- [x] …and the two XML documents nobody looks at, checked the same way. A feed
+      breaks silently for every subscriber at once, and both documents carry
+      text this site did not write. `npm run check` now asserts that neither
+      contains a character XML 1.0 forbids outright, that no `&` is unescaped,
+      that every tag closes, that the feed has its `id`/`title`/`updated` and a
+      `rel="self"` link, that every entry has an id, a title and a parseable
+      date, that no two entries share an id, and that the sitemap's `<loc>`s are
+      absolute, unique and carry W3C dates. One real bug behind this: a stray
+      control character in a GitHub release title made the whole feed
+      unparseable, which `shared/xml/escape.ts` now strips — and a malformed
+      sitemap used to crash the checker rather than fail it.
 - [x] Check external links on a schedule — `.github/workflows/links.yml`, weekly
       on Thursdays. It follows every external link and keeps ONE issue in sync:
       opened or updated while links are dead, closed the week they are all fixed.

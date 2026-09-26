@@ -8,17 +8,9 @@
  * does. The static pages carry no `lastmod` rather than a made-up one.
  */
 
-const STATIC_ROUTES = ['/', '/projects', '/status']
+import { xmlEscape } from '~~/shared/xml/escape'
 
-/** Only five characters are ever wrong inside XML text, and these are them. */
-function xmlEscape(value: string): string {
-  return value
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;')
-    .replace(/'/g, '&apos;')
-}
+const STATIC_ROUTES = ['/', '/projects', '/status']
 
 function urlEntry(loc: string, lastmod?: string | null): string {
   const mod = lastmod ? `\n    <lastmod>${xmlEscape(lastmod.split('T')[0] ?? '')}</lastmod>` : ''
