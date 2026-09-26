@@ -82,11 +82,13 @@ record. There is no run log.
       reaches for `typescript/lib/tsc`, which TS 7 no longer exports), so the
       project uses Golar via its `golar/unstable` entrypoint — move off `unstable`
       once a stable one exists, or back to `vue-tsc` once it supports TS 7
-- [ ] Silence Nitro's own `[request error]` stack-trace block on a 404. The
-      vue-router half is fixed (`app/pages/[...slug].vue`), but Nitro still prints
-      six unstructured lines per 404 beside the JSON request log. Suppressing it
-      means replacing the error handler that renders the 404 page, so it needs a
-      way to keep that rendering — not worth breaking the error page for.
+- [x] Silenced Nitro's own `[request error]` stack-trace block on a 404, without
+      replacing the error handler. Nitro logs it when the error is `fatal`, and
+      `fatal` is only load-bearing on the client, where it is what makes a 404
+      reached by in-app navigation show the error page at all. So both page-level
+      404s now throw with `fatal: import.meta.client`, which the bundler resolves
+      to `false` server-side and `true` client-side. A 404 is one structured JSON
+      line again; `app/error.vue` still renders it and the status is still 404.
 
 ## Phase 4 — Reach
 
