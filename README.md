@@ -97,6 +97,11 @@ npm run check                      # against http://127.0.0.1:3000
 npm run check -- --external        # also follow links off the site
 ```
 
+External links are followed weekly instead, by `.github/workflows/links.yml`,
+which keeps a single issue in sync with what it finds. They are a report rather
+than a gate: the project pages fold in each repo's README, so most dead links
+here are somebody else's to fix, and none of them should fail a pull request.
+
 ## Deployment
 
 The site runs as a container in the DeepStack compose project, behind Caddy,

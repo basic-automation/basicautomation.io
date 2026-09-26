@@ -98,11 +98,13 @@ record. There is no run log.
       over HTTPS, is not itself an onion site, and the value is a valid
       `http(s)://…onion` URL; a subdomain in the onion address suppresses the banner.
       <https://community.torproject.org/onion-services/advanced/onion-location/>
-- [ ] Decide what happens to `basic-automation.github.io`, which still serves the old page.
-      This is now load-bearing: the Skidbladnir README embeds a screenshot from
-      `https://basicautomation.io/ba-nextGenIMG/…`, a path the old site served and
-      this one does not, so that project's page renders a broken image. Either
-      serve the legacy path or fix the README upstream.
+- [ ] Decide what happens to `basic-automation.github.io`, which still serves the
+      old page (200, `<title>Basic Automation</title>`). No longer load-bearing:
+      the Skidbladnir README used to embed a screenshot from
+      `https://basicautomation.io/ba-nextGenIMG/…`, a path only the old site
+      served, and it now points at `raw.githubusercontent.com` instead (200,
+      verified 2026-09-25). So this is a plain decision — retire it, redirect it,
+      or leave it — with nothing on this site depending on the answer.
 
 ## Cross-cutting
 
@@ -126,9 +128,14 @@ record. There is no run log.
       wherever it carries information, or change the values — which the locked
       palette rule forbids without the owner saying so.
 - [x] A real 404 check: every internal link, every render, on every route — `npm run check`
-- [ ] Check external links on a schedule. `npm run check -- --external` exists but
-      nothing runs it; today it reports two genuinely dead links in fetched
-      READMEs (the Skidbladnir screenshot above, and a `LICENSE` the Skidbladnir
-      repo does not contain) and one stale table-of-contents anchor in the onyums
-      README. All three are upstream fixes, which is exactly why this wants to be
-      a periodic report rather than a CI gate.
+- [x] Check external links on a schedule — `.github/workflows/links.yml`, weekly
+      on Thursdays. It follows every external link and keeps ONE issue in sync:
+      opened or updated while links are dead, closed the week they are all fixed.
+      A dead link never fails the job, because almost none of them are ours to
+      fix; only a build or a server that will not come up does, since that means
+      the report itself is not trustworthy.
+- [ ] Upstream: the Skidbladnir README links to `blob/master/LICENSE`, a file that
+      repo does not contain — a 404 on this site's Skidbladnir page. Not fixable
+      here; the weekly report will keep saying so until someone commits a LICENSE.
+- [ ] Upstream: the onyums README's table of contents links
+      `#multiple-services-on-one-tor-client`, an anchor no heading in it produces.
