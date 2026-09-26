@@ -14,11 +14,31 @@ if (error.value || !project.value) {
 
 const meta = computed(() => project.value?.meta ?? null)
 
-// Only the project that serves this site asks for the address; every other
-// page would be paying for a request whose answer it never renders.
+// Only the pages that render the address ask for it; every other page would be
+// paying for a request whose answer it never shows. Serving this site implies
+// showing the demo, so one flag covers both.
+const showsTorDemo = computed(() => project.value?.servesThisSite === true || project.value?.showsTorDemo === true)
+
+// Same key as OnionFrame's own request, so this is deduped rather than a second
+// round trip. The page needs it because the copy below refers to the frame, and
+// the frame is absent whenever the snapshot was captured from another build.
+type SnapshotResponse =
+  | { available: false }
+  | { available: true, address: string, status: number, bytes: number, elapsedMs: number, fetchedAt: number }
+
+const { data: snapshotData } = await useFetch<SnapshotResponse>('/api/onion-snapshot', {
+  key: 'onion-snapshot',
+  immediate: showsTorDemo.value,
+  default: (): SnapshotResponse => ({ available: false }),
+})
+
+/** Passed to `OnionFrame`, which renders nothing when it is null. */
+const torSnapshot = computed(() => (snapshotData.value?.available ? snapshotData.value : null))
+const hasTorFrame = computed(() => torSnapshot.value !== null)
+
 const { data: onionData } = await useFetch<{ address: string | null }>('/api/onion', {
   key: 'onion-address',
-  immediate: project.value?.servesThisSite === true,
+  immediate: showsTorDemo.value,
   default: () => ({ address: null }),
 })
 const onion = computed(() => onionData.value?.address ?? null)
@@ -220,12 +240,43 @@ useSeoMeta({
         reading now are also reachable as a Tor onion service, behind its TLS
         and its abuse gate, on the address below.
       </p>
-      <CodeLine class="mt-7 max-w-4xl" :code="onion" />
+      <CodeLine class="mt-7 max-w-4xl" :code="onion" :prompt="false" />
       <p class="mt-4 max-w-3xl text-sm leading-relaxed text-pn-muted">
         Open it in Tor Browser. Expect a certificate warning — the service
         presents a self-signed certificate for its own address, which is normal
         for an onion service and explained in the README below.
       </p>
+
+      <!-- The proof, rather than the assertion: this server dials its own onion
+           address over Tor every ten minutes, and that is what is in the frame. -->
+      <OnionFrame :snapshot="torSnapshot" />
+
+      <TorBrowserSteps :address="onion" />
+    </section>
+
+    <!-- ── Reaching one ─────────────────────────────────────────────────── -->
+    <!-- The other side of the same coin, for the project that is about being
+         the client rather than the server. Deliberately does NOT claim this
+         crate performed the fetch in the frame — it did not; see
+         onion/src/snapshot.rs for why it cannot yet. -->
+    <section v-if="project.showsTorDemo && onion" class="mb-32">
+      <TermRule label="see it working" />
+      <p class="mt-7 max-w-3xl text-base leading-relaxed text-pn-fg sm:text-lg">
+        {{ project.name }} is the client half of this: your code asks for a URL
+        and gets an ordinary response back, with the circuit built and torn down
+        for you.<template v-if="hasTorFrame"> Below is a page fetched over Tor by
+          the server rendering this sentence — using arti, the Tor client
+          {{ project.name }} wraps — from the onion address underneath.</template>
+      </p>
+
+      <OnionFrame :snapshot="torSnapshot" />
+
+      <p class="mt-10 max-w-3xl text-base leading-relaxed text-pn-fg sm:text-lg">
+        {{ hasTorFrame ? 'Or reach it yourself.' : 'Reach it yourself.' }} It
+        takes about two minutes and nothing you install has to stay installed.
+      </p>
+
+      <TorBrowserSteps :address="onion" />
     </section>
 
     <!-- ── Why ──────────────────────────────────────────────────────────── -->

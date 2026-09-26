@@ -123,6 +123,83 @@ would actually be given, with the crate's own defences in front of it.
   into a network hop and the address file into a shared volume, for nothing:
   the gateway is a front for this exact site and has no life without it.
 
+- **Slice 4 — show it working.** The page now carries a browser frame with the
+  site in it, fetched by this server through a real rendezvous circuit to its own
+  `.onion` address every ten minutes, with the measurement underneath — status,
+  bytes, seconds, and when it last succeeded. A claim on a page about an onion
+  service is worth less than the thing running.
+
+  Three decisions in it are worth keeping:
+
+  **It is not `artiqwest`, and it should have been.** artiqwest is this org's own
+  "HTTP over Tor" crate and this is precisely its job. It cannot be used here:
+  artiqwest 0.4.1 pins `arti-client 0.43` and `tokio-native-tls`, while onyums 0.5
+  is on `arti-client 0.46` and went deliberately C-free with rustls. Taking both
+  means two complete, semver-incompatible copies of arti in one binary — two
+  bootstraps, two consensus downloads, two sets of circuits — plus OpenSSL back in
+  a static musl build that does not currently need it. `artiqwest::get` also wants
+  an `Arc<TorClient<PreferredRuntime>>` from *its* arti, so the bootstrapped client
+  we already hold could not be passed to it regardless.
+
+  So `snapshot.rs` does what artiqwest does, over the same arti onyums already
+  links. The Tor-specific part is confined to `fetch_once` so that bumping
+  artiqwest onto a shared arti makes swapping it in a one-function change.
+  **That bump is the real fix** and it is an artiqwest issue, not a site one.
+
+  **It needs a second Tor client, and the first version was wrong about that.**
+  The obvious implementation reuses `OnionServiceHandle::tor_client()` — already
+  bootstrapped, already hosting the service — and it does not work: a client
+  cannot reliably rendezvous with a service it is itself hosting. It appeared to
+  work twice, which is the worst way for something to be broken. Measured on the
+  deployed container: an external probe got 200 in 4.8s while the container's own
+  attempts failed with `Failed to obtain hidden service circuit`, twice, ten
+  minutes apart. onyums' own live test bootstraps a second client for exactly this
+  reason, and its comment is the only place that says so.
+
+  Two details of that second client are not guessable. It needs its own state
+  directory, and it needs `allow_onion_addrs(true)` — arti's address filter
+  refuses `.onion` by default, and a client built without it fails on the connect
+  with an error that never mentions the filter.
+
+  This does weaken the count in the artiqwest argument above: two bootstraps
+  happen either way. What taking artiqwest would have added is a second *copy of
+  arti* and OpenSSL with it, which is a different thing from a second instance of
+  the one already linked.
+
+  **It lets itself through its own gate.** The service is behind Skin, so fetching
+  it returns the proof-of-work challenge, not the site. The gateway mints itself a
+  clearance from the gate's own store rather than solving the puzzle. Solving your
+  own front door is theatre — the gate is not what the frame demonstrates, the
+  circuit is — and a binary carrying a solver for its own challenge is a strange
+  thing to own.
+
+  **The frame is inert.** Scripts stripped, `pointer-events: none`, `inert`, and a
+  CSP with `script-src 'none'`. Without that it boots a second copy of the whole
+  application inside the first, with a second set of backdrop and SVG filters
+  compositing every frame. And its links are relative, so following one would
+  quietly leave the snapshot and load this origin instead — a lie told by
+  accident. `style-src` does allow inline, because the page carries a
+  `<style id="nuxt-ui-colors">` block and sets the hero through a `style=`
+  attribute; with scripts at `'none'` and everything else `'self'`, inline CSS can
+  neither execute nor reach off-origin.
+
+  `/onion-frame` is `Disallow`ed in robots.txt: it is a byte-for-byte copy of the
+  home page under a second URL.
+
+  The frame also appears on the **artiqwest** page, with a Tor Browser
+  walkthrough beside it on both. artiqwest is the client half of the same story —
+  onyums publishes a service on the Tor network, artiqwest is how your own code
+  reaches one — so a page fetched over Tor belongs on both. The copy there says
+  the fetch was done "using arti, the Tor client artiqwest wraps", because that
+  is what happened and the ambiguous version ("reached that way") would have read
+  as a claim that artiqwest performed it. When the version pin above is resolved,
+  that sentence gets simpler and truer at the same time.
+
+  The walkthrough (`TorBrowserSteps.vue`) is the reader doing it themselves,
+  which is the only version that actually settles the question. It includes the
+  certificate warning and the proof-of-work interstitial, because those are the
+  two steps people stop at when nobody told them they were coming.
+
   `Onion-Location` on the clearnet site is **not** done. It is the standard way
   Tor Browser offers an onion address, but it changes what every clearnet
   visitor using Tor Browser is shown, which is a bigger decision than the page

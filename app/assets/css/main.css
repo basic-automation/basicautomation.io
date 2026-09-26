@@ -142,10 +142,14 @@ body {
 
 /* ── Terminal furniture ───────────────────────────────────────────────────── */
 
-/* A shell prompt. `data-prompt` overrides the sigil ($ by default). */
+/* A shell prompt. `--prompt` overrides the sigil, `$ ` by default; set it to
+   `""` for a line that is not a command — an address you paste into a browser
+   reads as a shell command with a `$` in front of it, which is the one thing it
+   is not. (The previous comment here promised a `data-prompt` override that was
+   never implemented.) */
 @utility prompt {
   &::before {
-    content: "$ ";
+    content: var(--prompt, "$ ");
     color: var(--color-pn-accent);
   }
 }

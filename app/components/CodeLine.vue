@@ -1,5 +1,9 @@
 <script setup lang="ts">
-const { code } = defineProps<{ code: string }>()
+const { code, prompt = true } = defineProps<{
+  code: string
+  /** A `$` sigil. Off for anything that is not a shell command. */
+  prompt?: boolean
+}>()
 
 const copied = ref(false)
 let timer: ReturnType<typeof setTimeout> | undefined
@@ -22,7 +26,7 @@ onBeforeUnmount(() => clearTimeout(timer))
 
 <template>
   <div class="flex items-center gap-4 bar" style="--accent: var(--color-pn-rule)">
-    <code class="flex-1 overflow-x-auto py-1 text-sm text-pn-green prompt">{{ code }}</code>
+    <code class="flex-1 overflow-x-auto py-1 text-sm text-pn-green prompt" :style="prompt ? undefined : { '--prompt': '\'\'' }">{{ code }}</code>
     <!-- UButton for the focus ring, keyboard handling and disabled semantics;
          app.config.ts strips it back to a bracketed mono label. -->
     <UButton
