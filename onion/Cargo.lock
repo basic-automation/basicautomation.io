@@ -381,7 +381,9 @@ dependencies = [
  "onyums",
  "regex",
  "reqwest",
+ "rustls-graviola",
  "tokio",
+ "tokio-rustls",
  "tracing",
  "tracing-subscriber",
 ]

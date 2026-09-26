@@ -64,25 +64,48 @@ const DEFAULT_DIFFICULTY: u32 = 18;
 const DEFAULT_PATIENCE_DELAY: Duration = Duration::from_secs(5);
 const DEFAULT_RATE_PER_SEC: u32 = 30;
 
+/// The gate, and the clearance store behind it.
+///
+/// The store comes back because this process is the gate's operator as well as
+/// its subject: `snapshot.rs` fetches the site over Tor to show it on the onyums
+/// page, and that fetch has to come through the front door like anyone else.
+/// Holding the store lets it mint itself a clearance rather than solve its own
+/// proof-of-work, which would be theatre — the gate is not what that fetch is
+/// demonstrating, the Tor circuit is.
+pub struct Gate {
+	pub skin: Skin,
+	pub store: Arc<HmacClearanceStore>,
+	/// The cookie name the minted token has to be sent under.
+	pub cookie_name: &'static str,
+}
+
+/// The cookie name. Set explicitly rather than left to default: `snapshot.rs`
+/// has to name it too, and onyums-skin's default is a private const it cannot
+/// read.
+pub const COOKIE_NAME: &str = "skin_clearance";
+
 /// `Skin::secure_default()`, minus one misfiring WAF rule.
-pub fn build() -> Result<Skin, Box<dyn std::error::Error>> {
+pub fn build() -> Result<Gate, Box<dyn std::error::Error>> {
 	let waf = Waf::starter().disable_rule(DISABLED_RULE);
 	assert_disabled(&waf);
 
-	let store = HmacClearanceStore::generate();
+	let store = Arc::new(HmacClearanceStore::generate());
 
 	// The fallback chain, most-preferred first: JS PoW → no-JS CAPTCHA → no-JS
 	// tarpit — the same order and the same tiers as `secure_default`. The
 	// CAPTCHA advertises its no-visual escape because the tarpit sits behind it,
 	// so a low-vision no-JS client can fall through rather than fail an image.
-	Ok(Skin::builder()
-		.store(Arc::new(store.clone()))
+	let skin = Skin::builder()
+		.store(store.clone())
 		.challenge(Box::new(PowChallenge::new(Hashcash, secret()?, DEFAULT_DIFFICULTY)))
 		.challenge(Box::new(CaptchaChallenge::new(secret()?).with_submit_path(DEFAULT_SUBMIT_PATH).with_no_image_escape(true)))
-		.challenge(Box::new(PatienceChallenge::new(store, DEFAULT_PATIENCE_DELAY)))
+		.challenge(Box::new(PatienceChallenge::new((*store).clone(), DEFAULT_PATIENCE_DELAY)))
 		.rate_limit(SkinRateLimit::per_second(NonZeroU32::new(DEFAULT_RATE_PER_SEC).expect("DEFAULT_RATE_PER_SEC is nonzero")))
 		.waf(waf)
-		.build())
+		.cookie_name(COOKIE_NAME)
+		.build();
+
+	Ok(Gate { skin, store, cookie_name: COOKIE_NAME })
 }
 
 /// `disable_rule` takes a `&str` and silently does nothing when no rule has that

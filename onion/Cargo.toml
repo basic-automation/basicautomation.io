@@ -20,6 +20,12 @@ reqwest = { version = "0.12", default-features = false, features = ["stream"] }
 http = "1"
 http-body-util = "0.1"
 futures-util = "0.3"
+# The self-fetch in `snapshot.rs` dials our own onion over the Tor client onyums
+# already has, then speaks TLS inside that circuit. Versions and features match
+# onyums 0.5's own (`default-features = false` + graviola, no ring, no C) so the
+# binary carries one rustls and one provider rather than two.
+tokio-rustls = { version = "0.26", default-features = false, features = ["logging", "tls12"] }
+rustls-graviola = "0.4"
 tracing = "0.1"
 tracing-subscriber = { version = "0.3", features = ["env-filter", "json"] }
 

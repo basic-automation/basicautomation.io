@@ -13,6 +13,7 @@
 
 mod gate;
 mod proxy;
+mod snapshot;
 
 use std::path::Path;
 
@@ -24,6 +25,8 @@ const DEFAULT_UPSTREAM: &str = "http://127.0.0.1:3000";
 const DEFAULT_NICKNAME: &str = "basicautomation";
 /// The site reads this to advertise the address it is being served on.
 const DEFAULT_ADDRESS_FILE: &str = "/run/onion/address";
+/// And this, to show the site as it comes back over Tor. See `snapshot.rs`.
+const DEFAULT_SNAPSHOT_FILE: &str = "/run/onion/snapshot.json";
 /// Bootstrapping a Tor client and publishing a descriptor is minutes, not
 /// seconds, on a cold cache. Past this we carry on and let `status()` speak.
 const READY_TIMEOUT_SECS: u64 = 600;
@@ -43,6 +46,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 	let nickname = std::env::var("ONION_NICKNAME").unwrap_or_else(|_| DEFAULT_NICKNAME.to_string());
 	let address_file =
 		std::env::var("ONION_ADDRESS_FILE").unwrap_or_else(|_| DEFAULT_ADDRESS_FILE.to_string());
+	let snapshot_file =
+		std::env::var("ONION_SNAPSHOT_FILE").unwrap_or_else(|_| DEFAULT_SNAPSHOT_FILE.to_string());
 
 	let app = proxy::router(proxy::Upstream::new(&upstream_url)?);
 
@@ -53,7 +58,11 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 	// lose it and the site gets a new name.
 	// `.skin(...)` rather than the default gate: see `gate.rs`. The default one
 	// blocks every web browser on this site's front page.
-	let handle = OnionService::builder().router(app).nickname(&nickname).skin(gate::build()?).serve().await?;
+	let gate = gate::build()?;
+	let store = gate.store.clone();
+	let cookie_name = gate.cookie_name;
+
+	let handle = OnionService::builder().router(app).nickname(&nickname).skin(gate.skin).serve().await?;
 
 	let address = handle.onion_address().as_str().to_string();
 	tracing::info!(%address, "onion service launched");
@@ -69,6 +78,12 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
 	if handle.ready_timeout(std::time::Duration::from_secs(READY_TIMEOUT_SECS)).await {
 		tracing::info!(%address, "descriptor published; reachable over tor");
+
+		// Only once the descriptor is up: before that a self-fetch cannot succeed
+		// and would only log a failure the operator would have to explain away.
+		// Shares the client onyums has already bootstrapped rather than building a
+		// second one — see `snapshot.rs`.
+		tokio::spawn(snapshot::run(handle.onion_address().clone(), store, cookie_name, snapshot_file));
 	} else {
 		tracing::warn!(
 			status = ?handle.status(),
