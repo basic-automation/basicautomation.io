@@ -435,6 +435,21 @@ if (sitemap.status === 200 && sitemap.body) {
   notes.push(`sitemap lists ${locs.length} urls, all reachable`)
 }
 
+// ── HEAD answers wherever GET does ──────────────────────────────────────────
+// Nitro routes by filename suffix, so `healthz.get.ts` binds GET alone and a
+// HEAD for it used to fall through to the catch-all as a 404. That is the
+// method an uptime monitor reaches for, on the endpoint that says whether the
+// site is up. See server/middleware/head.ts.
+for (const path of ['/', '/projects', ...UNLINKED_ROUTES]) {
+  const res = await fetch(BASE + path, { method: 'HEAD', headers: HEADERS })
+    .catch((err) => ({ status: 0, error: err.message }))
+  const get = await fetchOnce(BASE + path)
+  if (res.status !== get.status) {
+    fail(path, `HEAD answered ${res.status || res.error}, GET answered ${get.status}`)
+  }
+}
+notes.push('HEAD answers the same as GET on every route')
+
 // ── A 404 has to be a 404 ───────────────────────────────────────────────────
 for (const path of MUST_404) {
   const res = await fetchOnce(BASE + path)

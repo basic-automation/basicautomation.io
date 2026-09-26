@@ -50,7 +50,9 @@ export default defineNitroPlugin((nitro) => {
 
     console.log(JSON.stringify({
       t: new Date().toISOString(),
-      method: event.method,
+      // A HEAD is routed as a GET (see server/middleware/head.ts); the log says
+      // what was asked for, not what it was rewritten to.
+      method: event.context.originalMethod ?? event.method,
       path: event.path,
       status: getResponseStatus(event),
       ms: started === undefined ? null : Math.round(performance.now() - started),
@@ -74,7 +76,7 @@ export default defineNitroPlugin((nitro) => {
     console.error(JSON.stringify({
       t: new Date().toISOString(),
       level: status >= 500 ? 'error' : 'warn',
-      method: event?.method ?? null,
+      method: event?.context.originalMethod ?? event?.method ?? null,
       path: event?.path ?? null,
       status,
       ms: started === undefined ? null : Math.round(performance.now() - started),

@@ -64,6 +64,13 @@ record. There is no run log.
       `BASICAUTOMATION_GITHUB_TOKEN`; what is missing is the secret itself, which
       is the owner's to create)
 - [x] Structured request logging, and a `status` page fed by `/healthz`
+- [x] Answer HEAD wherever GET is answered. Nitro routes by filename suffix, so
+      `healthz.get.ts` bound GET alone and every non-page route — `/healthz`,
+      `/sitemap.xml`, `/robots.txt`, `/releases.xml` and both `/api` routes —
+      returned 404 to a HEAD. An uptime monitor configured for HEAD was being
+      told the health endpoint does not exist. `server/middleware/head.ts` routes
+      a HEAD as the GET it is the head of, and `npm run check` now asserts parity
+      on every route.
 - [x] Alert when the site has been serving from the fallback snapshot for more than an hour
 - [x] …and notice the failure that alert could not see. `source: 'live'` only
       ever meant the repo call succeeded; its README and its release history are
