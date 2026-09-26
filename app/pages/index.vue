@@ -18,6 +18,30 @@ const description
 
 const siteUrl = useSiteOrigin()
 
+/**
+ * The organization's own page, so this is where the organization is described
+ * rather than referenced — every project page points its `@id` back here. The
+ * `WebSite` beside it is what names the site itself, which is a different thing
+ * from the company that publishes it.
+ */
+const jsonLd = computed(() => ldJson([
+  { '@context': 'https://schema.org', ...organizationLd(siteUrl) },
+  {
+    '@context': 'https://schema.org',
+    '@type': 'WebSite',
+    '@id': `${siteUrl}/${SITE_ID}`,
+    'name': 'basic automation',
+    'url': siteUrl,
+    'description': description,
+    'inLanguage': 'en',
+    'publisher': organizationRef(siteUrl),
+  },
+]))
+
+useHead({
+  script: [{ type: 'application/ld+json', innerHTML: () => jsonLd.value }],
+})
+
 useSeoMeta({
   title: 'basic automation — software for the productive',
   description,

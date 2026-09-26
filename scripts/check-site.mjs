@@ -92,6 +92,64 @@ function extractRefs(html) {
 }
 
 /**
+ * The structured data, checked for the same reason the feed is: nobody looks at
+ * it. A `<script type="application/ld+json">` that does not parse is ignored in
+ * silence by every consumer, and the page still looks perfect.
+ *
+ * Not a schema validator — it does not know what a `SoftwareSourceCode` needs.
+ * It knows the three ways this breaks: JSON that does not parse, a block with
+ * no `@context`/`@type` for a consumer to dispatch on, and a relative URL where
+ * an absolute one was meant, which is the failure mode of building these out of
+ * a request-derived origin.
+ */
+function checkJsonLd(path, html) {
+  const blocks = [...html.matchAll(
+    /<script[^>]+type=["']application\/ld\+json["'][^>]*>([\s\S]*?)<\/script>/gi,
+  )]
+  if (!blocks.length) return
+
+  for (const [i, block] of blocks.entries()) {
+    let parsed
+    try {
+      parsed = JSON.parse(block[1])
+    }
+    catch (err) {
+      fail(path, `ld+json block ${i + 1} does not parse — ${err.message}`)
+      continue
+    }
+
+    for (const node of Array.isArray(parsed) ? parsed : [parsed]) {
+      if (!node || typeof node !== 'object') {
+        fail(path, `ld+json block ${i + 1} is not an object`)
+        continue
+      }
+      if (!String(node['@context'] ?? '').includes('schema.org')) {
+        fail(path, `ld+json ${node['@type'] ?? `block ${i + 1}`} has no schema.org @context`)
+      }
+      if (!node['@type']) fail(path, `ld+json block ${i + 1} has no @type`)
+
+      // Any absolute-looking field that came out relative means the origin was
+      // lost somewhere, and a consumer has no base URL to resolve it against.
+      const walk = (value, key) => {
+        if (typeof value === 'string') {
+          if ((key === 'url' || key === '@id' || key === 'logo' || key === 'image')
+            && !/^https?:\/\//.test(value)) {
+            fail(path, `ld+json ${key} is relative: ${value}`)
+          }
+          return
+        }
+        if (Array.isArray(value)) return value.forEach((v) => walk(v, key))
+        if (value && typeof value === 'object') {
+          for (const [k, v] of Object.entries(value)) walk(v, k)
+        }
+      }
+      walk(node, null)
+    }
+  }
+  notes.push(`${path}: ${blocks.length} structured-data block(s), all parsed`)
+}
+
+/**
  * Structural accessibility, over the markup that was actually served.
  *
  * Not a substitute for an audit — it cannot see colour, focus order or whether
@@ -301,6 +359,7 @@ while (queue.length) {
   const isUpstream = (index) => readmeAt !== -1 && index >= readmeAt
 
   checkAccessibility(path, res.body, isUpstream)
+  checkJsonLd(path, res.body)
 
   for (const [ref, index] of extractRefs(res.body)) {
     if (/^(mailto|tel|data|javascript):/i.test(ref)) continue

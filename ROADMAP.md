@@ -36,6 +36,18 @@ record. There is no run log.
 
 - [x] `sitemap.xml` and `robots.txt`
 - [x] JSON-LD `SoftwareSourceCode` per project page
+- [x] …and on the two pages that had none. The organization's own home page said
+      nothing about the organization: `/` now carries `Organization` and
+      `WebSite`, `/projects` carries a `CollectionPage` whose `mainEntity` is the
+      `ItemList` it renders. The organization is described once, on `/`, and
+      referenced by `@id` everywhere else — so a consumer reading two pages can
+      tell it is one organization rather than two with matching names.
+- [x] The structured data is checked by `npm run check`, for the same reason the
+      feed is: a block that does not parse is ignored in silence and the page
+      still looks perfect. It asserts every block parses, carries a schema.org
+      `@context` and an `@type`, and that no `url`, `@id`, `logo` or `image` came
+      out relative — which is the failure mode of building these from a
+      request-derived origin. All five were proved against broken markup.
 - [x] RSS/Atom feed of releases across the org — `/releases.xml`
 
 ## Phase 3 — Operations

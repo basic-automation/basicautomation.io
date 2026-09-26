@@ -3,6 +3,36 @@ const { projects } = await useProjects()
 
 const siteUrl = useSiteOrigin()
 
+/**
+ * This page is a list, so it says so: a `CollectionPage` whose `mainEntity` is
+ * the ordered `ItemList` the page renders. Each item points at the project's own
+ * page, which is where that project is actually described — repeating the
+ * descriptions here would be two sources for one fact.
+ */
+const jsonLd = computed(() => ldJson({
+  '@context': 'https://schema.org',
+  '@type': 'CollectionPage',
+  'name': 'Projects — Basic Automation',
+  'url': `${siteUrl}/projects`,
+  'isPartOf': { '@id': `${siteUrl}/${SITE_ID}` },
+  'publisher': organizationRef(siteUrl),
+  'mainEntity': {
+    '@type': 'ItemList',
+    'numberOfItems': projects.value.length,
+    'itemListOrder': 'https://schema.org/ItemListOrderAscending',
+    'itemListElement': projects.value.map((p, i) => ({
+      '@type': 'ListItem',
+      'position': i + 1,
+      'name': p.name,
+      'url': `${siteUrl}/projects/${p.slug}`,
+    })),
+  },
+}))
+
+useHead({
+  script: [{ type: 'application/ld+json', innerHTML: () => jsonLd.value }],
+})
+
 useSeoMeta({
   title: 'projects — basic automation',
   description:

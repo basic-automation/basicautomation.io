@@ -92,13 +92,6 @@ const facts = computed(() => {
  */
 const siteUrl = useSiteOrigin()
 
-const orgLd = {
-  '@type': 'Organization',
-  'name': 'Basic Automation',
-  'url': siteUrl,
-  'logo': `${siteUrl}/logo.svg`,
-}
-
 const jsonLd = computed(() => {
   const p = project.value
   if (!p) return ''
@@ -113,8 +106,10 @@ const jsonLd = computed(() => {
     'description': p.summary,
     'url': `${siteUrl}/projects/${p.slug}`,
     'codeRepository': m?.htmlUrl ?? `https://github.com/basic-automation/${p.repo}`,
-    'author': orgLd,
-    'publisher': orgLd,
+    // Referenced, not repeated: the description lives on the landing page, and
+    // a consumer reading two pages of this site can tell it is one organization.
+    'author': organizationRef(siteUrl),
+    'publisher': organizationRef(siteUrl),
     'isAccessibleForFree': true,
     'image': `${siteUrl}/projects/og/${p.slug}.png`,
   }
