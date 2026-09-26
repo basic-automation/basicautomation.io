@@ -51,6 +51,10 @@ export interface Project {
   /** This project serves basicautomation.io itself — show the site's own
    *  onion address on its page, as evidence rather than as a claim */
   servesThisSite?: boolean
+  /** Show the live Tor frame and the Tor Browser walkthrough on this page.
+   *  Implied by `servesThisSite`; set it directly for a project that is about
+   *  reaching a page over Tor rather than about publishing one. */
+  showsTorDemo?: boolean
   /** One line, sentence case, no trailing period — cards, lists and <title> */
   tagline: string
   /** The headline claim. Short, declarative, the one thing to remember. */
@@ -83,6 +87,7 @@ export const projects: Project[] = [
     repo: 'artiqwest',
     name: 'artiqwest',
     logo: '/projects/artiqwest.svg',
+    showsTorDemo: true,
     tagline: 'Private web requests for your app, without the setup',
     hero: 'Every request, through Tor.',
     summary:
@@ -474,6 +479,91 @@ default_low_stock_threshold = 5    # overridable per product in the app
       {
         label: 'Download for Windows',
         href: 'https://github.com/basic-automation/Skidbladnir/releases',
+      },
+    ],
+  },
+  {
+    slug: 'nanna',
+    repo: 'Nanna',
+    name: 'Nanna',
+    logo: '/projects/nanna.svg',
+    tagline: 'An assistant that lives on your own hardware and remembers you',
+    hero: 'Your assistant, on your machine.',
+    summary:
+      'A personal assistant that runs on a computer you own instead of someone else\'s. It stays '
+      + 'on, it remembers what you told it last week, and it reaches you wherever you already are '
+      + '— Telegram, Discord, Slack, Signal or WhatsApp. No account, no subscription.',
+    problem:
+      'The assistants that know you best are the ones that keep everything they know on a server '
+      + 'you do not control, and forget you the moment the tab closes. Nanna runs as a service on '
+      + 'your own machine and thinks with an open model on a single consumer GPU, so the private '
+      + 'part is not a setting you have to trust — there is nowhere else for it to go.',
+    kind: 'Personal AI',
+    status: 'active',
+    accent: 'orange',
+    order: 7,
+    features: [
+      {
+        title: 'It is already running',
+        body: 'Nanna sits in the background as a service rather than waiting for you to open something. Ask it at midnight and it is there.',
+      },
+      {
+        title: 'It remembers between conversations',
+        body: 'What you told it last week is still true this week, across every channel you talk to it on. You stop re-explaining yourself.',
+      },
+      {
+        title: 'Message it from anywhere',
+        body: 'Telegram, Discord, Slack, Signal and WhatsApp. Text it from your phone on the train and the answer comes from the machine at home.',
+      },
+      {
+        title: 'The cloud is optional',
+        body: 'A small open model on one consumer GPU is enough to run it entirely on your own hardware. Add an Anthropic, OpenAI or OpenRouter key only if you want one.',
+      },
+      {
+        title: 'It does things, not just talks',
+        body: 'Forty-seven tools are wired in out of the box, and it picks up more from any MCP server you point it at — your files, your notes, your own systems.',
+      },
+      {
+        title: 'Nothing leaves without a reason',
+        body: 'Credentials live in the keychain your operating system already protects, and every inbound webhook is refused unless it proves who sent it.',
+      },
+      {
+        title: 'It keeps itself current',
+        body: 'New versions install in place, so the thing running quietly in the background does not quietly fall behind.',
+      },
+    ],
+    install: {
+      label: 'the one prerequisite — then the installer from Releases',
+      lang: 'shellscript',
+      code: 'ollama pull qwen3.5:9b',
+    },
+    // Same reasoning as Nisaba: the worked example for something you run rather
+    // than import is the one file you fill in. Trimmed from the README's own
+    // config.toml.
+    example: {
+      label: 'config.toml',
+      lang: 'toml',
+      code: `[llm]
+provider = "ollama"       # ollama | anthropic | openai | openrouter
+model = "qwen3.5:9b"      # a fully local run needs no key at all
+
+[server]
+port = 3000
+
+[[mcp.servers]]           # give it your notes; its tools appear alongside the built-ins
+name = "files"
+command = "npx"
+args = ["-y", "@modelcontextprotocol/server-filesystem", "/home/me/notes"]
+
+# Channel tokens are not kept here. They go in the operating system keyring,
+# and this file only records that the channel is switched on.`,
+    },
+    links: [
+      { label: 'Built with Tauri', href: 'https://v2.tauri.app' },
+      { label: 'Needs Ollama', href: 'https://ollama.com' },
+      {
+        label: 'Download for Windows',
+        href: 'https://github.com/basic-automation/Nanna/releases',
       },
     ],
   },
