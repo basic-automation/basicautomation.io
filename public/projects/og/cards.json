@@ -1,0 +1,12 @@
+{
+  "note": "Written by scripts/build-og.mjs. Fingerprints of what each card was rendered from; `npm run og:check` fails when a card no longer matches data/projects.ts.",
+  "recipe": "f76ae5b0bcff517f",
+  "cards": {
+    "artiqwest": "feb45bcd1d9e6a91",
+    "enlil": "5abaecb04e8718df",
+    "nisaba": "6cc30c8b1ee68141",
+    "onyums": "b47dbcdc8ed60ce3",
+    "skidbladnir": "ef15f071238bb45e",
+    "weftdb": "0918e3a14d29af66"
+  }
+}

@@ -13,6 +13,7 @@
     "sync": "node scripts/fetch-projects.mjs",
     "check": "node scripts/check-site.mjs",
     "og": "node scripts/build-og.mjs",
+    "og:check": "node scripts/build-og.mjs --check",
     "typecheck": "nuxt typecheck",
     "bevel": "node scripts/build-bevel-map.mjs",
     "splash": "node scripts/build-splash.mjs"

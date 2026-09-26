@@ -26,8 +26,11 @@ record. There is no run log.
 - [ ] Screenshots for Nisaba and Enlil — Skidbladnir has one, the rest are all type
       (BLOCKED — needs someone who can run the two apps and capture them; the
       routine cannot produce these and will not fabricate them)
-- [ ] Regenerate the social cards whenever `data/projects.ts` changes — `npm run og`
-      is manual today, so an edited hero line and its card can drift apart
+- [x] A card and its data can no longer drift apart. Rendering still needs a local
+      Chromium, so it stays manual — but every render records what it was rendered
+      from in `public/projects/og/cards.json`, and `npm run og:check` recomputes
+      those fingerprints and fails when one no longer matches `data/projects.ts`.
+      CI runs the check on every pull request; it needs neither Chromium nor network.
 
 ## Phase 2 — Discovery ✅
 

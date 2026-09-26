@@ -36,6 +36,12 @@ jobs:
         run: npm ci
       - name: Typecheck
         run: npx nuxt typecheck
+      # The cards themselves are rendered by hand (`npm run og` needs a local
+      # Chromium, which this runner has no business installing). The check does
+      # not render anything — it recomputes what each committed card was
+      # rendered from and fails if the editorial data has moved since.
+      - name: Social cards are current
+        run: npm run og:check
       - name: Build
         run: npm run build
       # The build is only half the claim — prove the server actually starts and

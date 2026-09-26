@@ -68,6 +68,11 @@ as long as it has been answering from the snapshot.
    caches for a month.
 4. Run `npm run sync` to refresh the offline fallback snapshot.
 
+Editing an existing project's name, kind, hero line, tagline, status, accent or
+wordmark changes its card too, so re-render it the same way. CI will tell you if
+you forget: `npm run og:check` recomputes what every committed card was rendered
+from and fails when one no longer matches `data/projects.ts`.
+
 ## Development
 
 ```sh
@@ -78,6 +83,7 @@ npm run start        # serve the build
 npm run typecheck
 npm run sync         # refresh data/projects.generated.json
 npm run og           # re-render the per-project social cards (needs Chromium)
+npm run og:check     # are the committed cards still current? (no Chromium)
 ```
 
 `npm run check` walks a running build: every page, every internal link and
