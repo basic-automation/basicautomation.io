@@ -30,8 +30,15 @@ const label: Record<Status, string> = {
   <UBadge
     :ui="{ base: 'bg-transparent! p-0! ring-0! font-mono text-xs gap-1.5 whitespace-nowrap' }"
     :class="color[status]"
-    :aria-label="`Status: ${label[status]}`"
   >
+    <!-- The word "Status" used to be an `aria-label` on this badge. ARIA
+         prohibits `aria-label` on a generic element — a UBadge renders a bare
+         `span` with no role — and screen readers are entitled to ignore it, so
+         the prefix was being dropped while the visible text carried the rest.
+         Said in the content instead, where it is the accessible name by
+         construction. `sr-only` is absolutely positioned, so it is not a flex
+         item and the badge's own `gap` does not open a hole where it sits. -->
+    <span class="sr-only">Status: </span>
     <span aria-hidden="true">●</span>{{ label[status] }}
   </UBadge>
 </template>

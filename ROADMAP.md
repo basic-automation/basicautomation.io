@@ -207,9 +207,19 @@ record. There is no run log.
       `tabindex`. Each of the six was proved to fail against deliberately broken
       markup. It is not an audit — it cannot see colour, focus order, or whether
       a label says anything useful.
-- [ ] A real accessibility audit, with something that evaluates the rendered page
-      rather than its markup — axe-core or similar. The structural checks above
-      are the floor, not the ceiling.
+- [x] axe-core over every page, in CI — `npm run a11y`, via jsdom. It found two
+      real defects on the first run: the landing page and `/projects` went from
+      `h1` straight to `h3` on the project cards (the dashed "projects" rule
+      between them is a `role="separator"`, not a heading), and the status badge
+      carried an `aria-label` on a bare `span`, which ARIA prohibits and screen
+      readers are entitled to drop — so the word "Status" was being lost. Both
+      fixed; the run is clean.
+- [ ] Run axe in a real browser too. jsdom has no layout engine, so six rules
+      cannot run at all: `color-contrast`, `color-contrast-enhanced`,
+      `target-size`, `scrollable-region-focusable` and the two `meta-viewport`
+      rules. Contrast is covered better by `npm run contrast`; `target-size` is
+      the one genuinely uncovered — nothing here checks that a tap target is big
+      enough. <https://dequeuniversity.com/rules/axe/4.13/target-size>
 - [x] Stop measuring the contrast by hand. `npm run contrast`
       (`scripts/check-contrast.mjs`) reads the `@theme` block, measures every
       token against the one `#d8d8d0` ground, and prints the table this item used

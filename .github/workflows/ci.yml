@@ -75,6 +75,11 @@ jobs:
             sleep 0.5
           done
           npm run check
+          # axe-core over the same pages, through jsdom. Structural rules only
+          # — the ones that need a layout engine are named and skipped in the
+          # script, and the palette's contrast is measured by `npm run contrast`
+          # above, which is a stronger check than sampling rendered pixels.
+          npm run a11y
 
   onion:
     name: onion gateway
