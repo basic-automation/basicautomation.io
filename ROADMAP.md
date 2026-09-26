@@ -122,6 +122,18 @@ record. There is no run log.
 
 ## Cross-cutting
 
+- [x] A test framework, and unit tests over the pure helpers — Vitest,
+      `test/*.test.ts`, run by CI. Scoped deliberately: only the functions in
+      `shared/` that a running server cannot exercise, because `npm run check`
+      already walks the real site. Writing them turned up two real bugs in the
+      README rewriter, both fixed and both now regression-tested: a `mailto:`
+      link was rewritten into a repo path, and a badge — an image inside a link —
+      left its link target relative.
+- [x] One copy of the README rewriter and the release shaper, in `shared/`.
+      `server/utils/github.ts` and `scripts/fetch-projects.mjs` each carried
+      their own; a snapshot shaped differently from the live path is a fallback
+      that changes the page when it takes over.
+
 - [x] Accessibility, structural: a skip link, a real `h1` on every project page,
       named `nav` landmarks, reduced-motion
 - [ ] Accessibility, contrast — **needs an owner decision**, because the palette is

@@ -19,6 +19,11 @@ import { dirname, resolve } from 'node:path'
 import { Marked } from 'marked'
 import { projects } from '../data/projects.ts'
 import { createSlugger } from '../shared/markdown/slug.ts'
+// The same two helpers the site itself renders READMEs and releases with. They
+// used to be copied here; a snapshot shaped differently from the live path is a
+// fallback that changes the page when it takes over.
+import { absolutize, stripLeadingLogo } from '../shared/markdown/readme.ts'
+import { normaliseReleases, pickLatest } from '../shared/github/releases.ts'
 
 const HERE = dirname(fileURLToPath(import.meta.url))
 const OUT = resolve(HERE, '../data/projects.generated.json')
@@ -27,7 +32,7 @@ const ORG = 'basic-automation'
 // information, and GitHub asks that the API version be stated rather than
 // defaulted. Same reasoning as server/utils/github.ts, which has the sources.
 const UA = 'basicautomation.io-build (+https://basicautomation.io)'
-const GH_API_VERSION = '2022-11-28'
+const GH_API_VERSION = '2026-03-10'
 /** Keep this in step with MAX_RELEASES in server/utils/github.ts. */
 const MAX_RELEASES = 5
 
@@ -49,39 +54,6 @@ async function getText(url, accept) {
   const res = await fetch(url, { headers })
   if (!res.ok) throw new Error(`${res.status} ${res.statusText} — ${url}`)
   return res.text()
-}
-
-/**
- * READMEs address their own repo with relative paths. Rewrite them to absolute
- * URLs — raw.githubusercontent for anything that renders as an image, the blob
- * view for anything you click.
- */
-function absolutize(markdown, repo, branch) {
-  const raw = `https://raw.githubusercontent.com/${ORG}/${repo}/${branch}/`
-  const blob = `https://github.com/${ORG}/${repo}/blob/${branch}/`
-  const isRelative = (u) => u && !/^([a-z]+:)?\/\//i.test(u) && !u.startsWith('#') && !u.startsWith('data:')
-  const clean = (u) => u.replace(/^\.\//, '').replace(/^\//, '')
-
-  return markdown
-    // ![alt](./path) — images resolve against raw
-    .replace(/(!\[[^\]]*\]\()([^)\s]+)(\)|\s)/g, (m, head, url, tail) =>
-      isRelative(url) ? `${head}${raw}${clean(url)}${tail}` : m)
-    // [text](./path) — links resolve against the blob view
-    .replace(/(?<!!)(\[[^\]]*\]\()([^)\s]+)(\)|\s)/g, (m, head, url, tail) =>
-      isRelative(url) ? `${head}${blob}${clean(url)}${tail}` : m)
-    // <img src="./path">
-    .replace(/(<img\b[^>]*?\bsrc=["'])([^"']+)(["'])/gi, (m, head, url, tail) =>
-      isRelative(url) ? `${head}${raw}${clean(url)}${tail}` : m)
-}
-
-/**
- * The page renders its own title, tagline and badges, so drop the README's
- * leading logo block to avoid showing the same thing twice.
- */
-function stripLeadingLogo(markdown) {
-  return markdown
-    .replace(/^\s*!\[[^\]]*\]\([^)]*(?:logo|banner)[^)]*\)\s*/i, '')
-    .replace(/^(?:\s*<br\s*\/?>\s*)+/i, '')
 }
 
 /**
@@ -140,7 +112,7 @@ async function fetchRepo(project) {
       `https://api.github.com/repos/${ORG}/${repo}/readme`,
       'application/vnd.github.raw',
     )
-    const prepared = absolutize(stripLeadingLogo(md), repo, out.defaultBranch)
+    const prepared = absolutize(stripLeadingLogo(md), ORG, repo, out.defaultBranch)
     out.readmeHtml = markdownRenderer().parse(prepared)
   }
   catch {
@@ -157,19 +129,8 @@ async function fetchRepo(project) {
     const list = await getJSON(
       `https://api.github.com/repos/${ORG}/${repo}/releases?per_page=${MAX_RELEASES}`,
     )
-    out.releases = list
-      .filter((r) => r && !r.draft && r.tag_name)
-      .map((r) => ({
-        tag: r.tag_name,
-        title: r.name && r.name !== r.tag_name ? r.name : null,
-        url: r.html_url,
-        publishedAt: r.published_at || r.created_at,
-        prerelease: !!r.prerelease,
-      }))
-    const full = out.releases.find((r) => !r.prerelease)
-    out.latestRelease = full
-      ? { tag: full.tag, url: full.url, publishedAt: full.publishedAt }
-      : null
+    out.releases = normaliseReleases(list)
+    out.latestRelease = pickLatest(out.releases)
   }
   catch {
     out.releases = []

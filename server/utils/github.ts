@@ -20,6 +20,8 @@ import { ofetch } from 'ofetch'
 import { projects, type Project } from '~~/data/projects'
 import type { EnrichedProject, Release, RepoMeta } from '~~/shared/types/project'
 import { createSlugger } from '~~/shared/markdown/slug'
+import { absolutize, stripLeadingLogo } from '~~/shared/markdown/readme'
+import { normaliseReleases, pickLatest } from '~~/shared/github/releases'
 import snapshot from '~~/data/projects.generated.json'
 
 const ORG = 'basic-automation'
@@ -144,59 +146,6 @@ async function gh<T>(
   }) as Promise<T>
 }
 
-/**
- * READMEs address their own repo with relative paths. Rewrite them to absolute
- * URLs — raw.githubusercontent for images, the blob view for links.
- */
-function absolutize(markdown: string, repo: string, branch: string): string {
-  const raw = `https://raw.githubusercontent.com/${ORG}/${repo}/${branch}/`
-  const blob = `https://github.com/${ORG}/${repo}/blob/${branch}/`
-  const isRelative = (u: string) => u && !/^([a-z]+:)?\/\//i.test(u) && !u.startsWith('#') && !u.startsWith('data:')
-  const clean = (u: string) => u.replace(/^\.\//, '').replace(/^\//, '')
-
-  return markdown
-    .replace(/(!\[[^\]]*\]\()([^)\s]+)(\)|\s)/g, (m, head, url, tail) =>
-      isRelative(url) ? `${head}${raw}${clean(url)}${tail}` : m)
-    .replace(/(?<!!)(\[[^\]]*\]\()([^)\s]+)(\)|\s)/g, (m, head, url, tail) =>
-      isRelative(url) ? `${head}${blob}${clean(url)}${tail}` : m)
-    .replace(/(<img\b[^>]*?\bsrc=["'])([^"']+)(["'])/gi, (m, head, url, tail) =>
-      isRelative(url) ? `${head}${raw}${clean(url)}${tail}` : m)
-}
-
-/** The page prints its own title and tagline; don't repeat the README's logo. */
-function stripLeadingLogo(markdown: string): string {
-  return markdown
-    .replace(/^\s*!\[[^\]]*\]\([^)]*(?:logo|banner)[^)]*\)\s*/i, '')
-    .replace(/^(?:\s*<br\s*\/?>\s*)+/i, '')
-}
-
-/**
- * GitHub's releases list, trimmed to what the strip prints. Drafts are dropped:
- * they are not public, and the site only shows what a visitor could download.
- */
-function normaliseReleases(raw: any[]): Release[] {
-  return raw
-    .filter((r) => r && !r.draft && r.tag_name)
-    .map((r) => ({
-      tag: r.tag_name as string,
-      // A release whose title is just its tag says nothing twice.
-      title: r.name && r.name !== r.tag_name ? (r.name as string) : null,
-      url: r.html_url as string,
-      publishedAt: (r.published_at || r.created_at) as string,
-      prerelease: !!r.prerelease,
-    }))
-}
-
-/**
- * The newest full release, matching what `/releases/latest` used to return:
- * drafts and pre-releases don't count. A repo that has only tagged
- * pre-releases gets null here and relies on the strip to show its history.
- */
-function pickLatest(releases: Release[]): RepoMeta['latestRelease'] {
-  const r = releases.find((x) => !x.prerelease)
-  return r ? { tag: r.tag, url: r.url, publishedAt: r.publishedAt } : null
-}
-
 async function fetchRepo(project: Project): Promise<RepoMeta> {
   const { repo } = project
 
@@ -245,7 +194,7 @@ async function fetchRepo(project: Project): Promise<RepoMeta> {
 
   if (readme.status === 'fulfilled' && typeof readme.value === 'string') {
     out.readmeHtml = await renderMarkdown(
-      absolutize(stripLeadingLogo(readme.value), repo, defaultBranch),
+      absolutize(stripLeadingLogo(readme.value), ORG, repo, defaultBranch),
     )
   }
 

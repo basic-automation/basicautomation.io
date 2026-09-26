@@ -81,11 +81,16 @@ npm run dev          # http://localhost:3000
 npm run build        # .output/ — a self-contained Nitro node server
 npm run start        # serve the build
 npm run typecheck
+npm test             # unit tests over the pure helpers in shared/
 npm run sync         # refresh data/projects.generated.json
 npm run og           # re-render the per-project social cards (needs Chromium)
 npm run og:check     # are the committed cards still current? (no Chromium)
 npm run bases        # runtime Alpine still matches the node base (needs docker)
 ```
+
+`npm test` is Vitest over the pure functions in `shared/` — README rewriting,
+release shaping, heading slugs — and nothing else. It boots no Nitro and renders
+no component: what a running server does is what `npm run check` asserts.
 
 `npm run check` walks a running build: every page, every internal link and
 asset, every URL the sitemap promises, and every social card, plus three paths

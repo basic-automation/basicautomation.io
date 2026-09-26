@@ -36,6 +36,11 @@ jobs:
         run: npm ci
       - name: Typecheck
         run: npx nuxt typecheck
+      # Unit tests over the pure helpers in `shared/` only. What a running
+      # server proves, `npm run check` proves further down; these cover the
+      # awkward input no README on the site happens to contain today.
+      - name: Unit tests
+        run: npm test
       # The cards themselves are rendered by hand (`npm run og` needs a local
       # Chromium, which this runner has no business installing). The check does
       # not render anything — it recomputes what each committed card was
