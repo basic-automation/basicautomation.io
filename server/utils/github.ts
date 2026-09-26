@@ -36,11 +36,22 @@ const UA = 'basicautomation.io (+https://basicautomation.io)'
 /**
  * GitHub's REST API is versioned by header, and a request without one silently
  * rides the `2022-11-28` default — supported only until 10 March 2028. Pinning
- * it makes the version this site is already using a decision rather than a
- * default that will move on its own one day.
+ * it makes the version this site is using a decision rather than a default that
+ * will move on its own one day.
+ *
+ * `2026-03-10` is the current version and has no end-of-support date yet. Its
+ * breaking changes touch `GET /repos/{owner}/{repo}` only, and only fields this
+ * site has never read: `has_downloads`, `use_squash_pr_title_as_default`,
+ * `secret_scanning_push_protection_custom_link_enabled`, and the beta media
+ * type's `master_branch`/`user` aliases — and the requests here ask for
+ * `application/vnd.github+json`, not that beta type. Checked field by field
+ * against both versions live on 2026-09-25: every value this site reads out of
+ * the repo, the releases list and the raw README was identical, so the move
+ * costs nothing and buys a version that is not counting down.
  * https://docs.github.com/en/rest/about-the-rest-api/api-versions
+ * https://docs.github.com/en/rest/about-the-rest-api/breaking-changes
  */
-const GH_API_VERSION = '2022-11-28'
+const GH_API_VERSION = '2026-03-10'
 
 /** How long upstream responses are reused. Short enough to feel live. */
 const CACHE_TTL = 60 * 15 // 15 minutes

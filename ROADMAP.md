@@ -62,13 +62,22 @@ record. There is no run log.
       healthcheck: `deploy/compose.yaml` uses `CMD-SHELL`, and distroless has no
       shell, so this needs the compose healthcheck converted to exec form first,
       which touches the live DeepStack stack
-- [ ] Evaluate GitHub REST API version `2026-03-10`. The calls now pin
-      `2022-11-28` explicitly, which GitHub supports until **10 March 2028**; the
-      breaking changes in the newer version (`has_downloads` removed from
-      Repository, `merge_commit_sha` removed from PRs, `cvss_severities`) do not
-      touch any field this site reads, so the upgrade looks free — but verify
-      before the sunset rather than after.
+- [x] Evaluated GitHub REST API version `2026-03-10` and moved to it. Its breaking
+      changes touch `GET /repos/{owner}/{repo}` only, and only fields this site has
+      never read (`has_downloads`, `use_squash_pr_title_as_default`,
+      `secret_scanning_push_protection_custom_link_enabled`, and the beta media
+      type's `master_branch`/`user` aliases, which these calls do not request).
+      Checked live on 2026-09-25 against both versions, field by field: the repo
+      payload, the releases list and the raw README came back identical. It has no
+      end-of-support date, where `2022-11-28` sunsets 10 March 2028.
       <https://docs.github.com/en/rest/about-the-rest-api/api-versions>
+      <https://docs.github.com/en/rest/about-the-rest-api/breaking-changes>
+- [ ] Watch for `2026-03-10` actually dropping the fields it documents as removed.
+      As of 2026-09-25 an unauthenticated `GET /repos/{owner}/{repo}` still returns
+      `has_downloads` and `use_squash_pr_title_as_default` with
+      `x-github-api-version-selected: 2026-03-10` in the response headers. Nothing
+      here reads either, so it costs this site nothing — but it means the version
+      header is not yet the whole story about what a payload contains.
 - [ ] Revisit the type checker: `vue-tsc` does not support TypeScript 7 (it still
       reaches for `typescript/lib/tsc`, which TS 7 no longer exports), so the
       project uses Golar via its `golar/unstable` entrypoint — move off `unstable`
