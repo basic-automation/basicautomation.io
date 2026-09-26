@@ -47,6 +47,12 @@ jobs:
       # rendered from and fails if the editorial data has moved since.
       - name: Social cards are current
         run: npm run og:check
+      # Reports every palette colour's contrast against the one background, and
+      # fails only on a NEW shortfall. The failures that exist today are on
+      # ROADMAP.md awaiting an owner decision, and an always-red check is a
+      # check nobody reads.
+      - name: No new contrast shortfall
+        run: npm run contrast -- --strict
       - name: Build
         run: npm run build
       # The build is only half the claim — prove the server actually starts and

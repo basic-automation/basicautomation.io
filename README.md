@@ -86,6 +86,7 @@ npm run sync         # refresh data/projects.generated.json
 npm run og           # re-render the per-project social cards (needs Chromium)
 npm run og:check     # are the committed cards still current? (no Chromium)
 npm run bases        # runtime Alpine still matches the node base (needs docker)
+npm run contrast     # WCAG contrast for every palette colour, against the ground
 ```
 
 `npm test` is Vitest over the pure functions in `shared/` — README rewriting,

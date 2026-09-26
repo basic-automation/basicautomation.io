@@ -136,23 +136,25 @@ record. There is no run log.
 
 - [x] Accessibility, structural: a skip link, a real `h1` on every project page,
       named `nav` landmarks, reduced-motion
-- [ ] Accessibility, contrast — **needs an owner decision**, because the palette is
-      locked and fixing this means changing what a colour role *is*. Measured
-      against the single `#d8d8d0` ground:
-
-      | token            | hex       | ratio | AA normal |
-      | ---              | ---       | ---   | ---       |
-      | `pn-muted`       | `#7c7c67` | 2.97  | FAIL      |
-      | `pn-accent`      | `#5ea500` | 2.14  | FAIL      |
-      | `pn-bright-cyan` | `#fb2c36` | 2.66  | FAIL      |
-      | `pn-magenta`     | `#497d00` | 3.47  | large only |
-      | `pn-bright-green`| `#7f22fe` | 4.11  | large only |
-
-      `pn-muted` carries every label and date on the site and `pn-accent` carries
-      link text. `pn-rule` (1.62) is decorative separators only and is exempt.
+- [x] Stop measuring the contrast by hand. `npm run contrast`
+      (`scripts/check-contrast.mjs`) reads the `@theme` block, measures every
+      token against the one `#d8d8d0` ground, and prints the table this item used
+      to carry as typed text. `--strict` fails only on a NEW shortfall, against a
+      baseline of the ones already known — an always-red check is a check nobody
+      reads. CI runs it. It reproduces every number that was typed here, and it
+      found two the typed table had missed: `pn-red` (2.56) and `pn-orange`
+      (2.62), both below AA, and `pn-red` is a live project accent today.
+- [ ] Accessibility, contrast — **needs an owner decision**, because the palette
+      is locked and fixing this means changing what a colour role *is*. Seven
+      tokens are below AA against the ground; run `npm run contrast` for the
+      current numbers rather than trusting a copy of them here. `pn-muted`
+      carries every label and date on the site and `pn-accent` carries link text;
+      `pn-rule` (1.62) is decorative separators only and is exempt.
       The options are: retire `pn-muted` in favour of `pn-dim` (4.82, passes)
       wherever it carries information, or change the values — which the locked
-      palette rule forbids without the owner saying so.
+      palette rule forbids without the owner saying so. Until then the shortfalls
+      sit in the script's `BASELINE`, which records the number each was measured
+      at, not an endorsement of it.
 - [x] A real 404 check: every internal link, every render, on every route — `npm run check`
 - [x] Check external links on a schedule — `.github/workflows/links.yml`, weekly
       on Thursdays. It follows every external link and keeps ONE issue in sync:
