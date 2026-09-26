@@ -191,28 +191,34 @@ body {
 }
 .readme > *:first-child { margin-top: 0; }
 
-.readme h1, .readme h2, .readme h3, .readme h4 {
+/* A README's headings are rendered one level DOWN from the markdown, so the
+   page keeps a single h1 (see shared/markdown/heading.ts). These selectors
+   follow that shift: `h2` is the README's `#`, `h3` is its `##`, and so on —
+   which is why the `## ` and `### ` prefixes sit where they do. They label the
+   markdown the author wrote, not the tag this page emitted. */
+.readme h2, .readme h3, .readme h4, .readme h5, .readme h6 {
   color: var(--color-pn-fg-bright);
   font-weight: 600;
   line-height: 1.35;
   margin: 2.25rem 0 0.75rem;
   scroll-margin-top: 5rem;
 }
-.readme h1 { font-size: 1.25rem; }
-.readme h2 {
+.readme h2 { font-size: 1.25rem; }
+.readme h3 {
   font-size: 1.05rem;
   border-top: 1px dashed color-mix(in srgb, var(--color-pn-rule) 70%, transparent);
   padding-top: 1.5rem;
 }
-.readme h2::before,
-.readme h3::before {
+.readme h3::before,
+.readme h4::before {
   color: var(--color-pn-accent);
   font-weight: 400;
 }
-.readme h2::before { content: "## "; }
-.readme h3::before { content: "### "; }
-.readme h3 { font-size: 0.95rem; color: var(--color-pn-blue); }
-.readme h4 { font-size: 0.875rem; color: var(--color-pn-dim); }
+.readme h3::before { content: "## "; }
+.readme h4::before { content: "### "; }
+.readme h4 { font-size: 0.95rem; color: var(--color-pn-blue); }
+.readme h5 { font-size: 0.875rem; color: var(--color-pn-dim); }
+.readme h6 { font-size: 0.875rem; color: var(--color-pn-dim); }
 
 .readme p { margin: 0.9rem 0; }
 .readme a {

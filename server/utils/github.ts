@@ -20,6 +20,7 @@ import { ofetch } from 'ofetch'
 import { projects, type Project } from '~~/data/projects'
 import type { EnrichedProject, Release, RepoMeta } from '~~/shared/types/project'
 import { createSlugger } from '~~/shared/markdown/slug'
+import { readmeHeading } from '~~/shared/markdown/heading'
 import { absolutize, stripLeadingLogo } from '~~/shared/markdown/readme'
 import { normaliseReleases, pickLatest } from '~~/shared/github/releases'
 import snapshot from '~~/data/projects.generated.json'
@@ -83,8 +84,9 @@ const snapshotRepos = (snapshot as { repos: Record<string, SnapshotRepo> }).repo
  * on a second — `marked` itself stays synchronous.
  *
  * Headings carry GitHub's own anchor, so a README's table of contents still
- * works once it is rendered here. The slugger is per-document: duplicate
- * heading text numbers from 1 within one README, not across all of them.
+ * works once it is rendered here, and are demoted a level so the README nests
+ * under the page's own h1. The slugger is per-document: duplicate heading text
+ * numbers from 1 within one README, not across all of them.
  */
 async function renderMarkdown(md: string): Promise<string> {
   const fences: { lang: string | undefined, code: string }[] = []
@@ -99,14 +101,9 @@ async function renderMarkdown(md: string): Promise<string> {
         fences.push({ lang, code: text })
         return `\u0000FENCE${fences.length - 1}\u0000`
       },
-      // The slug comes from the heading's raw text, never from the rendered
-      // inline HTML: `Identity & address helpers` renders as `&amp;`, and
-      // slugging that gives `identity-amp-address-helpers` instead of the
-      // `identity--address-helpers` GitHub minted and the README links to.
-      heading({ tokens, depth, text }) {
-        const inner = this.parser.parseInline(tokens)
-        return `<h${depth} id="${slug(text)}">${inner}</h${depth}>\n`
-      },
+      // Demoted a level so the README nests under the page's own h1, with the
+      // ids left where GitHub minted them. See shared/markdown/heading.ts.
+      heading: readmeHeading(slug),
     },
   })
 

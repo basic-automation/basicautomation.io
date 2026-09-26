@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { createSlugger, slugify } from '~~/shared/markdown/slug'
+import { MAX_HEADING, demote, readmeHeading } from '~~/shared/markdown/heading'
 
 /**
  * These are not invented cases. A README's own table of contents links to
@@ -68,5 +69,39 @@ describe('createSlugger', () => {
 		const b = createSlugger()
 		expect(a('Usage')).toBe('usage')
 		expect(b('Usage')).toBe('usage')
+	})
+})
+
+describe('demote', () => {
+	it('moves a README one level down so it nests under the page h1', () => {
+		expect(demote(1)).toBe(2)
+		expect(demote(2)).toBe(3)
+		expect(demote(5)).toBe(6)
+	})
+
+	it('flattens at h6 rather than emitting an h7 that does not exist', () => {
+		expect(demote(6)).toBe(MAX_HEADING)
+		expect(demote(6)).toBe(6)
+	})
+})
+
+describe('readmeHeading', () => {
+	// Marked calls the renderer with itself as `this`; this is the part of it
+	// the renderer touches.
+	const ctx = { parser: { parseInline: (tokens: unknown[]) => (tokens as { raw: string }[])[0]!.raw } }
+	const render = (depth: number, text: string) =>
+		readmeHeading(createSlugger()).call(ctx as never, { depth, text, tokens: [{ raw: text }] })
+
+	it('demotes the level and keeps the id GitHub minted', () => {
+		expect(render(1, 'Skidbladnir')).toBe('<h2 id="skidbladnir">Skidbladnir</h2>\n')
+		expect(render(3, 'Build from source')).toBe('<h4 id="build-from-source">Build from source</h4>\n')
+	})
+
+	it('numbers duplicates within the one document, as GitHub does', () => {
+		const heading = readmeHeading(createSlugger())
+		expect(heading.call(ctx as never, { depth: 2, text: 'Usage', tokens: [{ raw: 'Usage' }] }))
+			.toContain('id="usage"')
+		expect(heading.call(ctx as never, { depth: 2, text: 'Usage', tokens: [{ raw: 'Usage' }] }))
+			.toContain('id="usage-1"')
 	})
 })

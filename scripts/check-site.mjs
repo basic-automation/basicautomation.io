@@ -91,6 +91,63 @@ function extractRefs(html) {
   return [...out]
 }
 
+/**
+ * Structural accessibility, over the markup that was actually served.
+ *
+ * Not a substitute for an audit — it cannot see colour, focus order or whether
+ * a label says anything useful. What it does catch is the class of regression
+ * that is invisible in a browser and obvious to a screen reader, on every page,
+ * for free: two `h1`s, an unnamed second landmark, an image with no `alt`.
+ *
+ * Both of the first two were real here. A project page carries its own `h1` and
+ * then folds in a README that opens with `# ProjectName`, so four of six pages
+ * served two — which is why READMEs are now rendered a heading level down. And
+ * the site nav had no name while the per-project nav did, so a screen reader
+ * announced "navigation" twice with nothing to tell them apart.
+ */
+function checkAccessibility(path, html, isUpstream) {
+  const tag = (name) => [...html.matchAll(new RegExp(`<${name}\\b([^>]*)>`, 'gi'))]
+  const attr = (attrs, name) => attrs.match(new RegExp(`\\b${name}=["']([^"']*)["']`, 'i'))?.[1]
+
+  // A document says what it is about once.
+  const h1s = tag('h1')
+  if (h1s.length !== 1) {
+    fail(path, `${h1s.length} <h1> elements — a page has exactly one`)
+  }
+
+  // Without it a screen reader guesses the language, and pronounces accordingly.
+  const html_ = html.match(/<html\b([^>]*)>/i)?.[1] ?? ''
+  if (!attr(html_, 'lang')) fail(path, '<html> has no lang attribute')
+
+  // One main landmark, or "skip to content" has nowhere to point.
+  const mains = tag('main')
+  if (mains.length !== 1) fail(path, `${mains.length} <main> elements — a page has exactly one`)
+
+  // Two landmarks of the same kind need names to be told apart. One does not.
+  const navs = tag('nav')
+  if (navs.length > 1) {
+    for (const nav of navs) {
+      if (!attr(nav[1], 'aria-label') && !attr(nav[1], 'aria-labelledby')) {
+        fail(path, `a <nav> has no accessible name, and this page has ${navs.length} of them`)
+      }
+    }
+  }
+
+  // `alt=""` is a valid answer — it says "decorative". No `alt` at all is not.
+  for (const img of tag('img')) {
+    if (/\balt=/i.test(img[1])) continue
+    const report = isUpstream(img.index) ? warn : fail
+    report(path, `an <img> has no alt attribute${
+      isUpstream(img.index) ? " — it is in the repo's own README" : ` (${attr(img[1], 'src') ?? '?'})`}`)
+  }
+
+  // A positive tabindex takes an element out of document order and puts it in
+  // front of everything, which is almost never what anyone meant.
+  for (const m of html.matchAll(/\btabindex=["'](\d+)["']/gi)) {
+    if (Number(m[1]) > 0) fail(path, `tabindex="${m[1]}" — positive values reorder the whole page`)
+  }
+}
+
 const isCrawlable = (url) =>
   url.origin === new URL(BASE).origin
   && !UNLINKED_ROUTES.includes(url.pathname)
@@ -155,6 +212,8 @@ while (queue.length) {
   // must not turn this check red, so it warns.
   const readmeAt = res.body.indexOf('class="readme')
   const isUpstream = (index) => readmeAt !== -1 && index >= readmeAt
+
+  checkAccessibility(path, res.body, isUpstream)
 
   for (const [ref, index] of extractRefs(res.body)) {
     if (/^(mailto|tel|data|javascript):/i.test(ref)) continue

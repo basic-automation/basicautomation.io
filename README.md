@@ -100,7 +100,9 @@ no component: what a running server does is what `npm run check` asserts.
 
 `npm run check` walks a running build: every page, every internal link and
 asset, every URL the sitemap promises, and every social card, plus three paths
-that must answer 404. It is what CI runs after the build, because a bundle that
+that must answer 404. It also asserts the structural accessibility of each page
+— one `h1`, one `main`, a language, a named `nav` when there is more than one,
+an `alt` on every image, no positive `tabindex`. It is what CI runs after the build, because a bundle that
 compiles is not the same as a site that renders.
 
 ```sh

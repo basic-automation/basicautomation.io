@@ -19,6 +19,7 @@ import { dirname, resolve } from 'node:path'
 import { Marked } from 'marked'
 import { projects } from '../data/projects.ts'
 import { createSlugger } from '../shared/markdown/slug.ts'
+import { readmeHeading } from '../shared/markdown/heading.ts'
 // The same two helpers the site itself renders READMEs and releases with. They
 // used to be copied here; a snapshot shaped differently from the live path is a
 // fallback that changes the page when it takes over.
@@ -61,8 +62,9 @@ async function getText(url, accept) {
  *
  * One renderer per README, because the slugger has to number duplicate heading
  * text from 1 within a document rather than across the whole run. Headings get
- * GitHub's own anchor so a README's table of contents still works here — the
- * same treatment the live renderer in server/utils/github.ts gives them.
+ * GitHub's own anchor so a README's table of contents still works here, and are
+ * demoted a level — the same treatment the live renderer in
+ * server/utils/github.ts gives them, from the same module.
  */
 function markdownRenderer() {
   const slug = createSlugger()
@@ -71,14 +73,9 @@ function markdownRenderer() {
     breaks: false,
     async: false,
     renderer: {
-      // The slug comes from the heading's raw text, never from the rendered
-      // inline HTML: `Identity & address helpers` renders as `&amp;`, and
-      // slugging that gives `identity-amp-address-helpers` instead of the
-      // `identity--address-helpers` GitHub minted and the README links to.
-      heading({ tokens, depth, text }) {
-        const inner = this.parser.parseInline(tokens)
-        return `<h${depth} id="${slug(text)}">${inner}</h${depth}>\n`
-      },
+      // Demoted a level so the README nests under the page's own h1, with the
+      // ids left where GitHub minted them. See shared/markdown/heading.ts.
+      heading: readmeHeading(slug),
     },
   })
 }

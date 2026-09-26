@@ -164,6 +164,23 @@ record. There is no run log.
 
 - [x] Accessibility, structural: a skip link, a real `h1` on every project page,
       named `nav` landmarks, reduced-motion
+- [x] …and the two places that claim was not actually true. Four of six project
+      pages served TWO `<h1>`s, because the page has its own and then folds in a
+      README that opens with `# ProjectName` — so READMEs now render a heading
+      level down (`shared/markdown/heading.ts`), which also nests them under the
+      page's heading where they belong. And the site nav had no accessible name
+      while the per-project nav did, so a screen reader announced "navigation"
+      twice with nothing to tell the two apart.
+- [x] Structural accessibility is now checked on every page by `npm run check`,
+      so neither can come back: one `h1`, one `main`, `html[lang]`, an accessible
+      name on every `nav` when a page has more than one, an `alt` on every image
+      (a README's missing `alt` warns, since it is upstream's), and no positive
+      `tabindex`. Each of the six was proved to fail against deliberately broken
+      markup. It is not an audit — it cannot see colour, focus order, or whether
+      a label says anything useful.
+- [ ] A real accessibility audit, with something that evaluates the rendered page
+      rather than its markup — axe-core or similar. The structural checks above
+      are the floor, not the ceiling.
 - [x] Stop measuring the contrast by hand. `npm run contrast`
       (`scripts/check-contrast.mjs`) reads the `@theme` block, measures every
       token against the one `#d8d8d0` ground, and prints the table this item used
