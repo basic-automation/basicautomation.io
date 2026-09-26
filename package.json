@@ -19,7 +19,9 @@
     "splash": "node scripts/build-splash.mjs",
     "bases": "node scripts/check-base-images.mjs",
     "test": "vitest run",
-    "contrast": "node scripts/check-contrast.mjs"
+    "contrast": "node scripts/check-contrast.mjs",
+    "sizes": "node scripts/build-asset-sizes.mjs",
+    "sizes:check": "node scripts/build-asset-sizes.mjs --check"
   },
   "dependencies": {
     "@nuxt/ui": "^4.11.2",

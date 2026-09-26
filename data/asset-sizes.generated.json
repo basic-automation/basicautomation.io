@@ -1,0 +1,33 @@
+{
+  "note": "Written by scripts/build-asset-sizes.mjs. Intrinsic [width, height] per image, so an <img> can reserve its space. Run `npm run sizes` after adding or replacing one.",
+  "sizes": {
+    "/projects/artiqwest.svg": [
+      336,
+      84
+    ],
+    "/projects/enlil.svg": [
+      70,
+      100
+    ],
+    "/projects/nisaba.svg": [
+      150,
+      112
+    ],
+    "/projects/onyums.svg": [
+      483,
+      152
+    ],
+    "/projects/shots/skidbladnir-screenshot.webp": [
+      2292,
+      1088
+    ],
+    "/projects/skidbladnir.svg": [
+      500,
+      600
+    ],
+    "/projects/weftdb.svg": [
+      267,
+      168
+    ]
+  }
+}

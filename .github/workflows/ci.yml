@@ -53,6 +53,11 @@ jobs:
       # check nobody reads.
       - name: No new contrast shortfall
         run: npm run contrast -- --strict
+      # The committed image sizes are what the pages reserve space with. A
+      # replaced screenshot with the manifest left alone would reserve the wrong
+      # shape, which is worse than reserving none.
+      - name: Image sizes are current
+        run: npm run sizes:check
       - name: Build
         run: npm run build
       # The build is only half the claim — prove the server actually starts and

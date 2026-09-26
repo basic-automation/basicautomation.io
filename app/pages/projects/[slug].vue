@@ -184,6 +184,7 @@ useSeoMeta({
           <img
             :src="project.logo"
             :alt="project.name"
+            v-bind="assetSize(project.logo)"
             class="h-24 w-auto max-w-full sm:h-36 lg:h-44"
           >
         </h1>
@@ -224,9 +225,14 @@ useSeoMeta({
     <!-- ── Screenshot ───────────────────────────────────────────────────── -->
     <section v-if="project.screenshot" class="mb-32">
       <TermRule label="screenshot" />
+      <!-- The one image on the site that can move the page: it is `w-full` and
+           block-level, so until it lands the browser has nothing to reserve its
+           height with and everything below it sits too high. `assetSize` gives
+           it the aspect ratio; the classes still decide the drawn size. -->
       <img
         :src="project.screenshot"
         :alt="`${project.name} screenshot`"
+        v-bind="assetSize(project.screenshot)"
         class="mt-8 w-full max-w-5xl"
       >
     </section>

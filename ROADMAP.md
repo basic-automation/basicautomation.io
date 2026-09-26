@@ -122,6 +122,23 @@ record. There is no run log.
 
 ## Cross-cutting
 
+- [x] Reserve space for the images the pages render. Every `<img>` this repo
+      controls now carries its intrinsic `width`/`height`, read out of the file
+      itself by `npm run sizes` into `data/asset-sizes.generated.json`, with a
+      `sizes:check` in CI so a replaced image cannot leave the manifest behind.
+      The project screenshot is the one that mattered: it is `w-full` and
+      block-level, so without an aspect ratio everything below it sat too high
+      until the file landed. The cards were already safe — their media sits in an
+      `aspect-16/10` box — and are left alone.
+      NOTE: the improvement itself was not measured. `PerformanceObserver` for
+      `layout-shift` does not fire in the routine's headless browser, even on a
+      deliberate 300px shift, so there is no before/after CLS number here. What
+      was verified is that the attributes render, that the remote README images
+      are untouched, and that the layout is unchanged.
+- [ ] Measure Core Web Vitals for real, on the live site, with something that can
+      actually observe `layout-shift` and `largest-contentful-paint`. Until then
+      the CLS work above is best practice rather than a measured win.
+      <https://web.dev/articles/optimize-cls>
 - [x] A test framework, and unit tests over the pure helpers — Vitest,
       `test/*.test.ts`, run by CI. Scoped deliberately: only the functions in
       `shared/` that a running server cannot exercise, because `npm run check`

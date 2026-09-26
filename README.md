@@ -62,6 +62,10 @@ as long as it has been answering from the snapshot.
    pitch, the feature copy, and the code sample that shows what the thing feels
    like to use. Everything that moves on its own is fetched, not typed.
 2. If it has a wordmark, drop it in `public/projects/<slug>.svg` and set `logo`.
+   Same for a screenshot in `public/projects/shots/`. Then run `npm run sizes`,
+   which records each image's intrinsic size in
+   `data/asset-sizes.generated.json` so the page can reserve its space before
+   the file arrives. CI fails if that file and the images disagree.
 3. Run `npm run og` to render its social card into `public/projects/og/`, and
    commit it. Cards are generated rather than rendered per request: everything
    on one is editorial, and nothing live belongs in an image a social network
@@ -87,6 +91,7 @@ npm run og           # re-render the per-project social cards (needs Chromium)
 npm run og:check     # are the committed cards still current? (no Chromium)
 npm run bases        # runtime Alpine still matches the node base (needs docker)
 npm run contrast     # WCAG contrast for every palette colour, against the ground
+npm run sizes        # re-read every image's intrinsic size
 ```
 
 `npm test` is Vitest over the pure functions in `shared/` — README rewriting,
