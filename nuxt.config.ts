@@ -73,6 +73,38 @@ export default defineNuxtConfig({
           'Referrer-Policy': 'strict-origin-when-cross-origin',
           'X-Frame-Options': 'DENY',
           'Permissions-Policy': 'geolocation=(), camera=(), microphone=()',
+          // Every project page folds in that repo's README and renders its HTML
+          // as-is. The repos are first-party, but their content arrives at
+          // request time and changes without a deploy here — so the page is
+          // told what it is allowed to load, once, rather than trusting each
+          // README to stay well behaved.
+          //
+          // `font-src 'self'` is the locked "one self-hosted typeface" rule
+          // stated where a browser enforces it. `connect-src 'self'` is the
+          // same for "no third-party analytics". `default-src 'self'` rather
+          // than `'none'` deliberately: a directive nobody thought of falls
+          // back to same-origin instead of to a blank page.
+          //
+          // `img-src` allows any https host because a README's badges and
+          // screenshots are somebody else's URLs, and an allowlist here turns
+          // "a repo added a badge" into a silently broken image on this site.
+          //
+          // The two `'unsafe-inline'`s are Nuxt's: the importmap, the
+          // hydration payload and Shiki's per-token `style` attributes are all
+          // inline, and nothing serves them a nonce. They are the weak part of
+          // this policy and they still leave every other directive doing work.
+          'Content-Security-Policy': [
+            'default-src \'self\'',
+            'base-uri \'self\'',
+            'object-src \'none\'',
+            'frame-ancestors \'none\'',
+            'form-action \'self\'',
+            'script-src \'self\' \'unsafe-inline\'',
+            'style-src \'self\' \'unsafe-inline\'',
+            'img-src \'self\' data: https:',
+            'font-src \'self\'',
+            'connect-src \'self\'',
+          ].join('; '),
         },
       },
       // Hashed build output is content-addressed and safe to cache forever.

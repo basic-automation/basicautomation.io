@@ -122,6 +122,17 @@ record. There is no run log.
 
 ## Cross-cutting
 
+- [x] A Content-Security-Policy, in `nuxt.config.ts`'s `/**` route rule. The
+      project pages render each repo's README HTML as-is, fetched at request
+      time, so the page states what it may load rather than trusting every
+      README to stay well behaved. `font-src 'self'` and `connect-src 'self'`
+      put two locked principles somewhere a browser enforces them. The two
+      `'unsafe-inline'`s are Nuxt's own importmap, hydration payload and Shiki
+      style attributes, and are the weak part of the policy.
+- [ ] Replace the CSP's `'unsafe-inline'` with per-request nonces, which needs
+      Nuxt to serve one to the importmap, the hydration payload and Shiki's
+      inline `style` attributes. Not obviously possible without adding a
+      security module; worth knowing which before reaching for one.
 - [x] Reserve space for the images the pages render. Every `<img>` this repo
       controls now carries its intrinsic `width`/`height`, read out of the file
       itself by `npm run sizes` into `data/asset-sizes.generated.json`, with a
