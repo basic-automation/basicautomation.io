@@ -51,10 +51,13 @@ record. There is no run log.
 - [x] Structured request logging, and a `status` page fed by `/healthz`
 - [x] Alert when the site has been serving from the fallback snapshot for more than an hour
 - [x] Trim the image: the runtime layer is no longer a full `node:24-alpine`
-- [ ] Keep `onion/`-adjacent: the Dockerfile's `alpine:3.24` runtime must stay in
-      step with whatever base `node:24-alpine` uses, because the node binary is
-      linked against that Alpine's musl. Check on every node base bump:
-      `docker run --rm node:24-alpine cat /etc/alpine-release`
+- [x] The Dockerfile's `alpine:3.24` runtime must stay in step with whatever base
+      `node:24-alpine` uses, because the node binary is copied out of that image
+      and linked against its musl. No longer a thing to remember on a base bump:
+      `npm run bases` (`scripts/check-base-images.mjs`) reads both tags out of the
+      Dockerfile, asks the node image for `/etc/alpine-release`, and fails on a
+      mismatch. CI's `image` job runs it, which pulls an image that job needs
+      anyway. Today: node:24-alpine is Alpine 3.24.2, runtime is 3.24 — in step.
 - [ ] Move the runtime to distroless — roughly another 60 MB off. BLOCKED on the
       healthcheck: `deploy/compose.yaml` uses `CMD-SHELL`, and distroless has no
       shell, so this needs the compose healthcheck converted to exec form first,

@@ -91,6 +91,16 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: docker/setup-buildx-action@v3
+      # The runtime stage copies the node binary out of `node:24-alpine` into a
+      # bare Alpine, so the two Alpines have to be the same one — a mismatch is
+      # not a build error, it is a container that dies on a relocation error in
+      # production. This pulls the node image, which the build below needs
+      # anyway.
+      #
+      # Invoked directly rather than through `npm run bases`: this job installs
+      # no dependencies, and the script needs none.
+      - name: Runtime Alpine still matches the node base
+        run: node scripts/check-base-images.mjs
       # Build only — publishing happens in release.yml, on a tag.
       - uses: docker/build-push-action@v6
         with:

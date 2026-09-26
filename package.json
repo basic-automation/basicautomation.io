@@ -16,7 +16,8 @@
     "og:check": "node scripts/build-og.mjs --check",
     "typecheck": "nuxt typecheck",
     "bevel": "node scripts/build-bevel-map.mjs",
-    "splash": "node scripts/build-splash.mjs"
+    "splash": "node scripts/build-splash.mjs",
+    "bases": "node scripts/check-base-images.mjs"
   },
   "dependencies": {
     "@nuxt/ui": "^4.11.2",
