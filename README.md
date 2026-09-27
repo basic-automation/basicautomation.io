@@ -154,10 +154,13 @@ docker run --rm -p 3000:3000 ghcr.io/basic-automation/basicautomation.io:latest
 
 `deploy/compose.yaml` holds the service definition as it appears in DeepStack.
 
-Every response carries a Content-Security-Policy, set once in `nuxt.config.ts`.
-It matters here because each project page folds in that repo's README and
-renders its HTML as-is: the content arrives at request time and changes without
-a deploy. `font-src 'self'` and `connect-src 'self'` also state two of the
+Every response carries a Content-Security-Policy, built in
+`shared/security/csp.ts`. It matters here because each project page folds in
+that repo's README and renders its HTML as-is: the content arrives at request
+time and changes without a deploy. Rendered pages get a fresh script nonce per
+request (`server/plugins/csp-nonce.ts`), stamped on the scripts Nuxt emits and
+never on the page body, so an inline script or event handler that arrives in a
+README does not run. `font-src 'self'` and `connect-src 'self'` also state two of the
 site's own rules — one self-hosted typeface, no third-party calls — somewhere a
 browser enforces them. `img-src` allows any https host, because a README's
 badges are somebody else's URLs.

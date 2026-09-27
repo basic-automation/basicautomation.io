@@ -188,10 +188,20 @@ record. There is no run log.
       put two locked principles somewhere a browser enforces them. The two
       `'unsafe-inline'`s are Nuxt's own importmap, hydration payload and Shiki
       style attributes, and are the weak part of the policy.
-- [ ] Replace the CSP's `'unsafe-inline'` with per-request nonces, which needs
-      Nuxt to serve one to the importmap, the hydration payload and Shiki's
-      inline `style` attributes. Not obviously possible without adding a
-      security module; worth knowing which before reaching for one.
+- [x] Per-request nonces for `script-src`, without a security module:
+      `server/plugins/csp-nonce.ts` mints one in `render:html`, stamps it on the
+      `<script>`s in the head and body tail — Nuxt's colour-mode bootstrap,
+      runtime config and import map — and never on the app body where README
+      HTML lands, then swaps the header in `render:response`. The policy itself
+      moved to `shared/security/csp.ts` so the route rule and the plugin share
+      it. Proved in a browser: an inline `<script>` and an `onerror=` handler
+      injected into the page ran under the old policy and are refused now, while
+      hydration, colour mode and client navigation log nothing.
+      `'unsafe-inline'` stays in the list only as the CSP1 fallback, which a
+      nonce-aware browser ignores. <https://www.w3.org/TR/CSP3/#allow-all-inline>
+- [ ] `style-src` still needs `'unsafe-inline'`: Shiki colours tokens with
+      `style` attributes, which cannot carry a nonce. Moving Shiki to CSS
+      variables or classes would let it go.
 - [x] Reserve space for the images the pages render. Every `<img>` this repo
       controls now carries its intrinsic `width`/`height`, read out of the file
       itself by `npm run sizes` into `data/asset-sizes.generated.json`, with a
