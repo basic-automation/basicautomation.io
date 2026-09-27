@@ -101,6 +101,14 @@ record. There is no run log.
       refreshes inside 54 of the 60. Seven projects gives 30 minutes and 42
       calls; `test/budget.test.ts` proves the budget holds for every count up to
       18 and pins the numbers the comments quote.
+- [x] Show the quota, not just its symptoms. Every GitHub response's
+      `x-ratelimit-*` headers — refusals included, which is when they matter —
+      are recorded; `/healthz` carries `github` (limit, remaining, reset) plus
+      the computed refresh interval and its hourly budget, `/status` prints both,
+      and the log gets one `upstream.rate_limited` line when the quota hits zero.
+      Before this, the only sign of a spent quota was a README missing from a
+      page. It is also shared: a local build being tested draws on the same
+      anonymous 60 as the deployed site, which is how this run found it.
 - [x] Trim the image: the runtime layer is no longer a full `node:24-alpine`
 - [x] The Dockerfile's `alpine:3.24` runtime must stay in step with whatever base
       `node:24-alpine` uses, because the node binary is copied out of that image

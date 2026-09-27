@@ -23,4 +23,22 @@ export interface Health {
      */
     incomplete: { repo: string, missing: string[] }[]
   }
+  /**
+   * GitHub's own account of the rate limit, from the `x-ratelimit-*` headers on
+   * the most recent response — including a refusal, which is when it matters.
+   * Null until the process has made a call.
+   */
+  github: {
+    /** 60 anonymous, 5,000 with a token. */
+    limit: number
+    remaining: number
+    resetsAt: string
+    /** Measured on the server, so the status page never computes it from its own clock. */
+    resetsInSeconds: number
+    observedAt: string
+  } | null
+  /** How long a repo's data is reused before it is fetched again — see `shared/github/budget.ts`. */
+  refreshSeconds: number
+  /** The worst case that interval allows: every repo refreshed as often as it can be, for an hour. */
+  budgetedCallsPerHour: number
 }

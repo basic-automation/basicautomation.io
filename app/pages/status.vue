@@ -43,6 +43,17 @@ const rows = computed(() => {
     { label: 'started', value: h.startedAt },
     { label: 'live fetches', value: String(h.data.liveResolutions) },
     { label: 'snapshot fetches', value: String(h.data.snapshotResolutions) },
+    // GitHub's figures, not ours: the headers on its last response.
+    {
+      label: 'github quota',
+      value: h.github
+        ? `${h.github.remaining} of ${h.github.limit} left, resets in ${duration(h.github.resetsInSeconds)}`
+        : 'not yet asked',
+    },
+    {
+      label: 'refresh',
+      value: `every ${duration(h.refreshSeconds)}, at most ${h.budgetedCallsPerHour} calls an hour`,
+    },
   ]
 })
 
@@ -118,7 +129,7 @@ useSeoMeta({
 
         <dl class="mt-8 flex flex-wrap gap-x-10 gap-y-3 text-xs">
           <div v-for="row in rows" :key="row.label" class="flex items-baseline gap-2">
-            <dt class="text-pn-muted">
+            <dt class="whitespace-nowrap text-pn-muted">
               {{ row.label }}
             </dt>
             <dd class="text-pn-fg-bright">

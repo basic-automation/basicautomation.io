@@ -10,12 +10,15 @@
  */
 
 import type { Health } from '~~/shared/types/health'
+import { projects } from '~~/data/projects'
+import { cacheTtl, callsPerHour } from '~~/shared/github/budget'
 
 /**
  * Stale for this long stops being a blip and starts being something someone
- * should look at. Upstream is cached for fifteen minutes and served stale for
- * six hours, so an hour of snapshot-only answers means several refresh windows
- * have come and gone with GitHub still unreachable.
+ * should look at. Upstream is cached for `cacheTtl` — 30 minutes at seven
+ * projects — and served stale for six hours, so an hour of snapshot-only
+ * answers means at least two refresh windows have come and gone with GitHub
+ * still unreachable.
  */
 const STALE_ALERT_AFTER = 60 * 60 * 1000 // 1 hour
 
@@ -33,6 +36,38 @@ let lastAlertAt = 0
  * an empty list, so "is anything missing" is `incomplete.size`.
  */
 const incomplete = new Map<string, string[]>()
+
+/** The last `x-ratelimit-*` GitHub sent, and when. */
+let rateLimit: { limit: number, remaining: number, reset: number, at: number } | null = null
+
+/**
+ * Called by `github.ts` with the headers of every GitHub response it gets,
+ * refusals included — a 403 carries the headers that explain it.
+ *
+ * Without this, the only sign that the site had spent its quota was a README
+ * missing from a page. It is also shared: every process on this host's public
+ * address draws on the same anonymous 60, so a local build being tested can
+ * empty it for the deployed one.
+ */
+export function recordRateLimit(headers: Headers | undefined): void {
+  if (!headers) return
+  const limit = Number(headers.get('x-ratelimit-limit'))
+  const remaining = Number(headers.get('x-ratelimit-remaining'))
+  const reset = Number(headers.get('x-ratelimit-reset'))
+  if (!headers.has('x-ratelimit-limit') || [limit, remaining, reset].some(Number.isNaN)) return
+
+  if (remaining === 0 && rateLimit?.remaining !== 0) {
+    console.warn(JSON.stringify({
+      t: new Date().toISOString(),
+      level: 'warn',
+      event: 'upstream.rate_limited',
+      limit,
+      resetsAt: new Date(reset * 1000).toISOString(),
+      message: `GitHub quota spent (${limit}/hour); refusals until it resets`,
+    }))
+  }
+  rateLimit = { limit, remaining, reset, at: Date.now() }
+}
 
 /** Called once per resolved repo, by the cached fetch in `github.ts`. */
 export function recordSource(source: 'live' | 'snapshot'): void {
@@ -117,6 +152,8 @@ function alertIfStale(): void {
   }))
 }
 
+const ttl = cacheTtl(projects.length)
+
 export function health(): Health {
   alertIfStale()
 
@@ -142,5 +179,14 @@ export function health(): Health {
         .sort(([a], [b]) => a.localeCompare(b))
         .map(([repo, missing]) => ({ repo, missing })),
     },
+    github: rateLimit && {
+      limit: rateLimit.limit,
+      remaining: rateLimit.remaining,
+      resetsAt: new Date(rateLimit.reset * 1000).toISOString(),
+      resetsInSeconds: Math.max(0, Math.round(rateLimit.reset - now / 1000)),
+      observedAt: new Date(rateLimit.at).toISOString(),
+    },
+    refreshSeconds: ttl,
+    budgetedCallsPerHour: callsPerHour(projects.length, ttl),
   }
 }

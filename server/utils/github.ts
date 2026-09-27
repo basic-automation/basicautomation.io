@@ -154,6 +154,9 @@ async function gh<T>(
     headers,
     timeout: 8000,
     responseType: responseType as 'json',
+    // Every response, refusals included: ofetch runs this before it decides
+    // the status is an error, and a 403 is exactly when the numbers matter.
+    onResponse: ({ response }) => recordRateLimit(response.headers),
   }) as Promise<T>
 }
 

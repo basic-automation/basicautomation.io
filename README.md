@@ -54,10 +54,13 @@ An upstream outage degrades the numbers, not the site.
 Set `GITHUB_TOKEN` (or `NUXT_GITHUB_TOKEN`) in the environment to lift the
 anonymous rate limit. It is optional; nothing needs it to work.
 
-`/status` shows which of the two is happening right now, per project. The server
+`/status` shows which of the two is happening right now, per project, along with
+GitHub's own count of the rate limit — how many calls are left this hour and when
+it resets, read from the headers of its last response. The server
 also logs one JSON object per request on stdout — `docker logs
 basicautomation-site | jq 'select(.status >= 400)'` — and warns once an hour for
-as long as it has been answering from the snapshot.
+as long as it has been answering from the snapshot, and once when the GitHub
+quota runs out (`event: "upstream.rate_limited"`).
 
 ## Adding a project
 
