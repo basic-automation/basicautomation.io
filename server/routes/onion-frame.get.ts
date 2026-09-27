@@ -24,19 +24,7 @@
  * what the onion service served; nothing fetches them.
  */
 
-/**
- * Remove every `<script>` element, opening tag to closing tag.
- *
- * Deliberately blunt. This is defence in depth behind the CSP, not the other way
- * round: if this regex misses something exotic, `script-src 'none'` still stops
- * it running. The alternative — parsing the document properly — would mean a DOM
- * implementation in the request path to delete tags a header already neutralises.
- */
-function stripScripts(html: string): string {
-  return html
-    .replace(/<script\b[\s\S]*?<\/script\s*>/gi, '')
-    .replace(/<script\b[^>]*\/>/gi, '')
-}
+import { stripScripts } from '~~/shared/html/strip'
 
 export default defineEventHandler(async (event) => {
   const snapshot = await renderableSnapshot(event)
