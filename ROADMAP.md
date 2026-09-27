@@ -199,9 +199,13 @@ record. There is no run log.
       hydration, colour mode and client navigation log nothing.
       `'unsafe-inline'` stays in the list only as the CSP1 fallback, which a
       nonce-aware browser ignores. <https://www.w3.org/TR/CSP3/#allow-all-inline>
-- [ ] `style-src` still needs `'unsafe-inline'`: Shiki colours tokens with
-      `style` attributes, which cannot carry a nonce. Moving Shiki to CSS
-      variables or classes would let it go.
+- [x] …and styles, split with CSP Level 3's `style-src-elem` (nonced: Nuxt UI's
+      one head `<style>` is allowed, a README's `<style>` block is refused) and
+      `style-src-attr 'unsafe-inline'` (Shiki's per-token colours and Vue's
+      `:style` accents, which cannot carry a nonce and cannot hold a selector).
+      Proved in a browser: an injected `<style>` rule is refused, an injected
+      `style=` attribute and every Shiki colour still apply.
+      <https://www.w3.org/TR/CSP3/#directive-style-src-elem>
 - [x] Reserve space for the images the pages render. Every `<img>` this repo
       controls now carries its intrinsic `width`/`height`, read out of the file
       itself by `npm run sizes` into `data/asset-sizes.generated.json`, with a

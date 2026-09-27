@@ -159,8 +159,8 @@ Every response carries a Content-Security-Policy, built in
 that repo's README and renders its HTML as-is: the content arrives at request
 time and changes without a deploy. Rendered pages get a fresh script nonce per
 request (`server/plugins/csp-nonce.ts`), stamped on the scripts Nuxt emits and
-never on the page body, so an inline script or event handler that arrives in a
-README does not run. `font-src 'self'` and `connect-src 'self'` also state two of the
+never on the page body, so an inline script, event handler or `<style>` block
+that arrives in a README does not apply. `font-src 'self'` and `connect-src 'self'` also state two of the
 site's own rules — one self-hosted typeface, no third-party calls — somewhere a
 browser enforces them. `img-src` allows any https host, because a README's
 badges are somebody else's URLs.

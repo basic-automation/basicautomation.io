@@ -1,6 +1,7 @@
 /**
- * A fresh nonce on every rendered page, so `script-src` can stop trusting
- * inline script in general and trust only the inline script Nuxt wrote.
+ * A fresh nonce on every rendered page, so `script-src` and `style-src-elem`
+ * can stop trusting inline script and style blocks in general and trust only
+ * the ones Nuxt wrote.
  *
  * The nonce goes on the `<script>`s in the document head and the body's tail —
  * where Nuxt puts the colour-mode bootstrap, the runtime config and the import
@@ -24,11 +25,14 @@ declare module 'h3' {
 	}
 }
 
-/** An opening script tag that has no nonce yet. Attribute order is Nuxt's. */
-const SCRIPT_OPEN = /<script(?![^>]*\snonce=)(?=[\s>])/g
+/**
+ * An opening `<script>` or `<style>` tag with no nonce yet — Nuxt's scripts,
+ * and the one `<style id="nuxt-ui-colors">` Nuxt UI writes into the head.
+ */
+const OPEN_TAG = /<(script|style)(?![^>]*\snonce=)(?=[\s>])/g
 
 function stamp(chunks: string[], nonce: string): string[] {
-	return chunks.map((c) => c.replace(SCRIPT_OPEN, `<script nonce="${nonce}"`))
+	return chunks.map((c) => c.replace(OPEN_TAG, `<$1 nonce="${nonce}"`))
 }
 
 export default defineNitroPlugin((nitroApp) => {

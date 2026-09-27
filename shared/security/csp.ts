@@ -26,12 +26,22 @@
  * for responses rendered without a nonce, such as the error page.
  * https://www.w3.org/TR/CSP3/#allow-all-inline
  *
- * `style-src 'unsafe-inline'` stays: Shiki colours every token with a `style`
- * attribute, and attributes cannot carry a nonce.
+ * Styles split the same way, using CSP Level 3's two halves of `style-src`.
+ * `style-src-attr 'unsafe-inline'`: Shiki colours every token with a `style`
+ * attribute and Vue binds accents through `:style`, and an attribute cannot
+ * carry a nonce — but an attribute also cannot hold a selector, so it cannot
+ * be used to read the page. `style-src-elem` takes the nonce: the one `<style>`
+ * Nuxt UI writes into the head is allowed, and a `<style>` block arriving in a
+ * README — the element that can — is not. A browser without CSP3 reads the
+ * plain `style-src`, which is what every browser read before.
+ * https://www.w3.org/TR/CSP3/#directive-style-src-elem
  */
 export function contentSecurityPolicy(nonce?: string): string {
-	const script = ["'self'", "'unsafe-inline'"]
-	if (nonce) script.push(`'nonce-${nonce}'`)
+	const inline = ["'self'", "'unsafe-inline'"]
+	const script = nonce ? [...inline, `'nonce-${nonce}'`] : inline
+	const styleSplit = nonce
+		? [`style-src-elem ${[...inline, `'nonce-${nonce}'`].join(' ')}`, "style-src-attr 'unsafe-inline'"]
+		: []
 	return [
 		"default-src 'self'",
 		"base-uri 'self'",
@@ -40,6 +50,7 @@ export function contentSecurityPolicy(nonce?: string): string {
 		"form-action 'self'",
 		`script-src ${script.join(' ')}`,
 		"style-src 'self' 'unsafe-inline'",
+		...styleSplit,
 		"img-src 'self' data: https:",
 		"font-src 'self'",
 		"connect-src 'self'",
