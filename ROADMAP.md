@@ -197,9 +197,17 @@ record. There is no run log.
       deliberate 300px shift, so there is no before/after CLS number here. What
       was verified is that the attributes render, that the remote README images
       are untouched, and that the layout is unchanged.
-- [ ] Measure Core Web Vitals for real, on the live site, with something that can
-      actually observe `layout-shift` and `largest-contentful-paint`. Until then
-      the CLS work above is best practice rather than a measured win.
+- [x] Measure Core Web Vitals for real — `npm run vitals`
+      (`scripts/measure-vitals.mjs`): LCP and CLS in headless Chromium over CDP,
+      every sitemap page, median of N cold loads, at a throttled phone profile
+      (150 ms RTT, 1.6 Mbps, 4× CPU) and unthrottled desktop. `layout-shift`
+      observers do fire under `--headless=new` driven this way; they did not in
+      the screenshot-mode headless that left the CLS work above unmeasured.
+      Live site, 2026-09-26, phone: CLS 0.000 on all ten pages; LCP good
+      (1.3–1.6 s) everywhere but the home page, at 2508 ms — the wallpaper.
+      Desktop: everything under 120 ms, CLS 0. Lab data from one machine, not
+      field data; this site is too small to appear in CrUX.
+      <https://web.dev/articles/vitals#core-web-vitals>
       <https://web.dev/articles/optimize-cls>
 - [x] A test framework, and unit tests over the pure helpers — Vitest,
       `test/*.test.ts`, run by CI. Scoped deliberately: only the functions in

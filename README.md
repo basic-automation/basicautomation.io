@@ -114,6 +114,7 @@ npm run check                      # against http://127.0.0.1:3000
 npm run check -- --external        # also follow links off the site
 npm run a11y                       # axe-core over every page, through jsdom
 npm run a11y:browser               # the layout rules, in headless Chromium
+npm run vitals                     # LCP and CLS, phone and desktop, median of 3
 ```
 
 `npm run a11y` runs roughly ninety axe-core rules against the markup each page
@@ -125,6 +126,13 @@ in headless Chromium at a desktop and a phone width (set `CHROME_PATH` if
 Chromium is not on `PATH`). Both walk every page the sitemap lists, so a new
 project is audited the moment it is published. Colour contrast is measured
 separately and more directly by `npm run contrast`.
+
+`npm run vitals` measures Largest Contentful Paint and Cumulative Layout Shift
+the same way — headless Chromium, every sitemap page, cold loads — at a
+throttled phone profile and at desktop, and reports each against web.dev's
+thresholds. It is lab data, not field data, and a report rather than a gate
+unless run with `--strict`. Point it at the live site to measure what is
+deployed: `npm run vitals -- https://basicautomation.io`.
 
 External links are followed weekly instead, by `.github/workflows/links.yml`,
 which keeps a single issue in sync with what it finds. They are a report rather
