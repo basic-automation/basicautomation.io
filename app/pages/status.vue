@@ -11,8 +11,13 @@ import type { Health } from '~~/shared/types/health'
  * is visible.
  */
 
-const { data: healthData } = await useFetch<Health>('/healthz', { key: 'health' })
+// Projects first. Rendering them is what makes this process fetch from GitHub,
+// so asking /healthz before them described the process as it was a moment
+// before this very page's own work: on a fresh start, "data unknown", "0 live
+// fetches" and "quota not yet asked" above a list of seven projects all
+// fetched live.
 const { projects } = await useProjects()
+const { data: healthData } = await useFetch<Health>('/healthz', { key: 'health' })
 
 const health = computed(() => healthData.value ?? null)
 
