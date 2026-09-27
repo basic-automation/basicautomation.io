@@ -13,9 +13,20 @@
     "sync": "node scripts/fetch-projects.mjs",
     "check": "node scripts/check-site.mjs",
     "og": "node scripts/build-og.mjs",
+    "og:check": "node scripts/build-og.mjs --check",
     "typecheck": "nuxt typecheck",
     "bevel": "node scripts/build-bevel-map.mjs",
-    "splash": "node scripts/build-splash.mjs"
+    "splash": "node scripts/build-splash.mjs",
+    "bases": "node scripts/check-base-images.mjs",
+    "test": "vitest run",
+    "contrast": "node scripts/check-contrast.mjs",
+    "sizes": "node scripts/build-asset-sizes.mjs",
+    "sizes:check": "node scripts/build-asset-sizes.mjs --check",
+    "a11y": "node scripts/check-a11y.mjs",
+    "a11y:browser": "node scripts/check-a11y-browser.mjs",
+    "vitals": "node scripts/measure-vitals.mjs",
+    "font": "node scripts/build-font-subset.mjs",
+    "font:check": "node scripts/build-font-subset.mjs --check"
   },
   "dependencies": {
     "@nuxt/ui": "^4.11.2",
@@ -29,11 +40,18 @@
     "@golar/vue": "^0.1.10",
     "@tailwindcss/vite": "^4.3.3",
     "@types/node": "^26.6.2",
+    "axe-core": "^4.13.0",
+    "fontverter": "^2.0.0",
     "golar": "^0.1.10",
+    "harfbuzzjs": "^1.6.2",
+    "jsdom": "^30.1.1",
+    "subset-font": "^2.9.0",
     "tailwindcss": "^4.3.3",
-    "typescript": "^7.0.2"
+    "typescript": "^7.0.2",
+    "vitest": "^5.0.2"
   },
   "allowScripts": {
+    "esbuild@0.27.7": true,
     "esbuild@0.28.2": true,
     "vue-demi@0.14.10": true
   }

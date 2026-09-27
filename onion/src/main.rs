@@ -35,19 +35,12 @@ const READY_TIMEOUT_SECS: u64 = 600;
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
 	// One JSON object per line, the same shape the site's own request log
 	// uses, so both halves of the onion path read with one filter.
-	tracing_subscriber::fmt()
-		.json()
-		.with_env_filter(
-			tracing_subscriber::EnvFilter::try_from_env("ONION_LOG").unwrap_or_else(|_| "info".into()),
-		)
-		.init();
+	tracing_subscriber::fmt().json().with_env_filter(tracing_subscriber::EnvFilter::try_from_env("ONION_LOG").unwrap_or_else(|_| "info".into())).init();
 
 	let upstream_url = std::env::var("ONION_UPSTREAM").unwrap_or_else(|_| DEFAULT_UPSTREAM.to_string());
 	let nickname = std::env::var("ONION_NICKNAME").unwrap_or_else(|_| DEFAULT_NICKNAME.to_string());
-	let address_file =
-		std::env::var("ONION_ADDRESS_FILE").unwrap_or_else(|_| DEFAULT_ADDRESS_FILE.to_string());
-	let snapshot_file =
-		std::env::var("ONION_SNAPSHOT_FILE").unwrap_or_else(|_| DEFAULT_SNAPSHOT_FILE.to_string());
+	let address_file = std::env::var("ONION_ADDRESS_FILE").unwrap_or_else(|_| DEFAULT_ADDRESS_FILE.to_string());
+	let snapshot_file = std::env::var("ONION_SNAPSHOT_FILE").unwrap_or_else(|_| DEFAULT_SNAPSHOT_FILE.to_string());
 
 	let app = proxy::router(proxy::Upstream::new(&upstream_url)?);
 
@@ -115,7 +108,9 @@ fn publish_address(path: &str, address: &str) -> std::io::Result<()> {
 }
 
 async fn shutdown() {
-	let ctrl_c = async { let _ = tokio::signal::ctrl_c().await; };
+	let ctrl_c = async {
+		let _ = tokio::signal::ctrl_c().await;
+	};
 	#[cfg(unix)]
 	let term = async {
 		if let Ok(mut s) = tokio::signal::unix::signal(tokio::signal::unix::SignalKind::terminate()) {

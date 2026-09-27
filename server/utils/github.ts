@@ -20,6 +20,10 @@ import { ofetch } from 'ofetch'
 import { projects, type Project } from '~~/data/projects'
 import type { EnrichedProject, Release, RepoMeta } from '~~/shared/types/project'
 import { createSlugger } from '~~/shared/markdown/slug'
+import { readmeHeading } from '~~/shared/markdown/heading'
+import { absolutize, stripLeadingLogo } from '~~/shared/markdown/readme'
+import { normaliseReleases, pickLatest } from '~~/shared/github/releases'
+import { cacheTtl } from '~~/shared/github/budget'
 import snapshot from '~~/data/projects.generated.json'
 
 const ORG = 'basic-automation'
@@ -36,14 +40,38 @@ const UA = 'basicautomation.io (+https://basicautomation.io)'
 /**
  * GitHub's REST API is versioned by header, and a request without one silently
  * rides the `2022-11-28` default — supported only until 10 March 2028. Pinning
- * it makes the version this site is already using a decision rather than a
- * default that will move on its own one day.
+ * it makes the version this site is using a decision rather than a default that
+ * will move on its own one day.
+ *
+ * `2026-03-10` is the current version and has no end-of-support date yet. Its
+ * breaking changes touch `GET /repos/{owner}/{repo}` only, and only fields this
+ * site has never read: `has_downloads`, `use_squash_pr_title_as_default`,
+ * `secret_scanning_push_protection_custom_link_enabled`, and the beta media
+ * type's `master_branch`/`user` aliases — and the requests here ask for
+ * `application/vnd.github+json`, not that beta type. Checked field by field
+ * against both versions live on 2026-09-25: every value this site reads out of
+ * the repo, the releases list and the raw README was identical, so the move
+ * costs nothing and buys a version that is not counting down.
  * https://docs.github.com/en/rest/about-the-rest-api/api-versions
+ * https://docs.github.com/en/rest/about-the-rest-api/breaking-changes
  */
-const GH_API_VERSION = '2022-11-28'
+const GH_API_VERSION = '2026-03-10'
 
-/** How long upstream responses are reused. Short enough to feel live. */
-const CACHE_TTL = 60 * 15 // 15 minutes
+/**
+ * How long upstream responses are reused. Short enough to feel live, long
+ * enough that the site does not out-run GitHub's anonymous rate limit.
+ *
+ * Computed from the project count by `cacheTtl` rather than typed in, because a
+ * typed TTL is right only for the number of repos it was worked out against:
+ * 20 minutes was 54 calls an hour for six repos, and Nanna made it 63. See
+ * `shared/github/budget.ts` for the arithmetic, and `test/budget.test.ts` for
+ * the numbers it gives today.
+ *
+ * Adding a call per repo means changing `CALLS_PER_REPO` there too. Shipping
+ * `BASICAUTOMATION_GITHUB_TOKEN` lifts the limit to 5,000 an hour; the TTL does
+ * not shorten when it does, which only makes a token safer, never riskier.
+ */
+const CACHE_TTL = cacheTtl(projects.length)
 /** Serve stale while revalidating for this much longer, so no visitor waits. */
 const STALE_TTL = 60 * 60 * 6 // 6 hours
 /**
@@ -70,8 +98,9 @@ const snapshotRepos = (snapshot as { repos: Record<string, SnapshotRepo> }).repo
  * on a second — `marked` itself stays synchronous.
  *
  * Headings carry GitHub's own anchor, so a README's table of contents still
- * works once it is rendered here. The slugger is per-document: duplicate
- * heading text numbers from 1 within one README, not across all of them.
+ * works once it is rendered here, and are demoted a level so the README nests
+ * under the page's own h1. The slugger is per-document: duplicate heading text
+ * numbers from 1 within one README, not across all of them.
  */
 async function renderMarkdown(md: string): Promise<string> {
   const fences: { lang: string | undefined, code: string }[] = []
@@ -86,14 +115,9 @@ async function renderMarkdown(md: string): Promise<string> {
         fences.push({ lang, code: text })
         return `\u0000FENCE${fences.length - 1}\u0000`
       },
-      // The slug comes from the heading's raw text, never from the rendered
-      // inline HTML: `Identity & address helpers` renders as `&amp;`, and
-      // slugging that gives `identity-amp-address-helpers` instead of the
-      // `identity--address-helpers` GitHub minted and the README links to.
-      heading({ tokens, depth, text }) {
-        const inner = this.parser.parseInline(tokens)
-        return `<h${depth} id="${slug(text)}">${inner}</h${depth}>\n`
-      },
+      // Demoted a level so the README nests under the page's own h1, with the
+      // ids left where GitHub minted them. See shared/markdown/heading.ts.
+      heading: readmeHeading(slug),
     },
   })
 
@@ -130,60 +154,10 @@ async function gh<T>(
     headers,
     timeout: 8000,
     responseType: responseType as 'json',
+    // Every response, refusals included: ofetch runs this before it decides
+    // the status is an error, and a 403 is exactly when the numbers matter.
+    onResponse: ({ response }) => recordRateLimit(response.headers),
   }) as Promise<T>
-}
-
-/**
- * READMEs address their own repo with relative paths. Rewrite them to absolute
- * URLs — raw.githubusercontent for images, the blob view for links.
- */
-function absolutize(markdown: string, repo: string, branch: string): string {
-  const raw = `https://raw.githubusercontent.com/${ORG}/${repo}/${branch}/`
-  const blob = `https://github.com/${ORG}/${repo}/blob/${branch}/`
-  const isRelative = (u: string) => u && !/^([a-z]+:)?\/\//i.test(u) && !u.startsWith('#') && !u.startsWith('data:')
-  const clean = (u: string) => u.replace(/^\.\//, '').replace(/^\//, '')
-
-  return markdown
-    .replace(/(!\[[^\]]*\]\()([^)\s]+)(\)|\s)/g, (m, head, url, tail) =>
-      isRelative(url) ? `${head}${raw}${clean(url)}${tail}` : m)
-    .replace(/(?<!!)(\[[^\]]*\]\()([^)\s]+)(\)|\s)/g, (m, head, url, tail) =>
-      isRelative(url) ? `${head}${blob}${clean(url)}${tail}` : m)
-    .replace(/(<img\b[^>]*?\bsrc=["'])([^"']+)(["'])/gi, (m, head, url, tail) =>
-      isRelative(url) ? `${head}${raw}${clean(url)}${tail}` : m)
-}
-
-/** The page prints its own title and tagline; don't repeat the README's logo. */
-function stripLeadingLogo(markdown: string): string {
-  return markdown
-    .replace(/^\s*!\[[^\]]*\]\([^)]*(?:logo|banner)[^)]*\)\s*/i, '')
-    .replace(/^(?:\s*<br\s*\/?>\s*)+/i, '')
-}
-
-/**
- * GitHub's releases list, trimmed to what the strip prints. Drafts are dropped:
- * they are not public, and the site only shows what a visitor could download.
- */
-function normaliseReleases(raw: any[]): Release[] {
-  return raw
-    .filter((r) => r && !r.draft && r.tag_name)
-    .map((r) => ({
-      tag: r.tag_name as string,
-      // A release whose title is just its tag says nothing twice.
-      title: r.name && r.name !== r.tag_name ? (r.name as string) : null,
-      url: r.html_url as string,
-      publishedAt: (r.published_at || r.created_at) as string,
-      prerelease: !!r.prerelease,
-    }))
-}
-
-/**
- * The newest full release, matching what `/releases/latest` used to return:
- * drafts and pre-releases don't count. A repo that has only tagged
- * pre-releases gets null here and relies on the strip to show its history.
- */
-function pickLatest(releases: Release[]): RepoMeta['latestRelease'] {
-  const r = releases.find((x) => !x.prerelease)
-  return r ? { tag: r.tag, url: r.url, publishedAt: r.publishedAt } : null
 }
 
 async function fetchRepo(project: Project): Promise<RepoMeta> {
@@ -232,15 +206,27 @@ async function fetchRepo(project: Project): Promise<RepoMeta> {
       : Promise.reject(new Error('not a crate')),
   ])
 
+  // Each of these is allowed to fail without sinking the repo — but a failure
+  // is recorded rather than swallowed, so a page rendering with no README is
+  // something the status page can say out loud instead of something only a
+  // visitor notices.
+  const incomplete: NonNullable<RepoMeta['incomplete']> = []
+
   if (readme.status === 'fulfilled' && typeof readme.value === 'string') {
     out.readmeHtml = await renderMarkdown(
-      absolutize(stripLeadingLogo(readme.value), repo, defaultBranch),
+      absolutize(stripLeadingLogo(readme.value), ORG, repo, defaultBranch),
     )
+  }
+  else {
+    incomplete.push('readme')
   }
 
   if (release.status === 'fulfilled' && Array.isArray(release.value)) {
     out.releases = normaliseReleases(release.value)
     out.latestRelease = pickLatest(out.releases)
+  }
+  else {
+    incomplete.push('releases')
   }
 
   if (crate.status === 'fulfilled' && crate.value?.crate && project.crate) {
@@ -249,6 +235,13 @@ async function fetchRepo(project: Project): Promise<RepoMeta> {
     out.crateUrl = `https://crates.io/crates/${project.crate}`
     out.docsUrl = `https://docs.rs/${project.crate}`
   }
+  // A project that is not published to crates.io has nothing to fetch, and a
+  // rejection there is this function's own `not a crate`, not an outage.
+  else if (project.crate) {
+    incomplete.push('crate')
+  }
+
+  if (incomplete.length) out.incomplete = incomplete
 
   return out
 }
@@ -269,6 +262,7 @@ const cachedRepo = defineCachedFunction(
     try {
       const meta = await fetchRepo(project)
       recordSource('live')
+      recordIncomplete(project.repo, meta.incomplete ?? [])
       return meta
     }
     catch (err) {

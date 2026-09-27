@@ -2,6 +2,8 @@
 import type { EnrichedProject } from '~~/shared/types/project'
 
 const { project } = defineProps<{ project: EnrichedProject }>()
+
+const ago = useRelativeTime()
 </script>
 
 <template>
@@ -39,9 +41,13 @@ const { project } = defineProps<{ project: EnrichedProject }>()
     </div>
 
     <div class="mt-5 flex flex-wrap items-baseline gap-x-3 gap-y-1">
-      <h3 class="text-base text-pn-fg-bright transition-colors group-hover:text-[var(--accent)]">
+      <!-- `h2`, not `h3`. A card is a direct child of the page's own `h1` —
+           the dashed "projects" rule above it is a `role="separator"`, not a
+           heading, so there is no `h2` between them and starting at `h3`
+           skipped a level in the outline a screen reader navigates by. -->
+      <h2 class="text-base text-pn-fg-bright transition-colors group-hover:text-[var(--accent)]">
         {{ project.name }}
-      </h3>
+      </h2>
       <span class="text-xs text-pn-muted">
         {{ project.kind.toLowerCase() }}<span v-if="project.meta?.language"> · {{ project.meta.language }}</span>
       </span>
@@ -60,7 +66,7 @@ const { project } = defineProps<{ project: EnrichedProject }>()
         v{{ project.meta.crateVersion }}
       </span>
       <span v-if="project.meta?.license">{{ project.meta.license }}</span>
-      <span v-if="project.meta?.pushedAt">updated {{ relativeTime(project.meta.pushedAt) }}</span>
+      <span v-if="project.meta?.pushedAt">updated {{ ago(project.meta.pushedAt) }}</span>
       <span class="ml-auto text-pn-dim transition-colors group-hover:text-[var(--accent)]">open →</span>
     </div>
   </NuxtLink>

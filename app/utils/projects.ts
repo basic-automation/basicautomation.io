@@ -31,12 +31,19 @@ export const STATUS_COLOR: Record<Project['status'], string> = {
   archived: 'text-pn-muted',
 }
 
-/** "3 days ago" — Intl handles the wording and pluralisation. */
-export function relativeTime(iso: string | null | undefined): string {
+/**
+ * "3 days ago" — Intl handles the wording and pluralisation.
+ *
+ * Components should not call this directly: use `useRelativeTime()`, which
+ * measures against the one `now` the server rendered with. Measuring against
+ * each side's own clock makes the server say "44 seconds ago" and the client
+ * hydrate "45 seconds ago", which is a hydration mismatch.
+ */
+export function relativeTime(iso: string | null | undefined, now: number = Date.now()): string {
   if (!iso) return ''
   const then = new Date(iso).getTime()
   if (Number.isNaN(then)) return ''
-  const seconds = Math.round((then - Date.now()) / 1000)
+  const seconds = Math.round((then - now) / 1000)
   const units: [Intl.RelativeTimeFormatUnit, number][] = [
     ['year', 31557600],
     ['month', 2629800],

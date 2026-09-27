@@ -49,8 +49,9 @@
 use std::{io::Read, num::NonZeroU32, sync::Arc, time::Duration};
 
 use onyums::onyums_skin::{
-	HmacClearanceStore, PatienceChallenge, Skin, SkinRateLimit, Waf,
-	challenge::{captcha::CaptchaChallenge, pow::{Hashcash, PowChallenge}},
+	challenge::{
+		captcha::CaptchaChallenge, pow::{Hashcash, PowChallenge}
+	}, HmacClearanceStore, PatienceChallenge, Skin, SkinRateLimit, Waf
 };
 
 /// The rule that blocks every browser. See the module docs.
@@ -95,15 +96,7 @@ pub fn build() -> Result<Gate, Box<dyn std::error::Error>> {
 	// tarpit — the same order and the same tiers as `secure_default`. The
 	// CAPTCHA advertises its no-visual escape because the tarpit sits behind it,
 	// so a low-vision no-JS client can fall through rather than fail an image.
-	let skin = Skin::builder()
-		.store(store.clone())
-		.challenge(Box::new(PowChallenge::new(Hashcash, secret()?, DEFAULT_DIFFICULTY)))
-		.challenge(Box::new(CaptchaChallenge::new(secret()?).with_submit_path(DEFAULT_SUBMIT_PATH).with_no_image_escape(true)))
-		.challenge(Box::new(PatienceChallenge::new((*store).clone(), DEFAULT_PATIENCE_DELAY)))
-		.rate_limit(SkinRateLimit::per_second(NonZeroU32::new(DEFAULT_RATE_PER_SEC).expect("DEFAULT_RATE_PER_SEC is nonzero")))
-		.waf(waf)
-		.cookie_name(COOKIE_NAME)
-		.build();
+	let skin = Skin::builder().store(store.clone()).challenge(Box::new(PowChallenge::new(Hashcash, secret()?, DEFAULT_DIFFICULTY))).challenge(Box::new(CaptchaChallenge::new(secret()?).with_submit_path(DEFAULT_SUBMIT_PATH).with_no_image_escape(true))).challenge(Box::new(PatienceChallenge::new((*store).clone(), DEFAULT_PATIENCE_DELAY))).rate_limit(SkinRateLimit::per_second(NonZeroU32::new(DEFAULT_RATE_PER_SEC).expect("DEFAULT_RATE_PER_SEC is nonzero"))).waf(waf).cookie_name(COOKIE_NAME).build();
 
 	Ok(Gate { skin, store, cookie_name: COOKIE_NAME })
 }

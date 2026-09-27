@@ -26,7 +26,11 @@ onBeforeUnmount(() => clearTimeout(timer))
 
 <template>
   <div class="flex items-center gap-4 bar" style="--accent: var(--color-pn-rule)">
-    <code class="flex-1 overflow-x-auto py-1 text-sm text-pn-green prompt" :style="prompt ? undefined : { '--prompt': '\'\'' }">{{ code }}</code>
+    <!-- `wrap-anywhere`: a command already wraps at its spaces, but an onion
+         address or a URL is one unbroken token, and it used to overflow into a
+         scroll region on a phone — one a keyboard could not reach, and one that
+         hid most of the address it exists to show. -->
+    <code class="min-w-0 flex-1 overflow-x-auto py-1 text-sm wrap-anywhere text-pn-green prompt" :style="prompt ? undefined : { '--prompt': '\'\'' }">{{ code }}</code>
     <!-- UButton for the focus ring, keyboard handling and disabled semantics;
          app.config.ts strips it back to a bracketed mono label. -->
     <UButton

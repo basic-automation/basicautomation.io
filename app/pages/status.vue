@@ -11,10 +11,17 @@ import type { Health } from '~~/shared/types/health'
  * is visible.
  */
 
-const { data: healthData } = await useFetch<Health>('/healthz', { key: 'health' })
+// Projects first. Rendering them is what makes this process fetch from GitHub,
+// so asking /healthz before them described the process as it was a moment
+// before this very page's own work: on a fresh start, "data unknown", "0 live
+// fetches" and "quota not yet asked" above a list of seven projects all
+// fetched live.
 const { projects } = await useProjects()
+const { data: healthData } = await useFetch<Health>('/healthz', { key: 'health' })
 
 const health = computed(() => healthData.value ?? null)
+
+const ago = useRelativeTime()
 
 /** "2 days, 3 hours" — an uptime nobody has to divide by 86400 themselves. */
 function duration(seconds: number | null | undefined): string {
@@ -41,6 +48,17 @@ const rows = computed(() => {
     { label: 'started', value: h.startedAt },
     { label: 'live fetches', value: String(h.data.liveResolutions) },
     { label: 'snapshot fetches', value: String(h.data.snapshotResolutions) },
+    // GitHub's figures, not ours: the headers on its last response.
+    {
+      label: 'github quota',
+      value: h.github
+        ? `${h.github.remaining} of ${h.github.limit} left, resets in ${duration(h.github.resetsInSeconds)}`
+        : 'not yet asked',
+    },
+    {
+      label: 'refresh',
+      value: `every ${duration(h.refreshSeconds)}, at most ${h.budgetedCallsPerHour} calls an hour`,
+    },
   ]
 })
 
@@ -83,7 +101,8 @@ useSeoMeta({
         <p class="mt-8 text-2xl text-pn-fg-bright sm:text-3xl">
           <span aria-hidden="true" :class="health.status === 'ok' ? 'text-pn-bright-green' : 'text-pn-yellow'">● </span>
           <span v-if="health.status === 'ok'">Serving live data.</span>
-          <span v-else>Serving the fallback snapshot.</span>
+          <span v-else-if="health.data.degradedSince">Serving the fallback snapshot.</span>
+          <span v-else>Serving live data, with pieces missing.</span>
         </p>
 
         <p
@@ -95,9 +114,27 @@ useSeoMeta({
           and download counts on them are as old as the snapshot.
         </p>
 
+        <!-- `source: live` only ever meant the repo call succeeded. Its README
+             and its release history are separate calls that are each allowed to
+             fail, so a page can render live with a whole section absent — which
+             used to be visible only to whoever was reading that page. -->
+        <div v-if="health.data.incomplete.length" class="mt-4 max-w-2xl text-sm leading-relaxed text-pn-dim">
+          <p>
+            Upstream answered for the repositories below but refused part of what
+            those pages show, so the page is rendering without it. The usual cause
+            is GitHub's anonymous rate limit, which is 60 requests an hour.
+          </p>
+          <ul class="mt-3 space-y-1 text-xs">
+            <li v-for="row in health.data.incomplete" :key="row.repo">
+              <span class="text-pn-yellow">{{ row.repo }}</span>
+              <span class="text-pn-muted"> — no {{ row.missing.join(', no ') }}</span>
+            </li>
+          </ul>
+        </div>
+
         <dl class="mt-8 flex flex-wrap gap-x-10 gap-y-3 text-xs">
           <div v-for="row in rows" :key="row.label" class="flex items-baseline gap-2">
-            <dt class="text-pn-muted">
+            <dt class="whitespace-nowrap text-pn-muted">
               {{ row.label }}
             </dt>
             <dd class="text-pn-fg-bright">
@@ -126,7 +163,7 @@ useSeoMeta({
               v-if="p.meta?.fetchedAt"
               class="text-xs text-pn-muted"
               :datetime="p.meta.fetchedAt"
-            >fetched {{ relativeTime(p.meta.fetchedAt) }}</time>
+            >fetched {{ ago(p.meta.fetchedAt) }}</time>
           </p>
         </li>
       </ul>

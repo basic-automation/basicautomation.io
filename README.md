@@ -38,11 +38,14 @@ Each page is rendered per request. Stars, versions, downloads, licenses,
 release tags and READMEs come from the GitHub and crates.io APIs at render time —
 nothing is baked in at build.
 
-Those upstream calls sit behind Nitro's cache (`server/utils/github.ts`): 15
-minutes fresh, stale-while-revalidate for 6 hours. A visitor always gets freshly
-rendered markup; the numbers inside it are at most 15 minutes old. That keeps the
-site under GitHub's anonymous rate limit of 60 requests an hour without making
-anyone wait on a cache miss.
+Those upstream calls sit behind Nitro's cache (`server/utils/github.ts`),
+stale-while-revalidate for 6 hours. How long a response counts as fresh is
+worked out from the number of projects (`shared/github/budget.ts`): each repo
+costs three GitHub calls per refresh, and the site keeps itself to 54 of
+GitHub's 60 anonymous requests an hour. Seven projects gives 30 minutes — 42
+calls an hour. A visitor always gets freshly rendered markup, and adding a
+project lengthens the freshness window instead of quietly running the site into
+the rate limit.
 
 If GitHub or crates.io is unreachable, the render falls back to
 `data/projects.generated.json` — a committed snapshot refreshed by `npm run sync`.
@@ -51,10 +54,13 @@ An upstream outage degrades the numbers, not the site.
 Set `GITHUB_TOKEN` (or `NUXT_GITHUB_TOKEN`) in the environment to lift the
 anonymous rate limit. It is optional; nothing needs it to work.
 
-`/status` shows which of the two is happening right now, per project. The server
+`/status` shows which of the two is happening right now, per project, along with
+GitHub's own count of the rate limit — how many calls are left this hour and when
+it resets, read from the headers of its last response. The server
 also logs one JSON object per request on stdout — `docker logs
 basicautomation-site | jq 'select(.status >= 400)'` — and warns once an hour for
-as long as it has been answering from the snapshot.
+as long as it has been answering from the snapshot, and once when the GitHub
+quota runs out (`event: "upstream.rate_limited"`).
 
 ## Adding a project
 
@@ -62,11 +68,20 @@ as long as it has been answering from the snapshot.
    pitch, the feature copy, and the code sample that shows what the thing feels
    like to use. Everything that moves on its own is fetched, not typed.
 2. If it has a wordmark, drop it in `public/projects/<slug>.svg` and set `logo`.
+   Same for a screenshot in `public/projects/shots/`. Then run `npm run sizes`,
+   which records each image's intrinsic size in
+   `data/asset-sizes.generated.json` so the page can reserve its space before
+   the file arrives. CI fails if that file and the images disagree.
 3. Run `npm run og` to render its social card into `public/projects/og/`, and
    commit it. Cards are generated rather than rendered per request: everything
    on one is editorial, and nothing live belongs in an image a social network
    caches for a month.
 4. Run `npm run sync` to refresh the offline fallback snapshot.
+
+Editing an existing project's name, kind, hero line, tagline, status, accent or
+wordmark changes its card too, so re-render it the same way. CI will tell you if
+you forget: `npm run og:check` recomputes what every committed card was rendered
+from and fails when one no longer matches `data/projects.ts`.
 
 ## Development
 
@@ -76,20 +91,68 @@ npm run dev          # http://localhost:3000
 npm run build        # .output/ — a self-contained Nitro node server
 npm run start        # serve the build
 npm run typecheck
+npm test             # unit tests over the pure helpers in shared/
 npm run sync         # refresh data/projects.generated.json
 npm run og           # re-render the per-project social cards (needs Chromium)
+npm run og:check     # are the committed cards still current? (no Chromium)
+npm run bases        # runtime Alpine still matches the node base (needs docker)
+npm run contrast     # WCAG contrast for every palette colour, against the ground
+npm run sizes        # re-read every image's intrinsic size
 ```
+
+`npm test` is Vitest over the pure functions in `shared/` — README rewriting,
+release shaping, heading slugs — and nothing else. It boots no Nitro and renders
+no component: what a running server does is what `npm run check` asserts.
 
 `npm run check` walks a running build: every page, every internal link and
 asset, every URL the sitemap promises, and every social card, plus three paths
-that must answer 404. It is what CI runs after the build, because a bundle that
+that must answer 404. It also asserts the structural accessibility of each page
+— one `h1`, one `main`, a language, a named `nav` when there is more than one,
+an `alt` on every image, no positive `tabindex`. It is what CI runs after the build, because a bundle that
 compiles is not the same as a site that renders.
 
 ```sh
 npm run start &
 npm run check                      # against http://127.0.0.1:3000
 npm run check -- --external        # also follow links off the site
+npm run a11y                       # axe-core over every page, through jsdom
+npm run a11y:browser               # the layout rules, in headless Chromium
+npm run vitals                     # LCP and CLS, phone and desktop, median of 3
+npm run font                       # re-cut the preloaded core of Fira Code
 ```
+
+`npm run a11y` runs roughly ninety axe-core rules against the markup each page
+actually served. The rules that need a layout engine are named and skipped
+rather than silently failing — jsdom has none — so this is "every axe rule that
+can be judged from markup". `npm run a11y:browser` runs those skipped rules —
+touch-target size, keyboard access to scrollable regions, the viewport meta —
+in headless Chromium at a desktop and a phone width (set `CHROME_PATH` if
+Chromium is not on `PATH`), reading each page to the bottom so lazy content
+loads, and fails on any console error, uncaught exception or CSP refusal the
+page produces along the way. Both walk every page the sitemap lists, so a new
+project is audited the moment it is published. Colour contrast is measured
+separately and more directly by `npm run contrast`.
+
+`npm run vitals` measures Largest Contentful Paint and Cumulative Layout Shift
+the same way — headless Chromium, every sitemap page, cold loads — at a
+throttled phone profile and at desktop, and reports each against web.dev's
+thresholds. It is lab data, not field data, and a report rather than a gate
+unless run with `--strict`. Point it at the live site to measure what is
+deployed: `npm run vitals -- https://basicautomation.io`. For comparing two local
+builds, add `--shaped`: the phone profile then goes through a real shaped link
+(one shared 1.6 Mbps pipe) instead of DevTools' throttling, which has produced
+differences a real link does not have.
+
+Fira Code is served in two cuts of one family: a 61 KB core — Latin-1, Greek,
+punctuation, arrows, maths and box drawing, which is everything the pages and
+READMEs set — that every page preloads, and the full 113 KB font behind it by
+`unicode-range`, which a browser fetches only for a character the core lacks.
+`npm run font:check` (in CI) fails if either cut or its declared range drifts.
+
+External links are followed weekly instead, by `.github/workflows/links.yml`,
+which keeps a single issue in sync with what it finds. They are a report rather
+than a gate: the project pages fold in each repo's README, so most dead links
+here are somebody else's to fix, and none of them should fail a pull request.
 
 ## Deployment
 
@@ -102,6 +165,17 @@ docker run --rm -p 3000:3000 ghcr.io/basic-automation/basicautomation.io:latest
 ```
 
 `deploy/compose.yaml` holds the service definition as it appears in DeepStack.
+
+Every response carries a Content-Security-Policy, built in
+`shared/security/csp.ts`. It matters here because each project page folds in
+that repo's README and renders its HTML as-is: the content arrives at request
+time and changes without a deploy. Rendered pages get a fresh script nonce per
+request (`server/plugins/csp-nonce.ts`), stamped on the scripts Nuxt emits and
+never on the page body, so an inline script, event handler or `<style>` block
+that arrives in a README does not apply. `font-src 'self'` and `connect-src 'self'` also state two of the
+site's own rules — one self-hosted typeface, no third-party calls — somewhere a
+browser enforces them. `img-src` allows any https host, because a README's
+badges are somebody else's URLs.
 
 The runtime image is plain Alpine with the node binary copied in rather than
 `node:24-alpine`: Nitro bundles its dependencies into `.output`, so npm, yarn

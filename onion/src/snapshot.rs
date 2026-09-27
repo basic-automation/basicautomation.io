@@ -47,18 +47,14 @@
 //! process shipping a solver for its own front door is a strange thing to own.
 
 use std::{
-	sync::Arc,
-	time::{Duration, Instant, SystemTime, UNIX_EPOCH},
+	sync::Arc, time::{Duration, Instant, SystemTime, UNIX_EPOCH}
 };
 
 use onyums::{
-	OnionAddress,
-	arti_client::{TorClient, config::TorClientConfigBuilder},
-	onyums_skin::{ClearanceLevel, ClearanceStore, HmacClearanceStore},
-	tor_rtcompat::tokio::TokioRustlsRuntime,
+	arti_client::{config::TorClientConfigBuilder, TorClient}, onyums_skin::{ClearanceLevel, ClearanceStore, HmacClearanceStore}, tor_rtcompat::tokio::TokioRustlsRuntime, OnionAddress
 };
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
-use tokio_rustls::{TlsConnector, rustls};
+use tokio_rustls::{rustls, TlsConnector};
 
 /// How often to refresh. The page shows when this last succeeded, so it is also
 /// the resolution of that claim: current enough to mean something, rare enough
@@ -233,21 +229,20 @@ async fn fetch_once(client: &FetchClient, address: &OnionAddress, store: &HmacCl
 		return Err(format!("the service answered {status}").into());
 	}
 
-	Ok(Snapshot { address: address.as_str().to_string(), status, bytes: body.len(), elapsed_ms, fetched_at: SystemTime::now().duration_since(UNIX_EPOCH).unwrap_or_default().as_secs(), html: body.to_string() })
+	Ok(Snapshot {
+		address: address.as_str().to_string(),
+		status,
+		bytes: body.len(),
+		elapsed_ms,
+		fetched_at: SystemTime::now().duration_since(UNIX_EPOCH).unwrap_or_default().as_secs(),
+		html: body.to_string(),
+	})
 }
 
 /// Write it where the site can read it, atomically — the site reads on demand,
 /// and a partial write would be served to a visitor as the page.
 fn publish(path: &str, snap: &Snapshot) -> std::io::Result<()> {
-	let json = format!(
-		r#"{{"address":{},"status":{},"bytes":{},"elapsedMs":{},"fetchedAt":{},"html":{}}}"#,
-		json_string(&snap.address),
-		snap.status,
-		snap.bytes,
-		snap.elapsed_ms,
-		snap.fetched_at,
-		json_string(&snap.html),
-	);
+	let json = format!(r#"{{"address":{},"status":{},"bytes":{},"elapsedMs":{},"fetchedAt":{},"html":{}}}"#, json_string(&snap.address), snap.status, snap.bytes, snap.elapsed_ms, snap.fetched_at, json_string(&snap.html),);
 
 	let p = std::path::Path::new(path);
 	if let Some(dir) = p.parent() {

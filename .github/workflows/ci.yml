@@ -36,6 +36,32 @@ jobs:
         run: npm ci
       - name: Typecheck
         run: npx nuxt typecheck
+      # Unit tests over the pure helpers in `shared/` only. What a running
+      # server proves, `npm run check` proves further down; these cover the
+      # awkward input no README on the site happens to contain today.
+      - name: Unit tests
+        run: npm test
+      # The cards themselves are rendered by hand (`npm run og` needs a local
+      # Chromium, which this runner has no business installing). The check does
+      # not render anything — it recomputes what each committed card was
+      # rendered from and fails if the editorial data has moved since.
+      - name: Social cards are current
+        run: npm run og:check
+      # The preloaded core cut of Fira Code, and the unicode-ranges main.css
+      # declares for both cuts, must match what the script cuts from the font.
+      - name: Font cut is current
+        run: npm run font:check
+      # Reports every palette colour's contrast against the one background, and
+      # fails only on a NEW shortfall. The failures that exist today are on
+      # ROADMAP.md awaiting an owner decision, and an always-red check is a
+      # check nobody reads.
+      - name: No new contrast shortfall
+        run: npm run contrast -- --strict
+      # The committed image sizes are what the pages reserve space with. A
+      # replaced screenshot with the manifest left alone would reserve the wrong
+      # shape, which is worse than reserving none.
+      - name: Image sizes are current
+        run: npm run sizes:check
       - name: Build
         run: npm run build
       # The build is only half the claim — prove the server actually starts and
@@ -53,6 +79,15 @@ jobs:
             sleep 0.5
           done
           npm run check
+          # axe-core over the same pages, through jsdom. Structural rules only
+          # — the ones that need a layout engine are named and skipped in the
+          # script, and the palette's contrast is measured by `npm run contrast`
+          # above, which is a stronger check than sampling rendered pixels.
+          npm run a11y
+          # …and the layout rules jsdom cannot run — target size, keyboard
+          # access to scroll regions, the viewport meta — in the Google Chrome
+          # the Ubuntu runner already ships, at desktop and phone widths.
+          npm run a11y:browser
 
   onion:
     name: onion gateway
@@ -85,6 +120,16 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: docker/setup-buildx-action@v3
+      # The runtime stage copies the node binary out of `node:24-alpine` into a
+      # bare Alpine, so the two Alpines have to be the same one — a mismatch is
+      # not a build error, it is a container that dies on a relocation error in
+      # production. This pulls the node image, which the build below needs
+      # anyway.
+      #
+      # Invoked directly rather than through `npm run bases`: this job installs
+      # no dependencies, and the script needs none.
+      - name: Runtime Alpine still matches the node base
+        run: node scripts/check-base-images.mjs
       # Build only — publishing happens in release.yml, on a tag.
       - uses: docker/build-push-action@v6
         with:

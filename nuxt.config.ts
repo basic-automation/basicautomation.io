@@ -1,3 +1,5 @@
+import { contentSecurityPolicy } from './shared/security/csp'
+
 export default defineNuxtConfig({
   // Nuxt UI carries its own Tailwind v4 pipeline, so the standalone
   // @tailwindcss/vite plugin is gone — running both processed main.css twice.
@@ -54,7 +56,8 @@ export default defineNuxtConfig({
           rel: 'preload',
           as: 'font',
           type: 'font/woff2',
-          href: '/fonts/FiraCode-VF.woff2',
+          // The core cut, not the full font: it is what every page sets.
+          href: '/fonts/FiraCode-VF-core.woff2',
           crossorigin: 'anonymous',
         },
       ],
@@ -73,6 +76,11 @@ export default defineNuxtConfig({
           'Referrer-Policy': 'strict-origin-when-cross-origin',
           'X-Frame-Options': 'DENY',
           'Permissions-Policy': 'geolocation=(), camera=(), microphone=()',
+          // What a page may load — see `shared/security/csp.ts`. This is the
+          // nonce-less form every response gets; rendered pages have it
+          // replaced with one carrying a per-request nonce by
+          // `server/plugins/csp-nonce.ts`.
+          'Content-Security-Policy': contentSecurityPolicy(),
         },
       },
       // Hashed build output is content-addressed and safe to cache forever.

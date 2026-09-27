@@ -18,6 +18,39 @@ const description
 
 const siteUrl = useSiteOrigin()
 
+/**
+ * The organization's own page, so this is where the organization is described
+ * rather than referenced — every project page points its `@id` back here. The
+ * `WebSite` beside it is what names the site itself, which is a different thing
+ * from the company that publishes it.
+ */
+const jsonLd = computed(() => ldJson([
+  { '@context': 'https://schema.org', ...organizationLd(siteUrl) },
+  {
+    '@context': 'https://schema.org',
+    '@type': 'WebSite',
+    '@id': `${siteUrl}/${SITE_ID}`,
+    'name': 'basic automation',
+    'url': siteUrl,
+    'description': description,
+    'inLanguage': 'en',
+    'publisher': organizationRef(siteUrl),
+  },
+]))
+
+useHead({
+  script: [{ type: 'application/ld+json', innerHTML: () => jsonLd.value }],
+  // The wallpaper is this page's Largest Contentful Paint on a phone, and it
+  // is a CSS background set by `layouts/default.vue` — which a browser cannot
+  // discover until the stylesheet has loaded and the div has been laid out. So
+  // it is named up front and asked for early, and only here: no other page
+  // draws it. Measured with `npm run vitals` on the phone profile, median of
+  // 9 cold loads, twice: 2580/2588 ms before, 2484/2484 ms after — from just
+  // over web.dev's 2500 ms "good" line to just under it.
+  // https://web.dev/articles/optimize-lcp#optimize_when_the_resource_is_discovered
+  link: [{ rel: 'preload', as: 'image', href: '/bg/hero.webp', type: 'image/webp', fetchpriority: 'high' }],
+})
+
 useSeoMeta({
   title: 'basic automation — software for the productive',
   description,

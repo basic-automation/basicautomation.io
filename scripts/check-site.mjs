@@ -63,7 +63,7 @@ async function fetchOnce(url) {
       const body = type.includes('html') || type.includes('xml') || type.includes('text')
         ? await res.text()
         : null
-      return { status: res.status, type, body }
+      return { status: res.status, type, body, csp: res.headers.get('content-security-policy') }
     }
     catch (err) {
       return { status: 0, type: '', body: null, error: err.message }
@@ -89,6 +89,253 @@ function extractRefs(html) {
     }
   }
   return [...out]
+}
+
+/**
+ * The structured data, checked for the same reason the feed is: nobody looks at
+ * it. A `<script type="application/ld+json">` that does not parse is ignored in
+ * silence by every consumer, and the page still looks perfect.
+ *
+ * Not a schema validator — it does not know what a `SoftwareSourceCode` needs.
+ * It knows the three ways this breaks: JSON that does not parse, a block with
+ * no `@context`/`@type` for a consumer to dispatch on, and a relative URL where
+ * an absolute one was meant, which is the failure mode of building these out of
+ * a request-derived origin.
+ */
+function checkJsonLd(path, html) {
+  const blocks = [...html.matchAll(
+    /<script[^>]+type=["']application\/ld\+json["'][^>]*>([\s\S]*?)<\/script>/gi,
+  )]
+  if (!blocks.length) return
+
+  for (const [i, block] of blocks.entries()) {
+    let parsed
+    try {
+      parsed = JSON.parse(block[1])
+    }
+    catch (err) {
+      fail(path, `ld+json block ${i + 1} does not parse — ${err.message}`)
+      continue
+    }
+
+    for (const node of Array.isArray(parsed) ? parsed : [parsed]) {
+      if (!node || typeof node !== 'object') {
+        fail(path, `ld+json block ${i + 1} is not an object`)
+        continue
+      }
+      if (!String(node['@context'] ?? '').includes('schema.org')) {
+        fail(path, `ld+json ${node['@type'] ?? `block ${i + 1}`} has no schema.org @context`)
+      }
+      if (!node['@type']) fail(path, `ld+json block ${i + 1} has no @type`)
+
+      // Any absolute-looking field that came out relative means the origin was
+      // lost somewhere, and a consumer has no base URL to resolve it against.
+      const walk = (value, key) => {
+        if (typeof value === 'string') {
+          if ((key === 'url' || key === '@id' || key === 'logo' || key === 'image')
+            && !/^https?:\/\//.test(value)) {
+            fail(path, `ld+json ${key} is relative: ${value}`)
+          }
+          return
+        }
+        if (Array.isArray(value)) return value.forEach((v) => walk(v, key))
+        if (value && typeof value === 'object') {
+          for (const [k, v] of Object.entries(value)) walk(v, k)
+        }
+      }
+      walk(node, null)
+    }
+  }
+  notes.push(`${path}: ${blocks.length} structured-data block(s), all parsed`)
+}
+
+/**
+ * The script nonce holds together, on every page.
+ *
+ * `server/plugins/csp-nonce.ts` stamps a per-request nonce on the scripts and
+ * styles Nuxt writes into the head and body tail, and never on the app body,
+ * where README HTML lands. If a Nuxt upgrade moved one of its own scripts into
+ * the body, or changed how the tail is assembled, the browser would refuse it
+ * and the page would silently stop hydrating — and a crawler that runs no
+ * JavaScript would see nothing wrong. So the invariant is checked here, in the
+ * markup: the header names a nonce, every script that executes and every style
+ * block carries that same nonce, and nothing inside the app body carries any.
+ */
+function checkNonces(path, html, csp) {
+  const nonce = csp?.match(/'nonce-([^']+)'/)?.[1]
+  if (!nonce) {
+    fail(path, 'Content-Security-Policy carries no nonce — the CSP plugin did not run')
+    return
+  }
+  if (!/style-src-elem [^;]*'nonce-/.test(csp)) fail(path, 'style-src-elem carries no nonce')
+
+  // JSON and ld+json blocks are data, never executed, and CSP does not apply to
+  // them; everything else a <script> can be is code.
+  const executes = (attrs) => {
+    const type = attrs.match(/\btype=["']([^"']*)["']/i)?.[1]?.toLowerCase()
+    return !type || type === 'module' || type === 'importmap' || type.includes('javascript')
+  }
+
+  const appAt = html.indexOf('<div id="__nuxt"')
+  const appEnd = appAt === -1 ? -1 : html.indexOf('<div id="teleports"', appAt)
+
+  for (const m of html.matchAll(/<(script|style)\b([^>]*)>/gi)) {
+    const [, tag, attrs] = m
+    const inApp = appAt !== -1 && m.index > appAt && (appEnd === -1 || m.index < appEnd)
+    const has = attrs.match(/\bnonce=["']([^"']*)["']/i)?.[1]
+    if (inApp) {
+      if (has) fail(path, `a <${tag}> inside the app body carries the nonce — README content would be trusted`)
+      continue
+    }
+    if (tag.toLowerCase() === 'script' && !executes(attrs)) continue
+    if (has !== nonce) {
+      fail(path, `a <${tag}${attrs.slice(0, 40)}> ${has ? 'carries a different nonce' : 'has no nonce'} — the browser will refuse it`)
+    }
+  }
+}
+
+/**
+ * Structural accessibility, over the markup that was actually served.
+ *
+ * Not a substitute for an audit — it cannot see colour, focus order or whether
+ * a label says anything useful. What it does catch is the class of regression
+ * that is invisible in a browser and obvious to a screen reader, on every page,
+ * for free: two `h1`s, an unnamed second landmark, an image with no `alt`.
+ *
+ * Both of the first two were real here. A project page carries its own `h1` and
+ * then folds in a README that opens with `# ProjectName`, so four of six pages
+ * served two — which is why READMEs are now rendered a heading level down. And
+ * the site nav had no name while the per-project nav did, so a screen reader
+ * announced "navigation" twice with nothing to tell them apart.
+ */
+function checkAccessibility(path, html, isUpstream) {
+  const tag = (name) => [...html.matchAll(new RegExp(`<${name}\\b([^>]*)>`, 'gi'))]
+  const attr = (attrs, name) => attrs.match(new RegExp(`\\b${name}=["']([^"']*)["']`, 'i'))?.[1]
+
+  // A document says what it is about once.
+  const h1s = tag('h1')
+  if (h1s.length !== 1) {
+    fail(path, `${h1s.length} <h1> elements — a page has exactly one`)
+  }
+
+  // Without it a screen reader guesses the language, and pronounces accordingly.
+  const html_ = html.match(/<html\b([^>]*)>/i)?.[1] ?? ''
+  if (!attr(html_, 'lang')) fail(path, '<html> has no lang attribute')
+
+  // One main landmark, or "skip to content" has nowhere to point.
+  const mains = tag('main')
+  if (mains.length !== 1) fail(path, `${mains.length} <main> elements — a page has exactly one`)
+
+  // Two landmarks of the same kind need names to be told apart. One does not.
+  const navs = tag('nav')
+  if (navs.length > 1) {
+    for (const nav of navs) {
+      if (!attr(nav[1], 'aria-label') && !attr(nav[1], 'aria-labelledby')) {
+        fail(path, `a <nav> has no accessible name, and this page has ${navs.length} of them`)
+      }
+    }
+  }
+
+  // `alt=""` is a valid answer — it says "decorative". No `alt` at all is not.
+  for (const img of tag('img')) {
+    if (/\balt=/i.test(img[1])) continue
+    const report = isUpstream(img.index) ? warn : fail
+    report(path, `an <img> has no alt attribute${
+      isUpstream(img.index) ? " — it is in the repo's own README" : ` (${attr(img[1], 'src') ?? '?'})`}`)
+  }
+
+  // A positive tabindex takes an element out of document order and puts it in
+  // front of everything, which is almost never what anyone meant.
+  for (const m of html.matchAll(/\btabindex=["'](\d+)["']/gi)) {
+    if (Number(m[1]) > 0) fail(path, `tabindex="${m[1]}" — positive values reorder the whole page`)
+  }
+}
+
+/**
+ * The two XML documents, checked the way the HTML pages are.
+ *
+ * Nobody looks at a feed. It is read by software, and when it breaks it breaks
+ * silently for every subscriber at once — so the failure that matters is the
+ * one a person would never notice. Both documents carry text this site did not
+ * write (a GitHub release title, an editorial tagline), which is exactly where
+ * an unescaped `&`, or a control character XML forbids outright, comes from.
+ *
+ * Not a schema validator: these are the assertions that catch a document no
+ * reader can parse, plus the Atom elements a reader actually needs.
+ */
+function checkXml(path, xml) {
+  // XML 1.0 forbids these characters outright — they cannot be escaped into
+  // legality, so one of them means the document simply does not parse.
+  // eslint-disable-next-line no-control-regex
+  const illegal = xml.match(/[\u0000-\u0008\u000B\u000C\u000E-\u001F\uFFFE\uFFFF]/)
+  if (illegal) {
+    fail(path, `contains U+${illegal[0].codePointAt(0).toString(16).padStart(4, '0').toUpperCase()}, which XML 1.0 forbids — no reader can parse this`)
+  }
+
+  // An unescaped `&` is the classic one: `&` that is not the start of an entity.
+  for (const m of xml.matchAll(/&(?!(?:[a-zA-Z][a-zA-Z0-9]*|#\d+|#x[0-9a-fA-F]+);)/g)) {
+    fail(path, `unescaped & at offset ${m.index}`)
+    break
+  }
+
+  // A tag opened and never closed, the other way a document stops parsing.
+  const opens = [...xml.matchAll(/<([a-zA-Z][\w:-]*)(?:\s[^>]*?)?(\/?)>/g)]
+  const stack = []
+  for (const m of opens) {
+    if (m[2] === '/') continue
+    stack.push(m[1])
+  }
+  const closes = [...xml.matchAll(/<\/([a-zA-Z][\w:-]*)>/g)].map((m) => m[1])
+  for (const name of closes) {
+    const at = stack.lastIndexOf(name)
+    if (at === -1) fail(path, `closing </${name}> with nothing open`)
+    else stack.splice(at, 1)
+  }
+  if (stack.length) fail(path, `unclosed <${stack[stack.length - 1]}>`)
+
+  if (path.endsWith('releases.xml')) {
+    // What a reader needs to identify the feed and to de-duplicate entries.
+    for (const el of ['title', 'id', 'updated']) {
+      if (!new RegExp(`<${el}>`).test(xml)) fail(path, `the feed has no <${el}>`)
+    }
+    if (!/<link\b[^>]*rel="self"/.test(xml)) fail(path, 'the feed has no rel="self" link')
+
+    const ids = []
+    for (const entry of xml.matchAll(/<entry>([\s\S]*?)<\/entry>/g)) {
+      const body = entry[1]
+      for (const el of ['title', 'id', 'updated']) {
+        if (!new RegExp(`<${el}>`).test(body)) fail(path, `an <entry> has no <${el}>`)
+      }
+      const id = body.match(/<id>([^<]*)<\/id>/)?.[1]
+      if (id) ids.push(id)
+      const updated = body.match(/<updated>([^<]*)<\/updated>/)?.[1]
+      // A reader sorts on this. "Recently" is not a date.
+      if (updated && Number.isNaN(Date.parse(updated))) {
+        fail(path, `<updated>${updated}</updated> is not a date a reader can parse`)
+      }
+    }
+    // Two entries sharing an id is how a reader loses one of them.
+    const seenIds = new Set()
+    for (const id of ids) {
+      if (seenIds.has(id)) fail(path, `two entries share the id ${id}`)
+      seenIds.add(id)
+    }
+    notes.push(`${ids.length} feed entries, each with an id, a title and a date`)
+  }
+
+  if (path.endsWith('sitemap.xml')) {
+    for (const m of xml.matchAll(/<lastmod>([^<]*)<\/lastmod>/g)) {
+      // Sitemaps take W3C Datetime; a bare date is the shortest legal form.
+      if (!/^\d{4}-\d{2}-\d{2}(T|$)/.test(m[1])) fail(path, `<lastmod>${m[1]}</lastmod> is not a W3C date`)
+    }
+    const locs = [...xml.matchAll(/<loc>([^<]*)<\/loc>/g)].map((m) => m[1])
+    const seenLocs = new Set()
+    for (const loc of locs) {
+      if (!/^https:\/\//.test(loc)) fail(path, `<loc>${loc}</loc> is not an absolute https URL`)
+      if (seenLocs.has(loc)) fail(path, `<loc>${loc}</loc> appears twice`)
+      seenLocs.add(loc)
+    }
+  }
 }
 
 const isCrawlable = (url) =>
@@ -156,6 +403,10 @@ while (queue.length) {
   const readmeAt = res.body.indexOf('class="readme')
   const isUpstream = (index) => readmeAt !== -1 && index >= readmeAt
 
+  checkAccessibility(path, res.body, isUpstream)
+  checkJsonLd(path, res.body)
+  checkNonces(path, res.body, res.csp)
+
   for (const [ref, index] of extractRefs(res.body)) {
     if (/^(mailto|tel|data|javascript):/i.test(ref)) continue
 
@@ -199,8 +450,12 @@ console.log('')
 // ── Routes nothing links to ─────────────────────────────────────────────────
 for (const path of UNLINKED_ROUTES) {
   const res = await fetchOnce(BASE + path)
-  if (res.status !== 200) fail(path, `expected 200, got ${res.status}`)
-  else console.log(`  200  ${path}`)
+  if (res.status !== 200) {
+    fail(path, `expected 200, got ${res.status}`)
+    continue
+  }
+  console.log(`  200  ${path}`)
+  if (path.endsWith('.xml') && res.body) checkXml(path, res.body)
 }
 
 // ── Every URL the sitemap promises ──────────────────────────────────────────
@@ -209,13 +464,37 @@ if (sitemap.status === 200 && sitemap.body) {
   const locs = [...sitemap.body.matchAll(/<loc>([^<]+)<\/loc>/g)].map((m) => m[1])
   if (!locs.length) fail('/sitemap.xml', 'contains no <loc> entries')
   for (const loc of locs) {
-    // The sitemap carries the public origin; check the same path here.
-    const path = new URL(loc).pathname
+    // The sitemap carries the public origin; check the same path here. A `<loc>`
+    // that is not an absolute URL is a sitemap error, not a crash: `new URL`
+    // throws on one, and this used to take the whole check down with it.
+    let path
+    try {
+      path = new URL(loc).pathname
+    }
+    catch {
+      fail('/sitemap.xml', `<loc>${loc}</loc> is not a URL — a sitemap carries absolute ones`)
+      continue
+    }
     const res = await fetchOnce(BASE + path)
     if (res.status !== 200) fail('/sitemap.xml', `promises ${path}, which answered ${res.status}`)
   }
   notes.push(`sitemap lists ${locs.length} urls, all reachable`)
 }
+
+// ── HEAD answers wherever GET does ──────────────────────────────────────────
+// Nitro routes by filename suffix, so `healthz.get.ts` binds GET alone and a
+// HEAD for it used to fall through to the catch-all as a 404. That is the
+// method an uptime monitor reaches for, on the endpoint that says whether the
+// site is up. See server/middleware/head.ts.
+for (const path of ['/', '/projects', ...UNLINKED_ROUTES]) {
+  const res = await fetch(BASE + path, { method: 'HEAD', headers: HEADERS })
+    .catch((err) => ({ status: 0, error: err.message }))
+  const get = await fetchOnce(BASE + path)
+  if (res.status !== get.status) {
+    fail(path, `HEAD answered ${res.status || res.error}, GET answered ${get.status}`)
+  }
+}
+notes.push('HEAD answers the same as GET on every route')
 
 // ── A 404 has to be a 404 ───────────────────────────────────────────────────
 for (const path of MUST_404) {

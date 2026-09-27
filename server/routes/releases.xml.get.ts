@@ -11,21 +11,14 @@
  * else when GitHub is unreachable.
  */
 
+import { xmlEscape } from '~~/shared/xml/escape'
+
 /** How many entries the feed carries. A reader wants recent, not complete. */
 const MAX_ENTRIES = 30
 
 /** A release tag is data, not a pattern — neutralise it before it becomes one. */
 function escapeRegExp(value: string): string {
   return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
-}
-
-function xmlEscape(value: string): string {
-  return value
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;')
-    .replace(/'/g, '&apos;')
 }
 
 export default defineEventHandler(async (event) => {

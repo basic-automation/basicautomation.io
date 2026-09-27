@@ -5,10 +5,12 @@ const slug = computed(() => String(route.params.slug))
 const { project, error } = await useProject(slug)
 
 if (error.value || !project.value) {
+  // Client-only `fatal`, for the reason spelled out in `app/pages/[...slug].vue`:
+  // on the server it buys a Nitro stack trace and nothing else.
   throw createError({
     statusCode: error.value?.statusCode ?? 404,
     statusMessage: 'No such project',
-    fatal: true,
+    fatal: import.meta.client,
   })
 }
 
@@ -67,6 +69,8 @@ const releases = computed(() => meta.value?.releases ?? [])
 const releasesUrl = computed(() =>
   `https://github.com/basic-automation/${project.value?.repo}/releases`)
 
+const ago = useRelativeTime()
+
 /** Kept deliberately small and late: this is a pitch, not a package listing. */
 const facts = computed(() => {
   const m = meta.value
@@ -78,7 +82,7 @@ const facts = computed(() => {
   if (m.license) rows.push({ label: 'license', value: m.license })
   if (m.stars) rows.push({ label: 'stars', value: String(m.stars) })
   if (m.crateDownloads) rows.push({ label: 'downloads', value: compactNumber(m.crateDownloads) })
-  if (m.pushedAt) rows.push({ label: 'updated', value: relativeTime(m.pushedAt) })
+  if (m.pushedAt) rows.push({ label: 'updated', value: ago(m.pushedAt) })
   return rows
 })
 
@@ -89,13 +93,6 @@ const facts = computed(() => {
  * reader could not also see.
  */
 const siteUrl = useSiteOrigin()
-
-const orgLd = {
-  '@type': 'Organization',
-  'name': 'Basic Automation',
-  'url': siteUrl,
-  'logo': `${siteUrl}/logo.svg`,
-}
 
 const jsonLd = computed(() => {
   const p = project.value
@@ -111,8 +108,10 @@ const jsonLd = computed(() => {
     'description': p.summary,
     'url': `${siteUrl}/projects/${p.slug}`,
     'codeRepository': m?.htmlUrl ?? `https://github.com/basic-automation/${p.repo}`,
-    'author': orgLd,
-    'publisher': orgLd,
+    // Referenced, not repeated: the description lives on the landing page, and
+    // a consumer reading two pages of this site can tell it is one organization.
+    'author': organizationRef(siteUrl),
+    'publisher': organizationRef(siteUrl),
     'isAccessibleForFree': true,
     'image': `${siteUrl}/projects/og/${p.slug}.png`,
   }
@@ -182,6 +181,7 @@ useSeoMeta({
           <img
             :src="project.logo"
             :alt="project.name"
+            v-bind="assetSize(project.logo)"
             class="h-24 w-auto max-w-full sm:h-36 lg:h-44"
           >
         </h1>
@@ -222,9 +222,14 @@ useSeoMeta({
     <!-- ── Screenshot ───────────────────────────────────────────────────── -->
     <section v-if="project.screenshot" class="mb-32">
       <TermRule label="screenshot" />
+      <!-- The one image on the site that can move the page: it is `w-full` and
+           block-level, so until it lands the browser has nothing to reserve its
+           height with and everything below it sits too high. `assetSize` gives
+           it the aspect ratio; the classes still decide the drawn size. -->
       <img
         :src="project.screenshot"
         :alt="`${project.name} screenshot`"
+        v-bind="assetSize(project.screenshot)"
         class="mt-8 w-full max-w-5xl"
       >
     </section>
@@ -352,7 +357,7 @@ useSeoMeta({
               <time
                 class="text-xs text-pn-muted"
                 :datetime="release.publishedAt"
-                :title="relativeTime(release.publishedAt)"
+                :title="ago(release.publishedAt)"
               >{{ isoDate(release.publishedAt) }}</time>
               <span v-if="release.prerelease" class="text-xs text-pn-muted">pre-release</span>
             </span>

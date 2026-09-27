@@ -1,0 +1,122 @@
+# The external link report.
+#
+# `npm run check` runs in CI on every pull request and deliberately does NOT
+# follow links off the site: somebody else's uptime must not decide whether a
+# PR is green. But the links still rot, and most of them are not even ours —
+# the project pages fold in each repo's README, so a dead link in an upstream
+# README becomes a dead link on this site without a single commit here.
+#
+# That is a report, not a gate. This job runs weekly, follows every external
+# link, and keeps ONE issue in sync with the result: opened or updated while
+# links are dead, closed the week they are all fixed. It never fails on a dead
+# link — only on the build or the server not coming up, which would mean the
+# report itself is not trustworthy.
+
+name: External links
+
+on:
+  schedule:
+    # Thursday, deliberately away from CI's Monday run: two jobs building the
+    # same tree in the same hour just makes one queue behind the other.
+    - cron: "0 6 * * 4"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  issues: write
+
+concurrency:
+  group: links
+  cancel-in-progress: false
+
+env:
+  ISSUE_TITLE: "External links: dead links found by the weekly check"
+
+jobs:
+  links:
+    name: follow every external link
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+      - name: Install
+        run: npm ci
+      - name: Build
+        run: npm run build
+
+      # `set +e` on the check itself: a dead link is the thing being reported,
+      # so its exit code must not end the job before the report is written.
+      - name: Follow every external link
+        run: |
+          node .output/server/index.mjs &
+          server=$!
+          trap 'kill $server' EXIT
+          ready=0
+          for _ in $(seq 1 40); do
+            curl -sf -o /dev/null http://127.0.0.1:3000/healthz && { ready=1; break; }
+            sleep 0.5
+          done
+          # Not a dead link — a broken report. Fail loudly, and let the steps
+          # below skip rather than announce that nothing is wrong.
+          [ "$ready" = 1 ] || { echo "the server never answered /healthz"; exit 1; }
+          set +e
+          npm run check -- --external 2>&1 | tee check.log
+          set -e
+          grep -E '^  ✗ external:' check.log | sed 's/^  ✗ external: /- /' > dead.txt || true
+          grep -E '^  ! external:' check.log | sed 's/^  ! external: /- /' > unreachable.txt || true
+
+      - name: Write the report
+        run: |
+          {
+            echo "## External links"
+            echo
+            if [ -s dead.txt ]; then
+              echo "**Dead** — answered 404 or 410:"
+              echo
+              cat dead.txt
+            else
+              echo "No dead links."
+            fi
+            echo
+            if [ -s unreachable.txt ]; then
+              echo "Unreachable from this runner (a verdict on the network as much as on the link):"
+              echo
+              cat unreachable.txt
+            fi
+          } | tee report.md >> "$GITHUB_STEP_SUMMARY"
+
+      # One issue, kept in sync. A new issue every week would be noise, and a
+      # stale open issue after the links are fixed is worse than none.
+      - name: Open, update or close the tracking issue
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          existing=$(gh issue list --state open --limit 50 \
+            --json number,title \
+            --jq "[.[] | select(.title == \"$ISSUE_TITLE\")] | .[0].number // empty")
+
+          if [ -s dead.txt ]; then
+            {
+              cat report.md
+              echo
+              echo "Most of these live in READMEs this site fetches and renders, so the fix"
+              echo "is usually a commit in the other repo, not this one."
+              echo
+              echo "[Run]($RUN_URL) · \`npm run check -- --external\` against a local build."
+            } > body.md
+            if [ -n "$existing" ]; then
+              gh issue comment "$existing" --body-file body.md
+              echo "Updated #$existing"
+            else
+              gh issue create --title "$ISSUE_TITLE" --body-file body.md
+            fi
+          elif [ -n "$existing" ]; then
+            gh issue close "$existing" --comment "All external links answered. Closed by [this run]($RUN_URL)."
+            echo "Closed #$existing"
+          else
+            echo "No dead links and no open issue. Nothing to do."
+          fi
