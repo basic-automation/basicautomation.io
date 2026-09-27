@@ -52,15 +52,22 @@ record. There is no run log.
 
 ## Phase 3 — Operations
 
-- [ ] Create the `glance.basicautomation.io` DNS record in Cloudflare — the Caddy
+- [x] Create the `glance.basicautomation.io` DNS record in Cloudflare — the Caddy
       site block exists and validates, but the name does not resolve yet, so
       Glance is only reachable on the LAN at `:5188` since it moved off the apex
+      — done by the owner. Checked 2026-09-26: it resolves publicly (Cloudflare)
+      and answers 200 with a valid certificate from both the public address and
+      the LAN override.
 
 - [ ] Ship `GITHUB_TOKEN` to the container so the rate limit stops being a factor.
       Less urgent than it was: the cache TTL now lengthens itself as projects
       are added (see below), so the cost of going without is staleness — 30
       minutes at seven projects — rather than a rate-limited site. A token lifts
-      the limit to 5,000 an hour.
+      the limit to 5,000 an hour, and it unlocks conditional requests: a
+      `304 Not Modified` to an `If-None-Match` does not count against the limit,
+      but only when the request is authorized — so ETags buy an anonymous site
+      nothing, and an authenticated one near-free refreshes.
+      <https://docs.github.com/rest/guides/best-practices-for-using-the-rest-api>
       (the wiring is already there — `deploy/compose.yaml` reads
       `BASICAUTOMATION_GITHUB_TOKEN`; what is missing is the secret itself, which
       is the owner's to create)
@@ -131,16 +138,18 @@ record. There is no run log.
       end-of-support date, where `2022-11-28` sunsets 10 March 2028.
       <https://docs.github.com/en/rest/about-the-rest-api/api-versions>
       <https://docs.github.com/en/rest/about-the-rest-api/breaking-changes>
-- [ ] Watch for `2026-03-10` actually dropping the fields it documents as removed.
-      As of 2026-09-25 an unauthenticated `GET /repos/{owner}/{repo}` still returns
-      `has_downloads` and `use_squash_pr_title_as_default` with
-      `x-github-api-version-selected: 2026-03-10` in the response headers. Nothing
-      here reads either, so it costs this site nothing — but it means the version
-      header is not yet the whole story about what a payload contains.
+- [x] Watch for `2026-03-10` actually dropping the fields it documents as removed.
+      On 2026-09-25 an unauthenticated `GET /repos/{owner}/{repo}` still returned
+      `has_downloads` and `use_squash_pr_title_as_default` under
+      `x-github-api-version-selected: 2026-03-10`. On 2026-09-26 both are gone,
+      authenticated and not. Nothing here read either, so nothing changed.
 - [ ] Revisit the type checker: `vue-tsc` does not support TypeScript 7 (it still
       reaches for `typescript/lib/tsc`, which TS 7 no longer exports), so the
       project uses Golar via its `golar/unstable` entrypoint — move off `unstable`
-      once a stable one exists, or back to `vue-tsc` once it supports TS 7
+      once a stable one exists, or back to `vue-tsc` once it supports TS 7.
+      Re-checked 2026-09-26: `vue-tsc` 3.3.11 against TypeScript 7.0.2 still
+      dies with `ERR_PACKAGE_PATH_NOT_EXPORTED` for `./lib/tsc`, and `golar`
+      0.1.10 still exports only `./unstable` and `./unstable-tsgo`.
 - [x] Silenced Nitro's own `[request error]` stack-trace block on a 404, without
       replacing the error handler. Nitro logs it when the error is `fatal`, and
       `fatal` is only load-bearing on the client, where it is what makes a 404
@@ -171,6 +180,20 @@ record. There is no run log.
       over HTTPS, is not itself an onion site, and the value is a valid
       `http(s)://…onion` URL; a subdomain in the onion address suppresses the banner.
       <https://community.torproject.org/onion-services/advanced/onion-location/>
+      An implementation is written and parked, not merged: commit `f6b387e` on
+      the local branch `routine/site-2026-09-25` (`server/plugins/onion-location.ts`,
+      on `render:response`, checking every one of the conditions above). It was
+      dropped from the 2026-09-26 PR because the owner's own note on main says
+      this is a bigger decision than page copy. Cherry-pick it if the answer is yes.
+- [ ] `Strict-Transport-Security` on the clearnet host — **needs an owner
+      decision**, because it is sticky in every visitor's browser for its
+      `max-age`. Neither Caddy nor the app sends it today (checked 2026-09-26;
+      plain HTTP already 308s to HTTPS). Two constraints if it is done: never on
+      a response to the `.onion` host, because HSTS forbids clicking through a
+      certificate warning and the onion service's self-signed certificate is a
+      warning every visitor is told to accept; and no `includeSubDomains` while
+      any subdomain (Glance) is not HTTPS-only.
+      <https://developer.mozilla.org/en-US/docs/Web/HTTP/Reference/Headers/Strict-Transport-Security>
 - [ ] Decide what happens to `basic-automation.github.io`, which still serves the
       old page (200, `<title>Basic Automation</title>`). No longer load-bearing:
       the Skidbladnir README used to embed a screenshot from
@@ -239,10 +262,15 @@ record. There is no run log.
       ten pages does today. Rendering pixel-identical at 1280 and 390 wherever
       the data matched. Home phone LCP 2484 → 2248 ms. Honest cost: the two
       text-LCP pages measured rose 1144 → 1192 ms and 1200 → 1248 ms,
-      reproducibly — still "good", and not yet explained.
-- [ ] Explain the ~48 ms the font split added to text-LCP pages on the phone
-      profile. A guess worth testing: two faces in one family change when
-      Chrome settles on a face for the first text paint.
+      reproducibly under DevTools throttling — an artefact of it (below).
+- [x] Explained the ~48 ms the font split appeared to add to text-LCP pages:
+      an artefact of DevTools' simulated throttling, not a real cost. Under it,
+      the stylesheet landed ~45 ms later with the core preloaded, and not
+      because of its size — shrinking the full face's `unicode-range` from
+      1,656 characters to ~250 moved nothing. Through a real shaped link
+      instead (a Node proxy: one shared 200 KB/s pipe, 150 ms per response,
+      DevTools throttling off), `/projects` FCP is 1168 ms with either font,
+      median of 7, twice — and the home page's LCP gain grows to 2448 → 2120 ms.
 - [x] A test framework, and unit tests over the pure helpers — Vitest,
       `test/*.test.ts`, run by CI. Scoped deliberately: only the functions in
       `shared/` that a running server cannot exercise, because `npm run check`
@@ -312,6 +340,12 @@ record. There is no run log.
       palette rule forbids without the owner saying so. Until then the shortfalls
       sit in the script's `BASELINE`, which records the number each was measured
       at, not an endorsement of it.
+      The same decision covers the focus ring: every one of the 39 tab stops on
+      a project page shows one (checked by tabbing through it in Chromium), but
+      it is 1px of `pn-accent` (2.14:1) or, on the header links, `pn-muted`
+      (2.97:1) — both under the 3:1 WCAG 1.4.11 asks of a focus indicator at AA.
+      `pn-fg` or `pn-dim` would pass without leaving the palette.
+      <https://www.w3.org/WAI/WCAG22/Understanding/non-text-contrast.html>
 - [x] A real 404 check: every internal link, every render, on every route — `npm run check`
 - [x] …and the two XML documents nobody looks at, checked the same way. A feed
       breaks silently for every subscriber at once, and both documents carry
