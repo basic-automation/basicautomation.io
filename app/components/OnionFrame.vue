@@ -58,7 +58,8 @@ const size = computed(() => {
 
 const seconds = computed(() => `${((snapshot?.elapsedMs ?? 0) / 1000).toFixed(1)} s`)
 
-const when = computed(() => (snapshot ? relativeTime(new Date(snapshot.fetchedAt * 1000).toISOString()) : ''))
+const ago = useRelativeTime()
+const when = computed(() => (snapshot ? ago(new Date(snapshot.fetchedAt * 1000).toISOString()) : ''))
 </script>
 
 <template>

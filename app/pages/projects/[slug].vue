@@ -69,6 +69,8 @@ const releases = computed(() => meta.value?.releases ?? [])
 const releasesUrl = computed(() =>
   `https://github.com/basic-automation/${project.value?.repo}/releases`)
 
+const ago = useRelativeTime()
+
 /** Kept deliberately small and late: this is a pitch, not a package listing. */
 const facts = computed(() => {
   const m = meta.value
@@ -80,7 +82,7 @@ const facts = computed(() => {
   if (m.license) rows.push({ label: 'license', value: m.license })
   if (m.stars) rows.push({ label: 'stars', value: String(m.stars) })
   if (m.crateDownloads) rows.push({ label: 'downloads', value: compactNumber(m.crateDownloads) })
-  if (m.pushedAt) rows.push({ label: 'updated', value: relativeTime(m.pushedAt) })
+  if (m.pushedAt) rows.push({ label: 'updated', value: ago(m.pushedAt) })
   return rows
 })
 
@@ -355,7 +357,7 @@ useSeoMeta({
               <time
                 class="text-xs text-pn-muted"
                 :datetime="release.publishedAt"
-                :title="relativeTime(release.publishedAt)"
+                :title="ago(release.publishedAt)"
               >{{ isoDate(release.publishedAt) }}</time>
               <span v-if="release.prerelease" class="text-xs text-pn-muted">pre-release</span>
             </span>

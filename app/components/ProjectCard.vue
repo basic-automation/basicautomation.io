@@ -2,6 +2,8 @@
 import type { EnrichedProject } from '~~/shared/types/project'
 
 const { project } = defineProps<{ project: EnrichedProject }>()
+
+const ago = useRelativeTime()
 </script>
 
 <template>
@@ -64,7 +66,7 @@ const { project } = defineProps<{ project: EnrichedProject }>()
         v{{ project.meta.crateVersion }}
       </span>
       <span v-if="project.meta?.license">{{ project.meta.license }}</span>
-      <span v-if="project.meta?.pushedAt">updated {{ relativeTime(project.meta.pushedAt) }}</span>
+      <span v-if="project.meta?.pushedAt">updated {{ ago(project.meta.pushedAt) }}</span>
       <span class="ml-auto text-pn-dim transition-colors group-hover:text-[var(--accent)]">open →</span>
     </div>
   </NuxtLink>

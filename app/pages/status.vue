@@ -16,6 +16,8 @@ const { projects } = await useProjects()
 
 const health = computed(() => healthData.value ?? null)
 
+const ago = useRelativeTime()
+
 /** "2 days, 3 hours" — an uptime nobody has to divide by 86400 themselves. */
 function duration(seconds: number | null | undefined): string {
   if (seconds === null || seconds === undefined) return '—'
@@ -145,7 +147,7 @@ useSeoMeta({
               v-if="p.meta?.fetchedAt"
               class="text-xs text-pn-muted"
               :datetime="p.meta.fetchedAt"
-            >fetched {{ relativeTime(p.meta.fetchedAt) }}</time>
+            >fetched {{ ago(p.meta.fetchedAt) }}</time>
           </p>
         </li>
       </ul>
