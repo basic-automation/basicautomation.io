@@ -16,7 +16,7 @@
  */
 
 import { randomBytes } from 'node:crypto'
-import { contentSecurityPolicy } from '~~/shared/security/csp'
+import { contentSecurityPolicy, stampNonce } from '~~/shared/security/csp'
 
 declare module 'h3' {
 	interface H3EventContext {
@@ -25,14 +25,8 @@ declare module 'h3' {
 	}
 }
 
-/**
- * An opening `<script>` or `<style>` tag with no nonce yet — Nuxt's scripts,
- * and the one `<style id="nuxt-ui-colors">` Nuxt UI writes into the head.
- */
-const OPEN_TAG = /<(script|style)(?![^>]*\snonce=)(?=[\s>])/g
-
 function stamp(chunks: string[], nonce: string): string[] {
-	return chunks.map((c) => c.replace(OPEN_TAG, `<$1 nonce="${nonce}"`))
+	return chunks.map((c) => stampNonce(c, nonce))
 }
 
 export default defineNitroPlugin((nitroApp) => {

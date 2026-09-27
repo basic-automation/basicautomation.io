@@ -63,7 +63,7 @@ async function fetchOnce(url) {
       const body = type.includes('html') || type.includes('xml') || type.includes('text')
         ? await res.text()
         : null
-      return { status: res.status, type, body }
+      return { status: res.status, type, body, csp: res.headers.get('content-security-policy') }
     }
     catch (err) {
       return { status: 0, type: '', body: null, error: err.message }
@@ -147,6 +147,51 @@ function checkJsonLd(path, html) {
     }
   }
   notes.push(`${path}: ${blocks.length} structured-data block(s), all parsed`)
+}
+
+/**
+ * The script nonce holds together, on every page.
+ *
+ * `server/plugins/csp-nonce.ts` stamps a per-request nonce on the scripts and
+ * styles Nuxt writes into the head and body tail, and never on the app body,
+ * where README HTML lands. If a Nuxt upgrade moved one of its own scripts into
+ * the body, or changed how the tail is assembled, the browser would refuse it
+ * and the page would silently stop hydrating — and a crawler that runs no
+ * JavaScript would see nothing wrong. So the invariant is checked here, in the
+ * markup: the header names a nonce, every script that executes and every style
+ * block carries that same nonce, and nothing inside the app body carries any.
+ */
+function checkNonces(path, html, csp) {
+  const nonce = csp?.match(/'nonce-([^']+)'/)?.[1]
+  if (!nonce) {
+    fail(path, 'Content-Security-Policy carries no nonce — the CSP plugin did not run')
+    return
+  }
+  if (!/style-src-elem [^;]*'nonce-/.test(csp)) fail(path, 'style-src-elem carries no nonce')
+
+  // JSON and ld+json blocks are data, never executed, and CSP does not apply to
+  // them; everything else a <script> can be is code.
+  const executes = (attrs) => {
+    const type = attrs.match(/\btype=["']([^"']*)["']/i)?.[1]?.toLowerCase()
+    return !type || type === 'module' || type === 'importmap' || type.includes('javascript')
+  }
+
+  const appAt = html.indexOf('<div id="__nuxt"')
+  const appEnd = appAt === -1 ? -1 : html.indexOf('<div id="teleports"', appAt)
+
+  for (const m of html.matchAll(/<(script|style)\b([^>]*)>/gi)) {
+    const [, tag, attrs] = m
+    const inApp = appAt !== -1 && m.index > appAt && (appEnd === -1 || m.index < appEnd)
+    const has = attrs.match(/\bnonce=["']([^"']*)["']/i)?.[1]
+    if (inApp) {
+      if (has) fail(path, `a <${tag}> inside the app body carries the nonce — README content would be trusted`)
+      continue
+    }
+    if (tag.toLowerCase() === 'script' && !executes(attrs)) continue
+    if (has !== nonce) {
+      fail(path, `a <${tag}${attrs.slice(0, 40)}> ${has ? 'carries a different nonce' : 'has no nonce'} — the browser will refuse it`)
+    }
+  }
 }
 
 /**
@@ -360,6 +405,7 @@ while (queue.length) {
 
   checkAccessibility(path, res.body, isUpstream)
   checkJsonLd(path, res.body)
+  checkNonces(path, res.body, res.csp)
 
   for (const [ref, index] of extractRefs(res.body)) {
     if (/^(mailto|tel|data|javascript):/i.test(ref)) continue

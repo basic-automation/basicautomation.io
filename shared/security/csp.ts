@@ -56,3 +56,17 @@ export function contentSecurityPolicy(nonce?: string): string {
 		"connect-src 'self'",
 	].join('; ')
 }
+
+/**
+ * An opening `<script>` or `<style>` tag with no nonce yet — Nuxt's scripts,
+ * and the one `<style id="nuxt-ui-colors">` Nuxt UI writes into the head. The
+ * lookahead keeps it to those two elements exactly (`<scripts>` or
+ * `<styled-thing>` are not them), and a tag that already has a nonce is left
+ * as it is.
+ */
+const OPEN_TAG = /<(script|style)(?![^>]*\snonce=)(?=[\s>])/g
+
+/** Put `nonce` on every script and style tag in `html` that lacks one. */
+export function stampNonce(html: string, nonce: string): string {
+	return html.replace(OPEN_TAG, `<$1 nonce="${nonce}"`)
+}
