@@ -127,11 +127,7 @@ async fn forward(State(upstream): State<Upstream>, req: Request) -> Response {
 /// the request URI instead. A visitor arriving over either has to look the same to
 /// the site, so both are checked.
 fn original_host(parts: &axum::http::request::Parts) -> Option<HeaderValue> {
-	parts
-		.headers
-		.get(axum::http::header::HOST)
-		.cloned()
-		.or_else(|| parts.uri.authority().and_then(|a| HeaderValue::from_str(a.host()).ok()))
+	parts.headers.get(axum::http::header::HOST).cloned().or_else(|| parts.uri.authority().and_then(|a| HeaderValue::from_str(a.host()).ok()))
 }
 
 fn upstream_res_status(res: &reqwest::Response) -> StatusCode {
