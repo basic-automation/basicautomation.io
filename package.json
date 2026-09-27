@@ -22,7 +22,8 @@
     "contrast": "node scripts/check-contrast.mjs",
     "sizes": "node scripts/build-asset-sizes.mjs",
     "sizes:check": "node scripts/build-asset-sizes.mjs --check",
-    "a11y": "node scripts/check-a11y.mjs"
+    "a11y": "node scripts/check-a11y.mjs",
+    "a11y:browser": "node scripts/check-a11y-browser.mjs"
   },
   "dependencies": {
     "@nuxt/ui": "^4.11.2",

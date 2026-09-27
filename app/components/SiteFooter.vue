@@ -24,11 +24,15 @@ const year = new Date().getFullYear()
         <p class="text-pn-muted">
           projects
         </p>
-        <ul class="mt-3 space-y-1.5">
+        <!-- Each link is its own 24px row rather than 15px of text with a gap:
+             WCAG 2.2's minimum target size, which the tightly stacked names
+             failed on every page (`npm run a11y:browser`). The row pitch is
+             what it was, give or take two pixels — the gap became the target. -->
+        <ul class="mt-2">
           <li v-for="p in projects" :key="p.slug">
             <NuxtLink
               :to="`/projects/${p.slug}`"
-              class="text-pn-dim transition-colors hover:text-pn-fg-bright"
+              class="inline-block py-1 text-pn-dim transition-colors hover:text-pn-fg-bright"
             >
               {{ p.name }}
             </NuxtLink>
@@ -40,26 +44,26 @@ const year = new Date().getFullYear()
         <p class="text-pn-muted">
           elsewhere
         </p>
-        <ul class="mt-3 space-y-1.5">
+        <ul class="mt-2">
           <li>
             <a
               href="https://github.com/basic-automation"
               target="_blank" rel="noreferrer noopener"
-              class="text-pn-dim transition-colors hover:text-pn-fg-bright"
+              class="inline-block py-1 text-pn-dim transition-colors hover:text-pn-fg-bright"
             >github.com/basic-automation</a>
           </li>
           <li>
             <a
               href="https://crates.io/crates/artiqwest"
               target="_blank" rel="noreferrer noopener"
-              class="text-pn-dim transition-colors hover:text-pn-fg-bright"
+              class="inline-block py-1 text-pn-dim transition-colors hover:text-pn-fg-bright"
             >crates.io</a>
           </li>
           <li>
             <!-- Not a NuxtLink: this is a server route, not a page to route to. -->
             <a
               href="/releases.xml"
-              class="text-pn-dim transition-colors hover:text-pn-fg-bright"
+              class="inline-block py-1 text-pn-dim transition-colors hover:text-pn-fg-bright"
             >releases feed</a>
           </li>
         </ul>

@@ -25,13 +25,16 @@
  * crawled.
  *
  * The honest summary: this is not "the site passes axe in a browser". It is
- * "the site passes every axe rule that can be judged from its markup".
+ * "the site passes every axe rule that can be judged from its markup". The
+ * layout rules it skips, less contrast, run in headless Chromium in
+ * `npm run a11y:browser` (`check-a11y-browser.mjs`).
  */
 
 import { readFile } from 'node:fs/promises'
 import { fileURLToPath } from 'node:url'
 import { dirname, resolve } from 'node:path'
 import { JSDOM, VirtualConsole } from 'jsdom'
+import { NOT_FOUND_PATH, sitePages } from './lib/pages.mjs'
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..')
 
@@ -40,19 +43,7 @@ const BASE = (args.find((a) => !a.startsWith('--'))
 	?? process.env.CHECK_BASE_URL
 	?? 'http://127.0.0.1:3000').replace(/\/$/, '')
 
-/** The same set `npm run check` crawls, plus the error page. */
-const PAGES = [
-	'/',
-	'/projects',
-	'/status',
-	'/projects/artiqwest',
-	'/projects/onyums',
-	'/projects/weftdb',
-	'/projects/enlil',
-	'/projects/nisaba',
-	'/projects/skidbladnir',
-	'/no-such-page-at-all',
-]
+const PAGES = await sitePages(BASE)
 
 /**
  * Rules that need a layout engine to mean anything. Each is disabled because
@@ -80,7 +71,7 @@ for (const path of PAGES) {
 
 	// The 404 page is supposed to be a 404; every other page is supposed not to
 	// be. Either way what is wanted is the body it rendered.
-	const expected = path === '/no-such-page-at-all' ? 404 : 200
+	const expected = path === NOT_FOUND_PATH ? 404 : 200
 	if (res.status !== expected) {
 		console.error(`✗ ${path} answered ${res.status || res.error}, expected ${expected}`)
 		process.exit(1)

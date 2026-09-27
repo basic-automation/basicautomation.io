@@ -80,6 +80,10 @@ jobs:
           # script, and the palette's contrast is measured by `npm run contrast`
           # above, which is a stronger check than sampling rendered pixels.
           npm run a11y
+          # …and the layout rules jsdom cannot run — target size, keyboard
+          # access to scroll regions, the viewport meta — in the Google Chrome
+          # the Ubuntu runner already ships, at desktop and phone widths.
+          npm run a11y:browser
 
   onion:
     name: onion gateway

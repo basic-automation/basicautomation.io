@@ -113,13 +113,18 @@ npm run start &
 npm run check                      # against http://127.0.0.1:3000
 npm run check -- --external        # also follow links off the site
 npm run a11y                       # axe-core over every page, through jsdom
+npm run a11y:browser               # the layout rules, in headless Chromium
 ```
 
 `npm run a11y` runs roughly ninety axe-core rules against the markup each page
 actually served. The rules that need a layout engine are named and skipped
 rather than silently failing — jsdom has none — so this is "every axe rule that
-can be judged from markup", not "the site passes axe in a browser". Colour
-contrast is measured separately and more directly by `npm run contrast`.
+can be judged from markup". `npm run a11y:browser` runs those skipped rules —
+touch-target size, keyboard access to scrollable regions, the viewport meta —
+in headless Chromium at a desktop and a phone width (set `CHROME_PATH` if
+Chromium is not on `PATH`). Both walk every page the sitemap lists, so a new
+project is audited the moment it is published. Colour contrast is measured
+separately and more directly by `npm run contrast`.
 
 External links are followed weekly instead, by `.github/workflows/links.yml`,
 which keeps a single issue in sync with what it finds. They are a report rather

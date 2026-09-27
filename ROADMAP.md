@@ -229,12 +229,21 @@ record. There is no run log.
       carried an `aria-label` on a bare `span`, which ARIA prohibits and screen
       readers are entitled to drop — so the word "Status" was being lost. Both
       fixed; the run is clean.
-- [ ] Run axe in a real browser too. jsdom has no layout engine, so six rules
-      cannot run at all: `color-contrast`, `color-contrast-enhanced`,
-      `target-size`, `scrollable-region-focusable` and the two `meta-viewport`
-      rules. Contrast is covered better by `npm run contrast`; `target-size` is
-      the one genuinely uncovered — nothing here checks that a tap target is big
-      enough. <https://dequeuniversity.com/rules/axe/4.13/target-size>
+- [x] Run axe in a real browser too — `npm run a11y:browser`
+      (`scripts/check-a11y-browser.mjs`), headless Chromium over the DevTools
+      Protocol with Node's own WebSocket, no framework. It runs the four layout
+      rules jsdom cannot (`target-size`, `scrollable-region-focusable`, both
+      `meta-viewport`s) on every page at 1280px and 390px, in CI. First run: 91
+      failing nodes. The footer's project names were 15px-tall targets stacked
+      6px apart on every page, now 24px rows at the same pitch; and a long
+      unbroken `CodeLine` — the onion address — overflowed into a scroll region
+      a keyboard could not reach on a phone, and now wraps instead, which also
+      shows the whole address. Both a11y scripts now take their pages from the
+      sitemap: the typed list had never included Nanna.
+      <https://dequeuniversity.com/rules/axe/4.13/target-size>
+- [ ] Run axe's `color-contrast` in the browser pass too, once the contrast item
+      below is decided. Left out deliberately: it would be red today on the
+      shortfalls already waiting on that decision.
 - [x] Stop measuring the contrast by hand. `npm run contrast`
       (`scripts/check-contrast.mjs`) reads the `@theme` block, measures every
       token against the one `#d8d8d0` ground, and prints the table this item used
