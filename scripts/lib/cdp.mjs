@@ -12,7 +12,7 @@
  */
 
 import { spawn, execFileSync } from 'node:child_process'
-import { mkdtemp, rm } from 'node:fs/promises'
+import { mkdtemp, readFile, rm } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 
@@ -45,19 +45,30 @@ async function launch(chrome, profile) {
 		'about:blank',
 	], { stdio: ['ignore', 'ignore', 'pipe'] })
 
-	const url = await new Promise((resolveUrl, reject) => {
-		let err = ''
-		const timer = setTimeout(() => reject(new Error(`Chromium did not start:\n${err}`)), 20_000)
-		proc.stderr.on('data', (chunk) => {
-			err += chunk
-			const m = err.match(/DevTools listening on (ws:\/\/\S+)/)
-			if (m) {
-				clearTimeout(timer)
-				resolveUrl(m[1])
-			}
-		})
-		proc.on('exit', (code) => reject(new Error(`Chromium exited ${code}:\n${err}`)))
-	})
+	// Chromium writes the port and browser path to `DevToolsActivePort` in the
+	// profile once it is listening. Polling for that file is sturdier than
+	// matching its stderr banner — on a cold CI runner the first start once
+	// took longer than the 20 s this used to allow, with nothing but D-Bus
+	// noise on stderr in the meantime. A minute, and the stderr is kept for
+	// the error message.
+	let err = ''
+	let exited = null
+	proc.stderr.on('data', (chunk) => { err += chunk })
+	proc.on('exit', (code) => { exited = code })
+
+	const deadline = Date.now() + 60_000
+	let url = null
+	while (!url) {
+		if (exited !== null) throw new Error(`Chromium exited ${exited}:\n${err}`)
+		if (Date.now() > deadline) {
+			proc.kill()
+			throw new Error(`Chromium did not start within 60 s:\n${err}`)
+		}
+		const active = await readFile(join(profile, 'DevToolsActivePort'), 'utf8').catch(() => null)
+		const [port, path] = active?.split('\n') ?? []
+		if (port && path) url = `ws://127.0.0.1:${port.trim()}${path.trim()}`
+		else await new Promise((r) => setTimeout(r, 100))
+	}
 	return { proc, url }
 }
 
