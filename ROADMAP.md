@@ -231,6 +231,18 @@ record. There is no run log.
       field data; this site is too small to appear in CrUX.
       <https://web.dev/articles/vitals#core-web-vitals>
       <https://web.dev/articles/optimize-cls>
+- [x] Preload the wallpaper on the home page (phone LCP 2580 → 2484 ms, median
+      of 9, twice) and preload a 61 KB core cut of Fira Code instead of the
+      113 KB full font (`npm run font`, `font:check` in CI). The full font stays
+      declared behind it by `unicode-range`, fetched only by a page that sets a
+      character only it has — checked with Cyrillic in a browser; none of the
+      ten pages does today. Rendering pixel-identical at 1280 and 390 wherever
+      the data matched. Home phone LCP 2484 → 2248 ms. Honest cost: the two
+      text-LCP pages measured rose 1144 → 1192 ms and 1200 → 1248 ms,
+      reproducibly — still "good", and not yet explained.
+- [ ] Explain the ~48 ms the font split added to text-LCP pages on the phone
+      profile. A guess worth testing: two faces in one family change when
+      Chrome settles on a face for the first text paint.
 - [x] A test framework, and unit tests over the pure helpers — Vitest,
       `test/*.test.ts`, run by CI. Scoped deliberately: only the functions in
       `shared/` that a running server cannot exercise, because `npm run check`

@@ -56,7 +56,8 @@ export default defineNuxtConfig({
           rel: 'preload',
           as: 'font',
           type: 'font/woff2',
-          href: '/fonts/FiraCode-VF.woff2',
+          // The core cut, not the full font: it is what every page sets.
+          href: '/fonts/FiraCode-VF-core.woff2',
           crossorigin: 'anonymous',
         },
       ],

@@ -118,6 +118,7 @@ npm run check -- --external        # also follow links off the site
 npm run a11y                       # axe-core over every page, through jsdom
 npm run a11y:browser               # the layout rules, in headless Chromium
 npm run vitals                     # LCP and CLS, phone and desktop, median of 3
+npm run font                       # re-cut the preloaded core of Fira Code
 ```
 
 `npm run a11y` runs roughly ninety axe-core rules against the markup each page
@@ -136,6 +137,12 @@ throttled phone profile and at desktop, and reports each against web.dev's
 thresholds. It is lab data, not field data, and a report rather than a gate
 unless run with `--strict`. Point it at the live site to measure what is
 deployed: `npm run vitals -- https://basicautomation.io`.
+
+Fira Code is served in two cuts of one family: a 61 KB core — Latin-1, Greek,
+punctuation, arrows, maths and box drawing, which is everything the pages and
+READMEs set — that every page preloads, and the full 113 KB font behind it by
+`unicode-range`, which a browser fetches only for a character the core lacks.
+`npm run font:check` (in CI) fails if either cut or its declared range drifts.
 
 External links are followed weekly instead, by `.github/workflows/links.yml`,
 which keeps a single issue in sync with what it finds. They are a report rather
