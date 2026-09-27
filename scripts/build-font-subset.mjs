@@ -15,9 +15,10 @@
  * the core second, both as "Fira Code", each with a `unicode-range`. For a
  * character both cover, the later face — the core — wins; for anything only the
  * full font has, the browser fetches the full font then, and only on that page.
- * The full face's range is exactly the code points the font contains, so an
- * emoji in a README (which Fira Code does not have) never triggers a download
- * of 113 KB to find that out.
+ * The full face's range is what the font contains outside the core — coarsely
+ * below the emoji planes, exactly within them, and never overlapping the core —
+ * so an emoji or a ✅ in a README (which Fira Code does not have) never
+ * triggers a download of 113 KB to find that out.
  * https://developer.mozilla.org/docs/Web/CSS/@font-face/unicode-range
  *
  * HarfBuzz keeps the layout closure of what is included, so the ligatures and
@@ -57,12 +58,42 @@ const CORE_RANGES = [
 const hex = (n) => n.toString(16).toUpperCase()
 const toRange = ([a, b]) => (a === b ? `U+${hex(a)}` : `U+${hex(a)}-${hex(b)}`)
 
-/** Collapse a sorted list of code points into `unicode-range` spans. */
+/**
+ * Below the emoji planes, spans closer than this are merged into one. The exact
+ * list of what Fira Code covers is 1,656 characters of CSS on every page; merged
+ * it is about 250, 334 bytes less after brotli. A coarse range costs a wasted
+ * fetch of the full font only when a page sets a character in a gap, which no
+ * page does today. (It was first suspected of the ~48 ms the split added to
+ * text-LCP pages on a throttled phone. Measured, it is not the cause: see
+ * ROADMAP.md.)
+ */
+const MERGE_GAP = 0x100
+
+/**
+ * Where emoji live. Here the range stays exact, because this is precisely where
+ * a README's 🌙 would otherwise send the browser off for 113 KB to find out the
+ * font does not have it.
+ */
+const EXACT_FROM = 0x1f000
+
+const inCore = (p) => CORE_RANGES.some(([a, b]) => p >= a && p <= b)
+const bridgesCore = (from, to) => CORE_RANGES.some(([a, b]) => a <= to && b >= from)
+
+/**
+ * Collapse a sorted list of code points into `unicode-range` spans for the full
+ * face. Never across a core range: a character the core range claims but the
+ * core does not have (✅, say — Fira Code has no such glyph) must not fall
+ * through to a full face whose coarse range happens to cover it, or the page
+ * pays 113 KB to learn the font lacks it.
+ */
 function spans(points) {
 	const out = []
 	for (const p of points) {
 		const last = out.at(-1)
-		if (last && p === last[1] + 1) last[1] = p
+		const gap = last ? p - last[1] : Infinity
+		const merge = last && (gap === 1
+			|| (p < EXACT_FROM && gap <= MERGE_GAP && !bridgesCore(last[1] + 1, p - 1)))
+		if (merge) last[1] = p
 		else out.push([p, p])
 	}
 	return out
@@ -72,11 +103,12 @@ const full = await readFile(FULL)
 const face = new Face(new Blob(await fontverter.convert(full, 'sfnt')), 0)
 const has = [...face.collectUnicodes()].sort((a, b) => a - b)
 
-const inCore = (p) => CORE_RANGES.some(([a, b]) => p >= a && p <= b)
 const corePoints = has.filter(inCore)
 
 const coreRange = CORE_RANGES.map(toRange).join(', ')
-const fullRange = spans(has).map(toRange).join(', ')
+// The full face only answers for what the core does not: inside the core's
+// ranges the core already has every glyph the font has.
+const fullRange = spans(has.filter((p) => !inCore(p))).map(toRange).join(', ')
 
 const core = await subsetFont(full, String.fromCodePoint(...corePoints), { targetFormat: 'woff2' })
 
