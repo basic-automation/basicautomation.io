@@ -5,6 +5,7 @@
  *   npm run vitals -- https://basicautomation.io
  *   npm run vitals -- http://127.0.0.1:3000 --runs=5 --strict
  *   npm run vitals -- http://127.0.0.1:3000 --only=/ --only=/projects
+ *   npm run vitals -- http://127.0.0.1:3000 --shaped
  *
  * Two profiles, each a cold load with the cache disabled:
  *
@@ -24,6 +25,13 @@
  * rather than argued. `layout-shift` observers DO fire in `--headless=new`
  * driven over CDP — they did not in the screenshot-mode headless used before.
  *
+ * `--shaped` swaps the phone profile's DevTools network throttling for a real
+ * shaped link (`lib/shaper.mjs`: one shared 1.6 Mbps pipe, 150 ms per
+ * response) in front of the target. Prefer it for A/B comparisons: DevTools'
+ * throttling once produced a reproducible 48 ms "regression" that the shaped
+ * link showed to be an artefact of the throttling itself. It needs a local
+ * target — shaping a remote site only adds to its own latency.
+ *
  * Reports by default. `--strict` exits non-zero when a median is "poor" by
  * web.dev's thresholds (LCP over 4 s, CLS over 0.25).
  * https://web.dev/articles/vitals#core-web-vitals
@@ -32,6 +40,7 @@
 
 import { sitePages, NOT_FOUND_PATH } from './lib/pages.mjs'
 import { startBrowser } from './lib/cdp.mjs'
+import { startShaper } from './lib/shaper.mjs'
 
 const args = process.argv.slice(2)
 const BASE = (args.find((a) => !a.startsWith('--'))
@@ -40,6 +49,7 @@ const BASE = (args.find((a) => !a.startsWith('--'))
 const RUNS = Number(args.find((a) => a.startsWith('--runs='))?.slice(7) ?? 3)
 const STRICT = args.includes('--strict')
 const ONLY = args.filter((a) => a.startsWith('--only=')).map((a) => a.slice(7))
+const SHAPED = args.includes('--shaped')
 
 /** web.dev's boundaries: good at or under the first, poor over the second. */
 const LCP = { good: 2500, poor: 4000 }
@@ -100,11 +110,13 @@ const median = (xs) => {
 
 const rate = (value, t) => (value <= t.good ? 'good' : value <= t.poor ? 'needs work' : 'POOR')
 
+const shaper = SHAPED ? await startShaper({ upstream: BASE, rate: 1_600_000 / 8, rtt: 150 }) : null
+
 const pages = (await sitePages(BASE))
 	.filter((p) => p !== NOT_FOUND_PATH && (!ONLY.length || ONLY.includes(p)))
 const { cdp, chrome, stop } = await startBrowser()
 
-console.log(`LCP and CLS, median of ${RUNS} cold load(s), ${pages.length} pages from ${BASE}`)
+console.log(`LCP and CLS, median of ${RUNS} cold load(s), ${pages.length} pages from ${BASE}${SHAPED ? ', phone through a shaped link' : ''}`)
 console.log(`in ${chrome}\n`)
 
 let poor = 0
@@ -127,12 +139,13 @@ try {
 				await cdp.send('Network.enable', {}, sessionId)
 				await cdp.send('Network.setCacheDisabled', { cacheDisabled: true }, sessionId)
 				await cdp.send('Emulation.setDeviceMetricsOverride', profile.metrics, sessionId)
-				if (profile.network) await cdp.send('Network.emulateNetworkConditions', profile.network, sessionId)
+				if (profile.network && !SHAPED) await cdp.send('Network.emulateNetworkConditions', profile.network, sessionId)
 				await cdp.send('Emulation.setCPUThrottlingRate', { rate: profile.cpu }, sessionId)
 				await cdp.send('Page.addScriptToEvaluateOnNewDocument', { source: OBSERVER }, sessionId)
 
 				const loaded = cdp.once('Page.loadEventFired', sessionId, 60_000)
-				const nav = await cdp.send('Page.navigate', { url: BASE + path }, sessionId)
+				const origin = shaper && profile.network ? shaper.url : BASE
+				const nav = await cdp.send('Page.navigate', { url: origin + path }, sessionId)
 				if (nav.errorText) throw new Error(`${path}: ${nav.errorText}`)
 				await loaded
 				// Late shifts — a font swap, a lazy image, hydration — land after load.
@@ -160,6 +173,7 @@ try {
 }
 finally {
 	await stop()
+	shaper?.stop()
 }
 
 console.log(`Thresholds: LCP good ≤ ${LCP.good} ms, poor > ${LCP.poor} ms; CLS good ≤ ${CLS.good}, poor > ${CLS.poor}.`)

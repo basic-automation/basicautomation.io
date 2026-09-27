@@ -136,7 +136,10 @@ the same way — headless Chromium, every sitemap page, cold loads — at a
 throttled phone profile and at desktop, and reports each against web.dev's
 thresholds. It is lab data, not field data, and a report rather than a gate
 unless run with `--strict`. Point it at the live site to measure what is
-deployed: `npm run vitals -- https://basicautomation.io`.
+deployed: `npm run vitals -- https://basicautomation.io`. For comparing two local
+builds, add `--shaped`: the phone profile then goes through a real shaped link
+(one shared 1.6 Mbps pipe) instead of DevTools' throttling, which has produced
+differences a real link does not have.
 
 Fira Code is served in two cuts of one family: a 61 KB core — Latin-1, Greek,
 punctuation, arrows, maths and box drawing, which is everything the pages and
