@@ -23,6 +23,7 @@ import { createSlugger } from '~~/shared/markdown/slug'
 import { readmeHeading } from '~~/shared/markdown/heading'
 import { absolutize, stripLeadingLogo } from '~~/shared/markdown/readme'
 import { normaliseReleases, pickLatest } from '~~/shared/github/releases'
+import { cacheTtl } from '~~/shared/github/budget'
 import snapshot from '~~/data/projects.generated.json'
 
 const ORG = 'basic-automation'
@@ -60,18 +61,17 @@ const GH_API_VERSION = '2026-03-10'
  * How long upstream responses are reused. Short enough to feel live, long
  * enough that the site does not out-run GitHub's anonymous rate limit.
  *
- * That limit is 60 requests an hour, and a refresh costs three GitHub calls per
- * repo — the repo, its README and its releases. Six repos is 18 calls per
- * refresh window, so the arithmetic that matters is how many windows fit in an
- * hour: at 15 minutes it was four of them, 72 calls, and the site spent part of
- * every hour rate-limited and quietly serving pages with no README and no
- * release strip. At 20 minutes it is three, 54 calls, with headroom.
+ * Computed from the project count by `cacheTtl` rather than typed in, because a
+ * typed TTL is right only for the number of repos it was worked out against:
+ * 20 minutes was 54 calls an hour for six repos, and Nanna made it 63. See
+ * `shared/github/budget.ts` for the arithmetic, and `test/budget.test.ts` for
+ * the numbers it gives today.
  *
- * Anything that changes this, adds a project, or adds a call per repo has to do
- * that arithmetic again — or ship `BASICAUTOMATION_GITHUB_TOKEN`, which lifts
- * the limit to 5,000 an hour and makes the whole question go away.
+ * Adding a call per repo means changing `CALLS_PER_REPO` there too. Shipping
+ * `BASICAUTOMATION_GITHUB_TOKEN` lifts the limit to 5,000 an hour; the TTL does
+ * not shorten when it does, which only makes a token safer, never riskier.
  */
-const CACHE_TTL = 60 * 20 // 20 minutes
+const CACHE_TTL = cacheTtl(projects.length)
 /** Serve stale while revalidating for this much longer, so no visitor waits. */
 const STALE_TTL = 60 * 60 * 6 // 6 hours
 /**

@@ -57,9 +57,10 @@ record. There is no run log.
       Glance is only reachable on the LAN at `:5188` since it moved off the apex
 
 - [ ] Ship `GITHUB_TOKEN` to the container so the rate limit stops being a factor.
-      More urgent than it reads: even at 54 calls an hour the site is at 90% of
-      the anonymous limit, so one more project or one more call per repo puts it
-      back over. A token lifts the limit to 5,000 an hour.
+      Less urgent than it was: the cache TTL now lengthens itself as projects
+      are added (see below), so the cost of going without is staleness — 30
+      minutes at seven projects — rather than a rate-limited site. A token lifts
+      the limit to 5,000 an hour.
       (the wiring is already there — `deploy/compose.yaml` reads
       `BASICAUTOMATION_GITHUB_TOKEN`; what is missing is the secret itself, which
       is the owner's to create)
@@ -86,6 +87,13 @@ record. There is no run log.
       rate-limited and quietly serving pages with no README. `CACHE_TTL` is 20
       minutes: three windows, 54 calls, with headroom. The arithmetic is written
       into the constant so the next edit has to face it.
+- [x] …and the next edit did not face it. Nanna was the seventh project, and
+      seven repos at 20 minutes is 63 calls an hour — over again, silently. The
+      TTL is now computed from the project count (`shared/github/budget.ts`):
+      the shortest whole-hour divisor that keeps a full hour of worst-case
+      refreshes inside 54 of the 60. Seven projects gives 30 minutes and 42
+      calls; `test/budget.test.ts` proves the budget holds for every count up to
+      18 and pins the numbers the comments quote.
 - [x] Trim the image: the runtime layer is no longer a full `node:24-alpine`
 - [x] The Dockerfile's `alpine:3.24` runtime must stay in step with whatever base
       `node:24-alpine` uses, because the node binary is copied out of that image

@@ -38,11 +38,14 @@ Each page is rendered per request. Stars, versions, downloads, licenses,
 release tags and READMEs come from the GitHub and crates.io APIs at render time —
 nothing is baked in at build.
 
-Those upstream calls sit behind Nitro's cache (`server/utils/github.ts`): 15
-minutes fresh, stale-while-revalidate for 6 hours. A visitor always gets freshly
-rendered markup; the numbers inside it are at most 15 minutes old. That keeps the
-site under GitHub's anonymous rate limit of 60 requests an hour without making
-anyone wait on a cache miss.
+Those upstream calls sit behind Nitro's cache (`server/utils/github.ts`),
+stale-while-revalidate for 6 hours. How long a response counts as fresh is
+worked out from the number of projects (`shared/github/budget.ts`): each repo
+costs three GitHub calls per refresh, and the site keeps itself to 54 of
+GitHub's 60 anonymous requests an hour. Seven projects gives 30 minutes — 42
+calls an hour. A visitor always gets freshly rendered markup, and adding a
+project lengthens the freshness window instead of quietly running the site into
+the rate limit.
 
 If GitHub or crates.io is unreachable, the render falls back to
 `data/projects.generated.json` — a committed snapshot refreshed by `npm run sync`.
