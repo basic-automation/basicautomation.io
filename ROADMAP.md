@@ -73,6 +73,13 @@ record. There is no run log.
       a HEAD as the GET it is the head of, and `npm run check` now asserts parity
       on every route.
 - [x] Alert when the site has been serving from the fallback snapshot for more than an hour
+- [x] …and make sure the fallback is worth serving. The committed snapshot had
+      been rendered before README headings were demoted, so five of its seven
+      READMEs still opened with an `<h1>`, and any page served from it had two.
+      Regenerated, and `test/snapshot.test.ts` now fails CI on a snapshot with an
+      `h1` in it or a project missing from it. Proved end to end by forcing all
+      seven repos onto the fallback with a bad token: `npm run check` and
+      `npm run a11y` both clean.
 - [x] …and notice the failure that alert could not see. `source: 'live'` only
       ever meant the repo call succeeded; its README and its release history are
       separate calls that are each allowed to fail without sinking the repo. So a
