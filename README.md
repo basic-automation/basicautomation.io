@@ -127,7 +127,9 @@ rather than silently failing — jsdom has none — so this is "every axe rule t
 can be judged from markup". `npm run a11y:browser` runs those skipped rules —
 touch-target size, keyboard access to scrollable regions, the viewport meta —
 in headless Chromium at a desktop and a phone width (set `CHROME_PATH` if
-Chromium is not on `PATH`). Both walk every page the sitemap lists, so a new
+Chromium is not on `PATH`), reading each page to the bottom so lazy content
+loads, and fails on any console error, uncaught exception or CSP refusal the
+page produces along the way. Both walk every page the sitemap lists, so a new
 project is audited the moment it is published. Colour contrast is measured
 separately and more directly by `npm run contrast`.
 

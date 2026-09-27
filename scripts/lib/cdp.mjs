@@ -73,8 +73,11 @@ async function connect(url) {
 	const pending = new Map()
 	const waiters = []
 
+	const listeners = new Set()
+
 	ws.onmessage = ({ data }) => {
 		const msg = JSON.parse(data)
+		for (const l of listeners) l(msg)
 		if (msg.id && pending.has(msg.id)) {
 			const { res, rej } = pending.get(msg.id)
 			pending.delete(msg.id)
@@ -108,6 +111,11 @@ async function connect(url) {
 					}
 				}, timeout)
 			})
+		},
+		/** Every message, raw; returns an unsubscribe function. */
+		on(listener) {
+			listeners.add(listener)
+			return () => listeners.delete(listener)
 		},
 		close: () => ws.close(),
 	}
