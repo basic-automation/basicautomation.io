@@ -70,6 +70,14 @@ record. There is no run log.
       minutes so a bad token cannot hammer GitHub's sign-in; seven projects
       refresh every 5 minutes, 252 calls an hour. `/healthz` carries
       `authenticated`, and `/status` says "with a token" or "anonymously".
+- [ ] Give the site a token of its own — **owner decision**. A personal
+      token's 5,000 an hour is one pool per user, shared with every other
+      token and OAuth app acting for that user; the live container's quota
+      resets on the same second as the routine's own `gh` token, so the site's
+      252 an hour and the owner's own tooling draw on one pool. A GitHub App
+      installation token has its own 5,000-an-hour limit and needs only
+      read access to public repos' metadata.
+      <https://docs.github.com/en/rest/using-the-rest-api/rate-limits-for-the-rest-api>
 - [ ] Conditional requests (`If-None-Match`) for the GitHub calls: a `304` to an
       authorized request does not count against the limit, so with the token
       live, refreshes of unchanged repos would be nearly free. Not needed for
@@ -194,6 +202,13 @@ record. There is no run log.
       Re-checked 2026-09-26: `vue-tsc` 3.3.11 against TypeScript 7.0.2 still
       dies with `ERR_PACKAGE_PATH_NOT_EXPORTED` for `./lib/tsc`, and `golar`
       0.1.10 still exports only `./unstable` and `./unstable-tsgo`.
+      Re-checked 2026-09-27: both still the latest published (vue-tsc 3.3.11,
+      golar 0.1.10, TypeScript 7.0.2). Upstream, the exact failure was filed as
+      vuejs/language-tools#6124 and closed as a duplicate of #5381, the
+      TypeScript 7 / `tsgo` support request, which is closed too — so there is
+      no open issue to watch. Check the release notes instead.
+      <https://github.com/vuejs/language-tools/issues/6124>
+      <https://github.com/vuejs/language-tools/issues/5381>
 - [x] Silenced Nitro's own `[request error]` stack-trace block on a 404, without
       replacing the error handler. Nitro logs it when the error is `fatal`, and
       `fatal` is only load-bearing on the client, where it is what makes a 404
