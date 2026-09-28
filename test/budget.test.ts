@@ -1,5 +1,8 @@
 import { describe, expect, it } from 'vitest'
-import { ANONYMOUS_LIMIT, SITE_BUDGET, MIN_TTL, cacheTtl, callsPerHour } from '~~/shared/github/budget'
+import {
+	ANONYMOUS_LIMIT, AUTHENTICATED_BUDGET, AUTHENTICATED_LIMIT, MIN_TTL, MIN_TTL_AUTHENTICATED, SITE_BUDGET,
+	cacheTtl, callsPerHour, refreshPolicy,
+} from '~~/shared/github/budget'
 import { projects } from '~~/data/projects'
 
 describe('cacheTtl', () => {
@@ -35,5 +38,30 @@ describe('cacheTtl', () => {
 	it('holds for the catalogue as it stands today', () => {
 		const ttl = cacheTtl(projects.length)
 		expect(callsPerHour(projects.length, ttl)).toBeLessThanOrEqual(SITE_BUDGET)
+	})
+})
+
+describe('refreshPolicy', () => {
+	it('is the anonymous arithmetic without a token', () => {
+		expect(refreshPolicy(7, false)).toEqual({ authenticated: false, ttl: 30 * 60, callsPerHour: 42, budget: SITE_BUDGET })
+	})
+
+	it('refreshes every five minutes with a token, and says what that costs', () => {
+		expect(refreshPolicy(7, true)).toEqual({ authenticated: true, ttl: 5 * 60, callsPerHour: 252, budget: AUTHENTICATED_BUDGET })
+	})
+
+	it('keeps a token inside its budget, and its budget a small share of the limit, for every count', () => {
+		expect(AUTHENTICATED_BUDGET).toBeLessThanOrEqual(AUTHENTICATED_LIMIT / 10)
+		for (let repos = 1; repos <= 100; repos++) {
+			const p = refreshPolicy(repos, true)
+			expect(p.callsPerHour, `${repos} repos at ${p.ttl}s`).toBeLessThanOrEqual(AUTHENTICATED_BUDGET)
+			expect(p.ttl).toBeGreaterThanOrEqual(MIN_TTL_AUTHENTICATED)
+		}
+	})
+
+	it('is never slower with a token than without one', () => {
+		for (let repos = 1; repos <= 18; repos++) {
+			expect(refreshPolicy(repos, true).ttl).toBeLessThanOrEqual(refreshPolicy(repos, false).ttl)
+		}
 	})
 })

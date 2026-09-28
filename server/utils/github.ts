@@ -23,7 +23,7 @@ import { createSlugger } from '~~/shared/markdown/slug'
 import { readmeHeading } from '~~/shared/markdown/heading'
 import { absolutize, stripLeadingLogo } from '~~/shared/markdown/readme'
 import { normaliseReleases, pickLatest } from '~~/shared/github/releases'
-import { cacheTtl } from '~~/shared/github/budget'
+import { refreshPolicy } from '~~/shared/github/budget'
 import snapshot from '~~/data/projects.generated.json'
 
 const ORG = 'basic-automation'
@@ -59,19 +59,24 @@ const GH_API_VERSION = '2026-03-10'
 
 /**
  * How long upstream responses are reused. Short enough to feel live, long
- * enough that the site does not out-run GitHub's anonymous rate limit.
+ * enough that the site does not out-run GitHub's rate limit.
  *
- * Computed from the project count by `cacheTtl` rather than typed in, because a
- * typed TTL is right only for the number of repos it was worked out against:
- * 20 minutes was 54 calls an hour for six repos, and Nanna made it 63. See
- * `shared/github/budget.ts` for the arithmetic, and `test/budget.test.ts` for
- * the numbers it gives today.
+ * Computed from the project count by `refreshPolicy` rather than typed in,
+ * because a typed TTL is right only for the number of repos it was worked out
+ * against: 20 minutes was 54 calls an hour for six repos, and Nanna made it 63.
+ * See `shared/github/budget.ts` for the arithmetic, and `test/budget.test.ts`
+ * for the numbers it gives today.
  *
- * Adding a call per repo means changing `CALLS_PER_REPO` there too. Shipping
- * `BASICAUTOMATION_GITHUB_TOKEN` lifts the limit to 5,000 an hour; the TTL does
- * not shorten when it does, which only makes a token safer, never riskier.
+ * It also depends on whether `BASICAUTOMATION_GITHUB_TOKEN` reached the
+ * container: anonymously the budget is 54 of 60 and seven repos refresh every
+ * 30 minutes; with a token it is 300 of 5,000 and they refresh every 5. The
+ * token is read once, here, because Nitro fixes `maxAge` when the cached
+ * function is defined — the container is restarted to change it anyway.
+ *
+ * Adding a call per repo means changing `CALLS_PER_REPO` there too.
  */
-const CACHE_TTL = cacheTtl(projects.length)
+export const githubRefresh = refreshPolicy(projects.length, !!token())
+const CACHE_TTL = githubRefresh.ttl
 /** Serve stale while revalidating for this much longer, so no visitor waits. */
 const STALE_TTL = 60 * 60 * 6 // 6 hours
 /**

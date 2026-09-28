@@ -37,6 +37,8 @@ export interface Health {
     resetsInSeconds: number
     observedAt: string
   } | null
+  /** Whether the process holds a GitHub token — it decides the two numbers below. */
+  authenticated: boolean
   /** How long a repo's data is reused before it is fetched again — see `shared/github/budget.ts`. */
   refreshSeconds: number
   /** The worst case that interval allows: every repo refreshed as often as it can be, for an hour. */

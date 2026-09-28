@@ -59,18 +59,23 @@ record. There is no run log.
       and answers 200 with a valid certificate from both the public address and
       the LAN override.
 
-- [ ] Ship `GITHUB_TOKEN` to the container so the rate limit stops being a factor.
-      Less urgent than it was: the cache TTL now lengthens itself as projects
-      are added (see below), so the cost of going without is staleness — 30
-      minutes at seven projects — rather than a rate-limited site. A token lifts
-      the limit to 5,000 an hour, and it unlocks conditional requests: a
-      `304 Not Modified` to an `If-None-Match` does not count against the limit,
-      but only when the request is authorized — so ETags buy an anonymous site
-      nothing, and an authenticated one near-free refreshes.
+- [x] Ship `GITHUB_TOKEN` to the container so the rate limit stops being a factor
+      — done by the owner: `BASICAUTOMATION_GITHUB_TOKEN` is set, and the live
+      `/healthz` reported `github.limit: 5000` on 2026-09-26 and 2026-09-27.
+- [x] …and let the token buy something a visitor can see. With it shipped the
+      site was still refreshing every 30 minutes — the anonymous arithmetic,
+      applied to a limit 80 times larger. `refreshPolicy` in
+      `shared/github/budget.ts` now budgets 300 of the 5,000 with a token (a
+      person's token: whatever else they run shares the hour), floored at 5
+      minutes so a bad token cannot hammer GitHub's sign-in; seven projects
+      refresh every 5 minutes, 252 calls an hour. `/healthz` carries
+      `authenticated`, and `/status` says "with a token" or "anonymously".
+- [ ] Conditional requests (`If-None-Match`) for the GitHub calls: a `304` to an
+      authorized request does not count against the limit, so with the token
+      live, refreshes of unchanged repos would be nearly free. Not needed for
+      the budget at 252 of 5,000; worth it only if the refresh shortens again.
       <https://docs.github.com/rest/guides/best-practices-for-using-the-rest-api>
-      (the wiring is already there — `deploy/compose.yaml` reads
-      `BASICAUTOMATION_GITHUB_TOKEN`; what is missing is the secret itself, which
-      is the owner's to create)
+
 - [x] Structured request logging, and a `status` page fed by `/healthz`
 - [x] Answer HEAD wherever GET is answered. Nitro routes by filename suffix, so
       `healthz.get.ts` bound GET alone and every non-page route — `/healthz`,

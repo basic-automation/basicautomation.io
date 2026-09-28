@@ -57,7 +57,8 @@ const rows = computed(() => {
     },
     {
       label: 'refresh',
-      value: `every ${duration(h.refreshSeconds)}, at most ${h.budgetedCallsPerHour} calls an hour`,
+      value: `every ${duration(h.refreshSeconds)}, at most ${h.budgetedCallsPerHour} calls an hour, `
+        + (h.authenticated ? 'with a token' : 'anonymously'),
     },
   ]
 })

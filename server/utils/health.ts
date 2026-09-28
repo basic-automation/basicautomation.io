@@ -10,15 +10,13 @@
  */
 
 import type { Health } from '~~/shared/types/health'
-import { projects } from '~~/data/projects'
-import { cacheTtl, callsPerHour } from '~~/shared/github/budget'
 
 /**
  * Stale for this long stops being a blip and starts being something someone
- * should look at. Upstream is cached for `cacheTtl` — 30 minutes at seven
- * projects — and served stale for six hours, so an hour of snapshot-only
- * answers means at least two refresh windows have come and gone with GitHub
- * still unreachable.
+ * should look at. Upstream is cached for `githubRefresh.ttl` — at most 30
+ * minutes at seven projects — and served stale for six hours, so an hour of
+ * snapshot-only answers means at least two refresh windows have come and gone
+ * with GitHub still unreachable.
  */
 const STALE_ALERT_AFTER = 60 * 60 * 1000 // 1 hour
 
@@ -152,8 +150,6 @@ function alertIfStale(): void {
   }))
 }
 
-const ttl = cacheTtl(projects.length)
-
 export function health(): Health {
   alertIfStale()
 
@@ -186,7 +182,8 @@ export function health(): Health {
       resetsInSeconds: Math.max(0, Math.round(rateLimit.reset - now / 1000)),
       observedAt: new Date(rateLimit.at).toISOString(),
     },
-    refreshSeconds: ttl,
-    budgetedCallsPerHour: callsPerHour(projects.length, ttl),
+    authenticated: githubRefresh.authenticated,
+    refreshSeconds: githubRefresh.ttl,
+    budgetedCallsPerHour: githubRefresh.callsPerHour,
   }
 }

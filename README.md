@@ -43,16 +43,20 @@ stale-while-revalidate for 6 hours. How long a response counts as fresh is
 worked out from the number of projects (`shared/github/budget.ts`): each repo
 costs three GitHub calls per refresh, and the site keeps itself to 54 of
 GitHub's 60 anonymous requests an hour. Seven projects gives 30 minutes — 42
-calls an hour. A visitor always gets freshly rendered markup, and adding a
-project lengthens the freshness window instead of quietly running the site into
-the rate limit.
+calls an hour. With a token the site allows itself 300 of GitHub's 5,000 and
+the same seven projects refresh every 5 minutes — 252 calls an hour; the
+deployed site has one. A visitor always gets freshly rendered markup, and adding
+a project lengthens the freshness window instead of quietly running the site
+into the rate limit. `/status` says which of the two it is running on.
 
 If GitHub or crates.io is unreachable, the render falls back to
 `data/projects.generated.json` — a committed snapshot refreshed by `npm run sync`.
 An upstream outage degrades the numbers, not the site.
 
-Set `GITHUB_TOKEN` (or `NUXT_GITHUB_TOKEN`) in the environment to lift the
-anonymous rate limit. It is optional; nothing needs it to work.
+Set `NUXT_GITHUB_TOKEN` in the server's environment to lift the anonymous rate
+limit (the compose file fills it from `BASICAUTOMATION_GITHUB_TOKEN`; a bare
+`GITHUB_TOKEN` is read by `npm run sync` but not by the server). It is optional;
+nothing needs it to work.
 
 `/status` shows which of the two is happening right now, per project, along with
 GitHub's own count of the rate limit — how many calls are left this hour and when
