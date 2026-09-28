@@ -30,6 +30,17 @@ function stamp(chunks: string[], nonce: string): string[] {
 }
 
 export default defineNitroPlugin((nitroApp) => {
+	// Not in development. Vite serves CSS by injecting `<style>` elements from
+	// JavaScript, and those carry no nonce — so a nonce'd `style-src-elem` (which
+	// makes the browser ignore `'unsafe-inline'`) blocks every one of them and the
+	// dev server renders unstyled. The built site has a real `<link rel=stylesheet>`
+	// and one nonce'd `<style>`, so this only ever bit the one environment where
+	// nobody is attacking you.
+	//
+	// Checked here rather than by not registering the plugin, so the code path is
+	// the same shape in both and this comment is where someone looks.
+	if (import.meta.dev) return
+
 	nitroApp.hooks.hook('render:html', (html, { event }) => {
 		const nonce = randomBytes(16).toString('base64')
 		event.context.cspNonce = nonce

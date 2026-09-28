@@ -8,7 +8,7 @@ const ago = useRelativeTime()
 
 <template>
   <NuxtLink
-    :to="`/projects/${project.slug}`"
+    :to="`/projects/${project.slug}/about`"
     :style="accentVar(project.accent)"
     class="group block"
   >

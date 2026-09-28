@@ -23,7 +23,11 @@ export default defineEventHandler(async (event) => {
 
   const entries = [
     ...STATIC_ROUTES.map((path) => urlEntry(`${base}${path}`)),
-    ...projects.map((p) => urlEntry(`${base}/projects/${p.slug}`, p.meta?.pushedAt)),
+    // `/about` rather than `/projects/<slug>`: the latter is a 301 to it, and a
+    // sitemap listing redirects asks every crawler to make two requests to learn
+    // one page.
+    ...projects.map((p) => urlEntry(`${base}/projects/${p.slug}/about`, p.meta?.pushedAt)),
+    ...projects.map((p) => urlEntry(`${base}/projects/${p.slug}/blog`)),
   ]
 
   setResponseHeader(event, 'content-type', 'application/xml; charset=utf-8')

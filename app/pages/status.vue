@@ -175,7 +175,7 @@ useSeoMeta({
         <li v-for="p in projects" :key="p.slug" class="bar" :style="accentVar(p.accent)">
           <p class="flex flex-wrap items-baseline gap-x-4 gap-y-1">
             <NuxtLink
-              :to="`/projects/${p.slug}`"
+              :to="`/projects/${p.slug}/about`"
               class="text-sm transition-colors hover:text-pn-fg-bright"
               :style="{ color: 'var(--accent)' }"
             >{{ p.slug }}</NuxtLink>

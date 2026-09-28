@@ -43,29 +43,31 @@ useSeoMeta({
         ../projects
       </NuxtLink>
       <span class="px-2">/</span>
-      <NuxtLink :to="`/projects/${slug}`" class="hover:text-pn-fg-bright">
+      <NuxtLink :to="`/projects/${slug}/about`" class="hover:text-pn-fg-bright">
         {{ project.name }}
       </NuxtLink>
       <span class="px-2">/</span>
       <span class="text-pn-dim">news</span>
     </nav>
 
-    <section class="pt-8 pb-10">
+    <section class="pt-8">
       <h1 class="text-3xl leading-tight text-pn-fg-bright sm:text-4xl">
         {{ project.name }} news
       </h1>
       <p class="mt-4 max-w-3xl text-base leading-relaxed text-pn-fg">
-        Releases, changes and notes. The project page has what
-        {{ project.name }} is and what it does.
+        Releases, changes and notes. The about tab has what {{ project.name }}
+        is and what it does.
       </p>
+
+      <ProjectTabs :slug="slug" current="blog" />
     </section>
 
-    <section class="mb-32">
+    <section class="mt-12 mb-32">
       <TermRule :label="`${posts.length} post${posts.length === 1 ? '' : 's'}`" />
 
       <p v-if="!posts.length" class="mt-8 max-w-3xl text-base leading-relaxed text-pn-muted">
         Nothing yet. When there is something worth saying about
-        {{ project.name }}, it will be here.
+        {{ project.name }} — a release, a change, a decision — it will be here.
       </p>
 
       <ol v-else class="mt-8 space-y-10">

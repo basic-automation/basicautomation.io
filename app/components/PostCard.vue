@@ -6,6 +6,8 @@
  * project name is shown only when the list mixes projects, which is the one
  * difference between the two.
  */
+import { postPath, sectionLabel } from '~~/shared/posts/section'
+
 const { post, projectName, showProject = false } = defineProps<{
   post: PostSummary
   projectName: string
@@ -21,14 +23,14 @@ const exact = computed(() =>
 
 <template>
   <NuxtLink
-    :to="`/projects/${post.project}/blog/${post.slug}`"
+    :to="postPath(post.project, post.slug)"
     class="group block max-w-3xl"
   >
     <p class="flex flex-wrap items-baseline gap-x-3 font-mono text-xs text-pn-muted">
       <time :datetime="post.date" :title="exact">{{ when }}</time>
       <template v-if="showProject">
         <span aria-hidden="true">·</span>
-        <span class="text-pn-accent">{{ projectName }}</span>
+        <span class="text-pn-accent">{{ sectionLabel(post.project, projectName) }}</span>
       </template>
     </p>
 

@@ -23,6 +23,7 @@ import { readFile, readdir, stat } from 'node:fs/promises'
 import { join, resolve, sep } from 'node:path'
 
 import { projects } from '~~/data/projects'
+import { SITE_SECTION } from '~~/shared/posts/section'
 import type { Post, PostSummary } from '~~/shared/types/post'
 
 const CONTENT_DIR = process.env.CONTENT_DIR || '/app/content'
@@ -71,8 +72,21 @@ function parseFrontMatter(raw: string): { data: Record<string, string>, body: st
   return { data: data, body: match[2] ?? '' }
 }
 
-/** Every known project slug, so a stray directory cannot become a section. */
-const knownProjects = new Set(projects.map((p) => p.slug))
+/**
+ * Every directory that may hold posts: the project slugs, plus `site` for the
+ * organisation's own news. A stray directory is not a section.
+ *
+ * The assertion is not paranoia about today — it is about the day someone adds
+ * a project whose slug happens to be `site`, which would silently merge that
+ * project's news into the site's. Better to fail at boot than to discover it in
+ * a listing.
+ */
+const knownProjects = new Set<string>(projects.map((p) => p.slug))
+
+if (knownProjects.has(SITE_SECTION)) {
+  throw new Error(`a project is using the reserved slug "${SITE_SECTION}", which names the site's own blog`)
+}
+knownProjects.add(SITE_SECTION)
 
 /**
  * The absolute path of a post, or null if the arguments could not name one.

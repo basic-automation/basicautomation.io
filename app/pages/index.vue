@@ -133,8 +133,9 @@ useSeoMeta({
     </section>
 
     <!-- ── About ────────────────────────────────────────────────────────── -->
-    <!-- Only when there is news. A "news" heading over an empty space says the
-         project is quiet, which is not the intended message. -->
+    <!-- Every blog on the site, mixed: the organisation's own news and each
+         project's. Only when there is some — a "news" heading over an empty
+         space says the place is quiet, which is not the intended message. -->
     <section v-if="news.length" id="news" class="mt-40">
       <TermRule label="news" />
 
@@ -143,6 +144,12 @@ useSeoMeta({
           <PostCard :post="post" :project-name="projectName(post.project)" show-project />
         </li>
       </ol>
+
+      <p class="mt-10">
+        <NuxtLink to="/news" class="font-mono text-xs text-pn-accent hover:text-pn-fg-bright">
+          → all news from basic automation
+        </NuxtLink>
+      </p>
     </section>
 
     <section id="about" class="mt-40">

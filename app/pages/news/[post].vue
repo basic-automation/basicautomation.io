@@ -1,21 +1,18 @@
 <script setup lang="ts">
 /**
- * One post.
+ * One of the organisation's own posts.
  *
- * The body arrives as HTML already rendered on the server — same `marked` and
- * Shiki as the READMEs — and is dropped in with `v-html`, exactly as the README
- * is further down the project page. The source is a file this site's own admin
- * wrote, on a volume only this container can reach.
+ * The same renderer and the same typography as a project's post — the only
+ * difference is which blog it belongs to, and therefore where it sits.
  */
+import { SITE_SECTION } from '~~/shared/posts/section'
+
 const route = useRoute()
-const slug = computed(() => String(route.params.slug))
 const postSlug = computed(() => String(route.params.post))
 
-const { project } = await useProject(slug)
-
 const { data: post, error } = await useFetch<PostSummary & { html: string }>(
-  () => `/api/posts/${slug.value}/${postSlug.value}`,
-  { key: () => `post-${slug.value}-${postSlug.value}` },
+  () => `/api/posts/${SITE_SECTION}/${postSlug.value}`,
+  { key: () => `post-site-${postSlug.value}` },
 )
 
 if (error.value || !post.value) {
@@ -28,12 +25,12 @@ const exact = computed(() =>
   post.value ? new Date(post.value.date).toLocaleDateString('en-GB', { year: 'numeric', month: 'long', day: 'numeric' }) : '')
 
 useSeoMeta({
-  title: () => `${post.value?.title} — ${project.value?.name ?? 'basic automation'}`,
+  title: () => `${post.value?.title} — basic automation`,
   description: () => post.value?.summary,
   ogTitle: () => post.value?.title,
   ogDescription: () => post.value?.summary,
   ogType: 'article',
-  ogUrl: () => `${siteUrl}/projects/${slug.value}/blog/${postSlug.value}`,
+  ogUrl: () => `${siteUrl}/news/${postSlug.value}`,
   articlePublishedTime: () => post.value?.date,
 })
 </script>
@@ -41,11 +38,7 @@ useSeoMeta({
 <template>
   <article v-if="post" class="mx-auto max-w-7xl px-5 sm:px-6">
     <nav aria-label="Breadcrumb" class="pt-14 font-mono text-xs text-pn-muted">
-      <NuxtLink :to="`/projects/${slug}/about`" class="hover:text-pn-fg-bright">
-        {{ project?.name ?? slug }}
-      </NuxtLink>
-      <span class="px-2">/</span>
-      <NuxtLink :to="`/projects/${slug}/blog`" class="hover:text-pn-fg-bright">
+      <NuxtLink to="/news" class="hover:text-pn-fg-bright">
         news
       </NuxtLink>
     </nav>
@@ -63,8 +56,6 @@ useSeoMeta({
       </p>
     </header>
 
-    <!-- Same `readme` typography as a rendered README, because it is the same
-         renderer and should read the same. -->
     <!-- eslint-disable-next-line vue/no-v-html -->
     <div class="readme mb-32 max-w-3xl" v-html="post.html" />
   </article>

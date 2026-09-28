@@ -31,7 +31,7 @@ const year = new Date().getFullYear()
         <ul class="mt-2">
           <li v-for="p in projects" :key="p.slug">
             <NuxtLink
-              :to="`/projects/${p.slug}`"
+              :to="`/projects/${p.slug}/about`"
               class="inline-block py-1 text-pn-dim transition-colors hover:text-pn-fg-bright"
             >
               {{ p.name }}
