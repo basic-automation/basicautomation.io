@@ -44,6 +44,12 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
 	let app = proxy::router(proxy::Upstream::new(&upstream_url)?);
 
+	// Registered first, before anything slow. The handlers used to be installed
+	// only once `ready_timeout` returned — up to ten minutes after start — and a
+	// SIGTERM before then met the default action and killed this process
+	// outright, never reaching `handle.shutdown()`.
+	let mut stop = Stop::new()?;
+
 	tracing::info!(upstream = %upstream_url, %nickname, "bootstrapping tor; this takes a while cold");
 
 	// The identity key lives in a persistent keystore under ./tor/onyums, so
@@ -55,7 +61,15 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 	let store = gate.store.clone();
 	let cookie_name = gate.cookie_name;
 
-	let handle = OnionService::builder().router(app).nickname(&nickname).skin(gate.skin).serve().await?;
+	// A stop during bootstrap has nothing to withdraw yet: there is no service
+	// until `serve()` returns, so it is enough to go.
+	let handle = tokio::select! {
+		handle = OnionService::builder().router(app).nickname(&nickname).skin(gate.skin).serve() => handle?,
+		signal = stop.recv() => {
+			tracing::info!(signal, "stopped while bootstrapping");
+			return Ok(());
+		}
+	};
 
 	let address = handle.onion_address().as_str().to_string();
 	tracing::info!(%address, "onion service launched");
@@ -69,23 +83,38 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 		tracing::warn!(%error, file = %address_file, "could not write the address file");
 	}
 
-	if handle.ready_timeout(std::time::Duration::from_secs(READY_TIMEOUT_SECS)).await {
-		tracing::info!(%address, "descriptor published; reachable over tor");
+	let ready = tokio::select! {
+		ready = handle.ready_timeout(std::time::Duration::from_secs(READY_TIMEOUT_SECS)) => Some(ready),
+		signal = stop.recv() => {
+			tracing::info!(signal, "stopped before the descriptor was published");
+			None
+		}
+	};
 
-		// Only once the descriptor is up: before that a self-fetch cannot succeed
-		// and would only log a failure the operator would have to explain away.
-		// Shares the client onyums has already bootstrapped rather than building a
-		// second one — see `snapshot.rs`.
-		tokio::spawn(snapshot::run(handle.onion_address().clone(), store, cookie_name, snapshot_file));
-	} else {
-		tracing::warn!(
-			status = ?handle.status(),
-			problem = ?handle.problem(),
-			"not reachable yet after {READY_TIMEOUT_SECS}s; still trying"
-		);
+	match ready {
+		Some(true) => {
+			tracing::info!(%address, "descriptor published; reachable over tor");
+
+			// Only once the descriptor is up: before that a self-fetch cannot succeed
+			// and would only log a failure the operator would have to explain away.
+			// Shares the client onyums has already bootstrapped rather than building a
+			// second one — see `snapshot.rs`.
+			tokio::spawn(snapshot::run(handle.onion_address().clone(), store, cookie_name, snapshot_file));
+		}
+		Some(false) => {
+			tracing::warn!(
+				status = ?handle.status(),
+				problem = ?handle.problem(),
+				"not reachable yet after {READY_TIMEOUT_SECS}s; still trying"
+			);
+		}
+		None => {}
 	}
 
-	shutdown().await;
+	if ready.is_some() {
+		let signal = stop.recv().await;
+		tracing::info!(signal, "stop requested");
+	}
 	tracing::info!("shutting down");
 	handle.shutdown().await;
 
@@ -107,21 +136,25 @@ fn publish_address(path: &str, address: &str) -> std::io::Result<()> {
 	std::fs::rename(&tmp, path)
 }
 
-async fn shutdown() {
-	let ctrl_c = async {
-		let _ = tokio::signal::ctrl_c().await;
-	};
-	#[cfg(unix)]
-	let term = async {
-		if let Ok(mut s) = tokio::signal::unix::signal(tokio::signal::unix::SignalKind::terminate()) {
-			s.recv().await;
-		}
-	};
-	#[cfg(not(unix))]
-	let term = std::future::pending::<()>();
+/// SIGTERM or SIGINT, whichever comes first — the container runtime sends the
+/// one, a terminal the other. Built by `new()` so the handlers exist from the
+/// moment it is called, not from the first time something awaits it.
+struct Stop {
+	term: tokio::signal::unix::Signal,
+	int: tokio::signal::unix::Signal,
+}
 
-	tokio::select! {
-		_ = ctrl_c => {},
-		_ = term => {},
+impl Stop {
+	fn new() -> std::io::Result<Self> {
+		use tokio::signal::unix::{signal, SignalKind};
+		Ok(Self { term: signal(SignalKind::terminate())?, int: signal(SignalKind::interrupt())? })
+	}
+
+	/// Which one arrived, for the log.
+	async fn recv(&mut self) -> &'static str {
+		tokio::select! {
+			_ = self.term.recv() => "SIGTERM",
+			_ = self.int.recv() => "SIGINT",
+		}
 	}
 }

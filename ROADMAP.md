@@ -144,13 +144,16 @@ record. There is no run log.
             `CMD-SHELL`, and it overrides the image's. It is the owner's stack:
             convert it to the exec form `deploy/compose.yaml` now carries, then
             the runtime stage can change base.
-- [ ] Fix the onion gateway ignoring SIGTERM until it is ready. `shutdown()` in
-      `onion/src/main.rs` registers its signal handlers only after
-      `ready_timeout` returns — up to 600 s after start — so a stop in that
-      window kills the gateway outright instead of letting onyums withdraw its
-      service. Seen while verifying the entrypoint change: a `docker stop` about
-      30 s after a cold start logged the gateway ending by SIGTERM rather than
-      "shutting down".
+- [x] The onion gateway ignored SIGTERM until it was ready: `shutdown()` in
+      `onion/src/main.rs` registered its handlers only after `ready_timeout`
+      returned — up to 600 s after start — so a stop in that window killed it
+      outright instead of letting onyums withdraw its service. Found while
+      verifying the entrypoint change above (`docker stop` ~30 s after a cold
+      start: the gateway ended by SIGTERM, not "shutting down"). The handlers
+      are now registered first, and both the bootstrap and the readiness wait
+      race them. Checked on a cold keystore, stopped at 3, 8, 13, 15 and 20 s:
+      "stopped while bootstrapping", "stopped before the descriptor was
+      published", and "stop requested" respectively, every one exit 0.
 - [x] Evaluated GitHub REST API version `2026-03-10` and moved to it. Its breaking
       changes touch `GET /repos/{owner}/{repo}` only, and only fields this site has
       never read (`has_downloads`, `use_squash_pr_title_as_default`,
