@@ -63,7 +63,8 @@ ENV NODE_ENV=production \
     NITRO_PORT=3000 \
     NITRO_HOST=0.0.0.0 \
     PORT=3000 \
-    ONION_ENABLED=1
+    ONION_ENABLED=1 \
+    ONION_GATEWAY=/app/onion-gateway
 
 # The site calls GitHub and crates.io at request time: a missing CA bundle is a
 # TLS failure at runtime rather than an error at build, and without tzdata every
@@ -77,7 +78,6 @@ COPY --from=build /usr/local/bin/node /usr/local/bin/node
 COPY --from=build --chown=site:site /app/.output ./.output
 
 COPY --from=onion-build /usr/local/bin/onion-gateway ./onion-gateway
-COPY --chown=site:site docker-entrypoint.sh ./docker-entrypoint.sh
 
 # `/app/tor` holds the onion identity key and is the volume mount point: Docker
 # seeds a fresh named volume from the image, ownership and mode included, so
@@ -99,9 +99,14 @@ USER site
 # service is reached through the Tor network, so there is nothing here to map.
 EXPOSE 3000
 
-# Nitro serves /healthz from server/routes/healthz.get.ts.
+# Nitro serves /healthz from server/routes/healthz.get.ts. Exec form, like the
+# command below: the shell form is `/bin/sh -c`, and nothing in this image's
+# own contract needs a shell any more — the step to a distroless runtime.
 HEALTHCHECK --interval=30s --timeout=5s --start-period=20s --retries=3 \
-  CMD node -e "fetch('http://127.0.0.1:3000/healthz').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"
+  CMD ["node", "-e", "fetch('http://127.0.0.1:3000/healthz').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
 
-# Two processes, one container. See docker-entrypoint.sh for why.
-CMD ["./docker-entrypoint.sh"]
+# Two processes, one container: the site starts the onion gateway itself, from
+# server/plugins/onion-gateway.ts, and stops with it. Node is PID 1, which is
+# safe here because Nitro installs its own SIGTERM/SIGINT handlers and the one
+# child it has is waited for.
+CMD ["node", ".output/server/index.mjs"]

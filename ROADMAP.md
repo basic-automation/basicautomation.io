@@ -59,18 +59,31 @@ record. There is no run log.
       and answers 200 with a valid certificate from both the public address and
       the LAN override.
 
-- [ ] Ship `GITHUB_TOKEN` to the container so the rate limit stops being a factor.
-      Less urgent than it was: the cache TTL now lengthens itself as projects
-      are added (see below), so the cost of going without is staleness — 30
-      minutes at seven projects — rather than a rate-limited site. A token lifts
-      the limit to 5,000 an hour, and it unlocks conditional requests: a
-      `304 Not Modified` to an `If-None-Match` does not count against the limit,
-      but only when the request is authorized — so ETags buy an anonymous site
-      nothing, and an authenticated one near-free refreshes.
+- [x] Ship `GITHUB_TOKEN` to the container so the rate limit stops being a factor
+      — done by the owner: `BASICAUTOMATION_GITHUB_TOKEN` is set, and the live
+      `/healthz` reported `github.limit: 5000` on 2026-09-26 and 2026-09-27.
+- [x] …and let the token buy something a visitor can see. With it shipped the
+      site was still refreshing every 30 minutes — the anonymous arithmetic,
+      applied to a limit 80 times larger. `refreshPolicy` in
+      `shared/github/budget.ts` now budgets 300 of the 5,000 with a token (a
+      person's token: whatever else they run shares the hour), floored at 5
+      minutes so a bad token cannot hammer GitHub's sign-in; seven projects
+      refresh every 5 minutes, 252 calls an hour. `/healthz` carries
+      `authenticated`, and `/status` says "with a token" or "anonymously".
+- [ ] Give the site a token of its own — **owner decision**. A personal
+      token's 5,000 an hour is one pool per user, shared with every other
+      token and OAuth app acting for that user; the live container's quota
+      resets on the same second as the routine's own `gh` token, so the site's
+      252 an hour and the owner's own tooling draw on one pool. A GitHub App
+      installation token has its own 5,000-an-hour limit and needs only
+      read access to public repos' metadata.
+      <https://docs.github.com/en/rest/using-the-rest-api/rate-limits-for-the-rest-api>
+- [ ] Conditional requests (`If-None-Match`) for the GitHub calls: a `304` to an
+      authorized request does not count against the limit, so with the token
+      live, refreshes of unchanged repos would be nearly free. Not needed for
+      the budget at 252 of 5,000; worth it only if the refresh shortens again.
       <https://docs.github.com/rest/guides/best-practices-for-using-the-rest-api>
-      (the wiring is already there — `deploy/compose.yaml` reads
-      `BASICAUTOMATION_GITHUB_TOKEN`; what is missing is the secret itself, which
-      is the owner's to create)
+
 - [x] Structured request logging, and a `status` page fed by `/healthz`
 - [x] Answer HEAD wherever GET is answered. Nitro routes by filename suffix, so
       `healthz.get.ts` bound GET alone and every non-page route — `/healthz`,
@@ -116,6 +129,15 @@ record. There is no run log.
       Before this, the only sign of a spent quota was a README missing from a
       page. It is also shared: a local build being tested draws on the same
       anonymous 60 as the deployed site, which is how this run found it.
+- [x] Say whether the onion service is actually reachable. A gateway that dies
+      takes the container with it, but one that runs without being reachable —
+      a descriptor that never published, circuits that stopped completing — was
+      visible only as a stale frame on the onyums page. `/healthz` now carries
+      `onion` (`off`, `starting`, `launched`, `reachable`, `unreachable`), judged
+      by the age of the gateway's own last successful fetch of the site over
+      Tor; 30 minutes without one (three missed self-fetches) makes `status`
+      `degraded`, and `/status` prints it ("reached over tor 4 minutes ago, in
+      11.2 s"). Thresholds are pure and tested (`shared/onion/state.ts`).
 - [x] Trim the image: the runtime layer is no longer a full `node:24-alpine`
 - [x] The Dockerfile's `alpine:3.24` runtime must stay in step with whatever base
       `node:24-alpine` uses, because the node binary is copied out of that image
@@ -124,10 +146,40 @@ record. There is no run log.
       Dockerfile, asks the node image for `/etc/alpine-release`, and fails on a
       mismatch. CI's `image` job runs it, which pulls an image that job needs
       anyway. Today: node:24-alpine is Alpine 3.24.2, runtime is 3.24 — in step.
-- [ ] Move the runtime to distroless — roughly another 60 MB off. BLOCKED on the
-      healthcheck: `deploy/compose.yaml` uses `CMD-SHELL`, and distroless has no
-      shell, so this needs the compose healthcheck converted to exec form first,
-      which touches the live DeepStack stack
+- [ ] Move the runtime to distroless — **needs an owner decision, because the
+      size case for it is gone.** Measured 2026-09-27: the same build on
+      `gcr.io/distroless/nodejs24-debian13:nonroot` is 73.0 MB of image content
+      against 71.0 MB for today's trimmed Alpine runtime — 2 MB larger, not the
+      ~60 MB smaller this item was written for, because the Alpine trim above
+      already took what distroless would have. It does run (healthy, all
+      routes, the gateway started and stopped cleanly, exit 0). What is left
+      is attack surface — no shell, no package manager in the image — weighed
+      against a glibc runtime replacing musl. Distroless has no shell, and the
+      image needed one in three places:
+      - [x] The entrypoint. `docker-entrypoint.sh` ran the site and the onion
+            gateway side by side; the site now starts the gateway itself
+            (`server/plugins/onion-gateway.ts`), stops it on SIGTERM through
+            Nitro's `close` hook, and exits with it if it dies. The image's
+            command is `node .output/server/index.mjs` in exec form. Not a node
+            supervisor: that is a second heap (~40 MB) against 145 MB for the
+            whole container today.
+      - [x] The image's own `HEALTHCHECK`, and `deploy/compose.yaml`'s, are exec
+            form now.
+      - [ ] BLOCKED — the live healthcheck in `compose-linux/infra.yaml` is still
+            `CMD-SHELL`, and it overrides the image's. It is the owner's stack:
+            convert it to the exec form `deploy/compose.yaml` now carries, then
+            the runtime stage can change base. (Harmless to do either way: the
+            exec form works on the Alpine runtime too.)
+- [x] The onion gateway ignored SIGTERM until it was ready: `shutdown()` in
+      `onion/src/main.rs` registered its handlers only after `ready_timeout`
+      returned — up to 600 s after start — so a stop in that window killed it
+      outright instead of letting onyums withdraw its service. Found while
+      verifying the entrypoint change above (`docker stop` ~30 s after a cold
+      start: the gateway ended by SIGTERM, not "shutting down"). The handlers
+      are now registered first, and both the bootstrap and the readiness wait
+      race them. Checked on a cold keystore, stopped at 3, 8, 13, 15 and 20 s:
+      "stopped while bootstrapping", "stopped before the descriptor was
+      published", and "stop requested" respectively, every one exit 0.
 - [x] Evaluated GitHub REST API version `2026-03-10` and moved to it. Its breaking
       changes touch `GET /repos/{owner}/{repo}` only, and only fields this site has
       never read (`has_downloads`, `use_squash_pr_title_as_default`,
@@ -150,6 +202,13 @@ record. There is no run log.
       Re-checked 2026-09-26: `vue-tsc` 3.3.11 against TypeScript 7.0.2 still
       dies with `ERR_PACKAGE_PATH_NOT_EXPORTED` for `./lib/tsc`, and `golar`
       0.1.10 still exports only `./unstable` and `./unstable-tsgo`.
+      Re-checked 2026-09-27: both still the latest published (vue-tsc 3.3.11,
+      golar 0.1.10, TypeScript 7.0.2). Upstream, the exact failure was filed as
+      vuejs/language-tools#6124 and closed as a duplicate of #5381, the
+      TypeScript 7 / `tsgo` support request, which is closed too — so there is
+      no open issue to watch. Check the release notes instead.
+      <https://github.com/vuejs/language-tools/issues/6124>
+      <https://github.com/vuejs/language-tools/issues/5381>
 - [x] Silenced Nitro's own `[request error]` stack-trace block on a 404, without
       replacing the error handler. Nitro logs it when the error is `fatal`, and
       `fatal` is only load-bearing on the client, where it is what makes a 404
@@ -170,7 +229,8 @@ record. There is no run log.
             the request's own host via `siteOrigin()` / `useSiteOrigin()`, so an
             onion visitor is not handed clearnet links.
       - [x] **Slice 3** — the gateway ships in the site's own image, started
-            beside Nitro by `docker-entrypoint.sh`, with the keystore volume in
+            beside Nitro (by `docker-entrypoint.sh` then; by the site's own
+            `server/plugins/onion-gateway.ts` since 2026-09-27), with the keystore volume in
             `compose-linux/infra.yaml`. The onyums project page advertises the
             address, read live from `/api/onion`.
 - [ ] `Onion-Location` on the clearnet site, so Tor Browser offers the onion address

@@ -21,13 +21,13 @@ bars the way a terminal does it.
 | `/` | The pitch, live project stats, and the catalogue |
 | `/projects` | Every public project |
 | `/projects/<slug>` | A marketing page per project: hero, why it exists, features, a worked example, the recent releases, and the repo's README folded away underneath |
-| `/status` | Whether the site is rendering live data or the fallback snapshot, and how long it has been up |
+| `/status` | Whether the site is rendering live data or the fallback snapshot, whether the onion service was last reached over Tor, and how long it has been up |
 | `/releases.xml` | An Atom feed of every release across every project |
 | `/sitemap.xml` | Built from the same project list the pages render from |
 | `/robots.txt` | Allows everything, points at the sitemap |
 | `/api/projects` | Card-level JSON for every project |
 | `/api/projects/<slug>` | One project, README and release history included |
-| `/healthz` | Liveness for the container healthcheck, plus the data source and uptime |
+| `/healthz` | Liveness for the container healthcheck, plus the data source, the onion service's state and uptime |
 
 Each project page also carries `SoftwareSourceCode` JSON-LD and its own Open
 Graph card, so a link to it previews as itself rather than as the organization.
@@ -43,20 +43,27 @@ stale-while-revalidate for 6 hours. How long a response counts as fresh is
 worked out from the number of projects (`shared/github/budget.ts`): each repo
 costs three GitHub calls per refresh, and the site keeps itself to 54 of
 GitHub's 60 anonymous requests an hour. Seven projects gives 30 minutes — 42
-calls an hour. A visitor always gets freshly rendered markup, and adding a
-project lengthens the freshness window instead of quietly running the site into
-the rate limit.
+calls an hour. With a token the site allows itself 300 of GitHub's 5,000 and
+the same seven projects refresh every 5 minutes — 252 calls an hour; the
+deployed site has one. A visitor always gets freshly rendered markup, and adding
+a project lengthens the freshness window instead of quietly running the site
+into the rate limit. `/status` says which of the two it is running on.
 
 If GitHub or crates.io is unreachable, the render falls back to
 `data/projects.generated.json` — a committed snapshot refreshed by `npm run sync`.
 An upstream outage degrades the numbers, not the site.
 
-Set `GITHUB_TOKEN` (or `NUXT_GITHUB_TOKEN`) in the environment to lift the
-anonymous rate limit. It is optional; nothing needs it to work.
+Set `NUXT_GITHUB_TOKEN` in the server's environment to lift the anonymous rate
+limit (the compose file fills it from `BASICAUTOMATION_GITHUB_TOKEN`; a bare
+`GITHUB_TOKEN` is read by `npm run sync` but not by the server). It is optional;
+nothing needs it to work.
 
 `/status` shows which of the two is happening right now, per project, along with
 GitHub's own count of the rate limit — how many calls are left this hour and when
-it resets, read from the headers of its last response. The server
+it resets, read from the headers of its last response — and when the onion
+service was last reached over Tor, from the gateway's own ten-minute self-fetch.
+Thirty minutes without one turns `/healthz`'s `status` to `degraded` (still a
+200: the clearnet site is serving). The server
 also logs one JSON object per request on stdout — `docker logs
 basicautomation-site | jq 'select(.status >= 400)'` — and warns once an hour for
 as long as it has been answering from the snapshot, and once when the GitHub
@@ -183,7 +190,8 @@ and the addon headers exist only to build something.
 
 `onion/` is a small Rust crate that serves the same site as a Tor onion service
 through the organization's own `onyums`. It is built into this image by a second
-stage and started beside Nitro by `docker-entrypoint.sh`: it proxies to the site
+stage and started by the site itself (`server/plugins/onion-gateway.ts`, when
+`ONION_GATEWAY` names the binary); if it exits, the site exits with it. It proxies to the site
 over loopback and writes its `.onion` address to `/run/onion/address`, which the
 site reads back through `/api/onion` to advertise the address on the onyums
 project page. The identity key lives in the named volume `basicautomation-onion`

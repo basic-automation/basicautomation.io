@@ -10,15 +10,13 @@
  */
 
 import type { Health } from '~~/shared/types/health'
-import { projects } from '~~/data/projects'
-import { cacheTtl, callsPerHour } from '~~/shared/github/budget'
 
 /**
  * Stale for this long stops being a blip and starts being something someone
- * should look at. Upstream is cached for `cacheTtl` — 30 minutes at seven
- * projects — and served stale for six hours, so an hour of snapshot-only
- * answers means at least two refresh windows have come and gone with GitHub
- * still unreachable.
+ * should look at. Upstream is cached for `githubRefresh.ttl` — at most 30
+ * minutes at seven projects — and served stale for six hours, so an hour of
+ * snapshot-only answers means at least two refresh windows have come and gone
+ * with GitHub still unreachable.
  */
 const STALE_ALERT_AFTER = 60 * 60 * 1000 // 1 hour
 
@@ -152,12 +150,11 @@ function alertIfStale(): void {
   }))
 }
 
-const ttl = cacheTtl(projects.length)
-
-export function health(): Health {
+export async function health(): Promise<Health> {
   alertIfStale()
 
   const now = Date.now()
+  const onion = await onionHealth(now)
   const source = degradedSince !== null
     ? 'snapshot'
     : liveCount > 0 ? 'live' : 'unknown'
@@ -166,7 +163,7 @@ export function health(): Health {
     // Degraded is a 200. The healthcheck restarts a process that cannot serve,
     // and a process serving from the snapshot — or one serving a page with its
     // README missing — can serve perfectly well.
-    status: degradedSince === null && incomplete.size === 0 ? 'ok' : 'degraded',
+    status: degradedSince === null && incomplete.size === 0 && onion.state !== 'unreachable' ? 'ok' : 'degraded',
     uptimeSeconds: Math.round((now - startedAt) / 1000),
     startedAt: new Date(startedAt).toISOString(),
     data: {
@@ -186,7 +183,9 @@ export function health(): Health {
       resetsInSeconds: Math.max(0, Math.round(rateLimit.reset - now / 1000)),
       observedAt: new Date(rateLimit.at).toISOString(),
     },
-    refreshSeconds: ttl,
-    budgetedCallsPerHour: callsPerHour(projects.length, ttl),
+    onion,
+    authenticated: githubRefresh.authenticated,
+    refreshSeconds: githubRefresh.ttl,
+    budgetedCallsPerHour: githubRefresh.callsPerHour,
   }
 }

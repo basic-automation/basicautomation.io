@@ -25,8 +25,10 @@ export default defineNuxtConfig({
   css: ['~/assets/css/main.css'],
 
   runtimeConfig: {
-    // Optional. Lifts GitHub's anonymous 60 req/hour limit — set GITHUB_TOKEN
-    // (or NUXT_GITHUB_TOKEN) in the container environment.
+    // Optional. Lifts GitHub's anonymous 60 req/hour limit, and shortens the
+    // refresh from 30 minutes to 5 (shared/github/budget.ts). Nuxt reads it from
+    // NUXT_GITHUB_TOKEN only — a bare GITHUB_TOKEN is not mapped; the compose
+    // file sets it from BASICAUTOMATION_GITHUB_TOKEN.
     githubToken: '',
     public: {
       siteUrl: 'https://basicautomation.io',
