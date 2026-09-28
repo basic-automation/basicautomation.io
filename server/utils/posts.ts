@@ -182,10 +182,19 @@ export async function postsFor(project: string): Promise<PostSummary[]> {
   return all.filter((p) => p.project === project && !p.draft).map(({ body: _body, ...rest }) => rest)
 }
 
-/** The most recent published posts across every project. */
-export async function latestPosts(limit: number): Promise<PostSummary[]> {
+/**
+ * Published posts across every project, newest first.
+ *
+ * `limit` omitted means all of them, which is what `/news` wants: it is the
+ * aggregate of every blog on the site, so a cap there would silently hide the
+ * oldest history rather than paginate it. The home page passes its own small
+ * limit because it shows a teaser.
+ */
+export async function latestPosts(limit?: number): Promise<PostSummary[]> {
   const all = await allPosts()
-  return all.filter((p) => !p.draft).slice(0, limit).map(({ body: _body, ...rest }) => rest)
+  const published = all.filter((p) => !p.draft)
+  const bounded = limit === undefined ? published : published.slice(0, limit)
+  return bounded.map(({ body: _body, ...rest }) => rest)
 }
 
 /** One post, draft or not — a draft is reachable by URL so it can be previewed. */
