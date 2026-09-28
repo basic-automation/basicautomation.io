@@ -121,6 +121,15 @@ record. There is no run log.
       Before this, the only sign of a spent quota was a README missing from a
       page. It is also shared: a local build being tested draws on the same
       anonymous 60 as the deployed site, which is how this run found it.
+- [x] Say whether the onion service is actually reachable. A gateway that dies
+      takes the container with it, but one that runs without being reachable —
+      a descriptor that never published, circuits that stopped completing — was
+      visible only as a stale frame on the onyums page. `/healthz` now carries
+      `onion` (`off`, `starting`, `launched`, `reachable`, `unreachable`), judged
+      by the age of the gateway's own last successful fetch of the site over
+      Tor; 30 minutes without one (three missed self-fetches) makes `status`
+      `degraded`, and `/status` prints it ("reached over tor 4 minutes ago, in
+      11.2 s"). Thresholds are pure and tested (`shared/onion/state.ts`).
 - [x] Trim the image: the runtime layer is no longer a full `node:24-alpine`
 - [x] The Dockerfile's `alpine:3.24` runtime must stay in step with whatever base
       `node:24-alpine` uses, because the node binary is copied out of that image

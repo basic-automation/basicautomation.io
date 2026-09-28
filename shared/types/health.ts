@@ -1,9 +1,12 @@
+import type { OnionState } from '~~/shared/onion/state'
+
 /** What `/healthz` answers, and what the status page renders. */
 export interface Health {
   /**
    * `degraded` means the pages are being rendered from the committed snapshot
-   * because upstream is unreachable, or that a page rendered live with part of
-   * it missing — still serving, just with stale or absent numbers. It is
+   * because upstream is unreachable, that a page rendered live with part of
+   * it missing, or that the onion service has not been reachable over Tor for
+   * half an hour — still serving, just not all of it. It is
    * deliberately not an unhealthy HTTP status; see server/routes/healthz.
    */
   status: 'ok' | 'degraded'
@@ -37,6 +40,21 @@ export interface Health {
     resetsInSeconds: number
     observedAt: string
   } | null
+  /**
+   * The onion service, judged by the gateway's own self-fetch over Tor.
+   * `off` where no gateway runs (outside the image, or `ONION_ENABLED=0`);
+   * `starting` until it has an address; `launched` until the first fetch over
+   * Tor succeeds; `reachable` while one has in the last 30 minutes; and
+   * `unreachable` once none has for 30 minutes, which makes `status` degraded.
+   */
+  onion: {
+    state: OnionState
+    address: string | null
+    lastReachedAt: string | null
+    lastReachedSecondsAgo: number | null
+    /** How long the last successful fetch over Tor took, end to end. */
+    circuitMs: number | null
+  }
   /** Whether the process holds a GitHub token — it decides the two numbers below. */
   authenticated: boolean
   /** How long a repo's data is reused before it is fetched again — see `shared/github/budget.ts`. */

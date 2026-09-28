@@ -21,13 +21,13 @@ bars the way a terminal does it.
 | `/` | The pitch, live project stats, and the catalogue |
 | `/projects` | Every public project |
 | `/projects/<slug>` | A marketing page per project: hero, why it exists, features, a worked example, the recent releases, and the repo's README folded away underneath |
-| `/status` | Whether the site is rendering live data or the fallback snapshot, and how long it has been up |
+| `/status` | Whether the site is rendering live data or the fallback snapshot, whether the onion service was last reached over Tor, and how long it has been up |
 | `/releases.xml` | An Atom feed of every release across every project |
 | `/sitemap.xml` | Built from the same project list the pages render from |
 | `/robots.txt` | Allows everything, points at the sitemap |
 | `/api/projects` | Card-level JSON for every project |
 | `/api/projects/<slug>` | One project, README and release history included |
-| `/healthz` | Liveness for the container healthcheck, plus the data source and uptime |
+| `/healthz` | Liveness for the container healthcheck, plus the data source, the onion service's state and uptime |
 
 Each project page also carries `SoftwareSourceCode` JSON-LD and its own Open
 Graph card, so a link to it previews as itself rather than as the organization.
@@ -60,7 +60,10 @@ nothing needs it to work.
 
 `/status` shows which of the two is happening right now, per project, along with
 GitHub's own count of the rate limit — how many calls are left this hour and when
-it resets, read from the headers of its last response. The server
+it resets, read from the headers of its last response — and when the onion
+service was last reached over Tor, from the gateway's own ten-minute self-fetch.
+Thirty minutes without one turns `/healthz`'s `status` to `degraded` (still a
+200: the clearnet site is serving). The server
 also logs one JSON object per request on stdout — `docker logs
 basicautomation-site | jq 'select(.status >= 400)'` — and warns once an hour for
 as long as it has been answering from the snapshot, and once when the GitHub

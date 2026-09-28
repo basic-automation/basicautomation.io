@@ -38,6 +38,26 @@ function duration(seconds: number | null | undefined): string {
   return parts.length ? parts.join(', ') : '0 seconds'
 }
 
+/**
+ * The onion service as its own self-fetch over Tor last found it. Durations
+ * come from the server's numbers, not this page's clock, so the render and the
+ * hydration agree.
+ */
+function onionLine(o: Health['onion']): string {
+  switch (o.state) {
+    case 'off': return 'not run by this process'
+    case 'starting': return 'bootstrapping tor'
+    case 'launched': return 'address published, not yet reached over tor'
+    case 'reachable':
+      return `reached over tor ${duration(o.lastReachedSecondsAgo)} ago`
+        + (o.circuitMs === null ? '' : `, in ${(o.circuitMs / 1000).toFixed(1)} s`)
+    case 'unreachable':
+      return o.lastReachedSecondsAgo === null
+        ? 'never reached over tor since the gateway started'
+        : `not reached over tor for ${duration(o.lastReachedSecondsAgo)}`
+  }
+}
+
 const rows = computed(() => {
   const h = health.value
   if (!h) return []
@@ -55,6 +75,7 @@ const rows = computed(() => {
         ? `${h.github.remaining} of ${h.github.limit} left, resets in ${duration(h.github.resetsInSeconds)}`
         : 'not yet asked',
     },
+    { label: 'onion', value: onionLine(h.onion) },
     {
       label: 'refresh',
       value: `every ${duration(h.refreshSeconds)}, at most ${h.budgetedCallsPerHour} calls an hour, `
@@ -103,7 +124,8 @@ useSeoMeta({
           <span aria-hidden="true" :class="health.status === 'ok' ? 'text-pn-bright-green' : 'text-pn-yellow'">● </span>
           <span v-if="health.status === 'ok'">Serving live data.</span>
           <span v-else-if="health.data.degradedSince">Serving the fallback snapshot.</span>
-          <span v-else>Serving live data, with pieces missing.</span>
+          <span v-else-if="health.data.incomplete.length">Serving live data, with pieces missing.</span>
+          <span v-else>Serving live data. The onion service is not answering.</span>
         </p>
 
         <p

@@ -48,7 +48,10 @@ export default defineNitroPlugin((nitroApp) => {
   const gateway: ChildProcess = spawn(binary, [], { stdio: 'inherit' })
   const exited = new Promise<void>((resolve) => gateway.once('exit', () => resolve()))
 
-  gateway.once('spawn', () => log('onion.started', { pid: gateway.pid, site: process.pid }))
+  gateway.once('spawn', () => {
+    markGatewayStarted()
+    log('onion.started', { pid: gateway.pid, site: process.pid })
+  })
 
   gateway.once('error', (err) => {
     // Could not be started at all — a missing or non-executable binary. Same
