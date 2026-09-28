@@ -138,8 +138,16 @@ record. There is no run log.
       Dockerfile, asks the node image for `/etc/alpine-release`, and fails on a
       mismatch. CI's `image` job runs it, which pulls an image that job needs
       anyway. Today: node:24-alpine is Alpine 3.24.2, runtime is 3.24 — in step.
-- [ ] Move the runtime to distroless — roughly another 60 MB off. Distroless
-      has no shell, and the image needed one in three places:
+- [ ] Move the runtime to distroless — **needs an owner decision, because the
+      size case for it is gone.** Measured 2026-09-27: the same build on
+      `gcr.io/distroless/nodejs24-debian13:nonroot` is 73.0 MB of image content
+      against 71.0 MB for today's trimmed Alpine runtime — 2 MB larger, not the
+      ~60 MB smaller this item was written for, because the Alpine trim above
+      already took what distroless would have. It does run (healthy, all
+      routes, the gateway started and stopped cleanly, exit 0). What is left
+      is attack surface — no shell, no package manager in the image — weighed
+      against a glibc runtime replacing musl. Distroless has no shell, and the
+      image needed one in three places:
       - [x] The entrypoint. `docker-entrypoint.sh` ran the site and the onion
             gateway side by side; the site now starts the gateway itself
             (`server/plugins/onion-gateway.ts`), stops it on SIGTERM through
@@ -152,7 +160,8 @@ record. There is no run log.
       - [ ] BLOCKED — the live healthcheck in `compose-linux/infra.yaml` is still
             `CMD-SHELL`, and it overrides the image's. It is the owner's stack:
             convert it to the exec form `deploy/compose.yaml` now carries, then
-            the runtime stage can change base.
+            the runtime stage can change base. (Harmless to do either way: the
+            exec form works on the Alpine runtime too.)
 - [x] The onion gateway ignored SIGTERM until it was ready: `shutdown()` in
       `onion/src/main.rs` registered its handlers only after `ready_timeout`
       returned — up to 600 s after start — so a stop in that window killed it
