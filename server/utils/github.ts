@@ -11,7 +11,6 @@
  * outage degrades the numbers rather than the site.
  */
 
-import { Marked } from 'marked'
 // Nitro's `$fetch` carries typed-route overloads for the app's OWN routes;
 // handed an external URL it recurses through every route key and trips the
 // type-instantiation depth limit. These calls go off-site, so use ofetch
@@ -19,8 +18,6 @@ import { Marked } from 'marked'
 import { ofetch } from 'ofetch'
 import { projects, type Project } from '~~/data/projects'
 import type { EnrichedProject, Release, RepoMeta } from '~~/shared/types/project'
-import { createSlugger } from '~~/shared/markdown/slug'
-import { readmeHeading } from '~~/shared/markdown/heading'
 import { absolutize, stripLeadingLogo } from '~~/shared/markdown/readme'
 import { normaliseReleases, pickLatest } from '~~/shared/github/releases'
 import { refreshPolicy } from '~~/shared/github/budget'
@@ -95,43 +92,6 @@ const MAX_RELEASES = 5
 type SnapshotRepo = Omit<RepoMeta, 'source' | 'releases'> & { releases?: Release[] }
 
 const snapshotRepos = (snapshot as { repos: Record<string, SnapshotRepo> }).repos ?? {}
-
-/**
- * README code fences go through the same highlighter as the site's own
- * examples, so a repo's code reads the same as the code beside it. Shiki is
- * async to initialise, so fences are collected on the first pass and swapped in
- * on a second — `marked` itself stays synchronous.
- *
- * Headings carry GitHub's own anchor, so a README's table of contents still
- * works once it is rendered here, and are demoted a level so the README nests
- * under the page's own h1. The slugger is per-document: duplicate heading text
- * numbers from 1 within one README, not across all of them.
- */
-async function renderMarkdown(md: string): Promise<string> {
-  const fences: { lang: string | undefined, code: string }[] = []
-  const slug = createSlugger()
-
-  const collecting = new Marked({
-    gfm: true,
-    breaks: false,
-    async: false,
-    renderer: {
-      code({ text, lang }) {
-        fences.push({ lang, code: text })
-        return `\u0000FENCE${fences.length - 1}\u0000`
-      },
-      // Demoted a level so the README nests under the page's own h1, with the
-      // ids left where GitHub minted them. See shared/markdown/heading.ts.
-      heading: readmeHeading(slug),
-    },
-  })
-
-  const html = collecting.parse(md) as string
-  if (!fences.length) return html
-
-  const rendered = await Promise.all(fences.map((f) => highlight(f.code, f.lang)))
-  return html.replace(/\u0000FENCE(\d+)\u0000/g, (_, i) => rendered[Number(i)] ?? '')
-}
 
 function token(): string {
   const config = useRuntimeConfig()

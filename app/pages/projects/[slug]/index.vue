@@ -45,6 +45,16 @@ const { data: onionData } = await useFetch<{ address: string | null }>('/api/oni
 })
 const onion = computed(() => onionData.value?.address ?? null)
 
+// Just enough to decide whether the news tab exists and what it says. The list
+// page fetches the posts themselves; this is the same endpoint and the same key
+// shape, so it is one request either way.
+const { data: newsData } = await useFetch<{ posts: PostSummary[] }>('/api/posts', {
+  key: () => `posts-${slug.value}`,
+  query: { project: slug },
+  default: () => ({ posts: [] }),
+})
+const postCount = computed(() => newsData.value?.posts.length ?? 0)
+
 const links = computed(() => {
   const p = project.value
   if (!p) return []
@@ -216,6 +226,16 @@ useSeoMeta({
           class="transition-colors hover:text-pn-fg-bright"
           :style="{ color: 'var(--accent)' }"
         >→ {{ link.label }}</a>
+
+        <!-- Internal, so `NuxtLink` rather than an `<a>` with target=_blank:
+             this one stays on the site. Only rendered when there is something
+             to read — an empty news tab is a worse answer than no tab. -->
+        <NuxtLink
+          v-if="postCount"
+          :to="`/projects/${slug}/blog`"
+          class="transition-colors hover:text-pn-fg-bright"
+          :style="{ color: 'var(--accent)' }"
+        >→ news ({{ postCount }})</NuxtLink>
       </nav>
     </header>
 

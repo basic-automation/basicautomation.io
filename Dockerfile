@@ -89,9 +89,15 @@ COPY --from=onion-build /usr/local/bin/onion-gateway ./onion-gateway
 # NOTE: do not "fix" a permission complaint from arti with
 # ARTI_FS_DISABLE_PERMISSION_CHECKS. It turns off a real check on the directory
 # holding the identity key. Fix the directory.
-RUN mkdir -p /app/tor /run/onion \
- && chown site:site /app/tor /run/onion \
- && chmod 700 /app/tor /run/onion
+# `/app/content` holds the blog. Like `/app/tor` it is a volume mount point, so
+# it is created here owned by the unprivileged user: Docker seeds a fresh named
+# volume from the image including ownership, and without that the admin page
+# could not write to it. 0755 rather than 0700 — nothing secret lives here, and
+# the posts are served to the public the moment they stop being drafts.
+RUN mkdir -p /app/tor /app/content/posts /run/onion \
+ && chown -R site:site /app/tor /app/content /run/onion \
+ && chmod 700 /app/tor /run/onion \
+ && chmod 755 /app/content /app/content/posts
 
 USER site
 

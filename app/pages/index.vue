@@ -16,6 +16,18 @@ const description
   = 'Basic Automation designs and builds software tools for businesses. Open-source '
     + 'Rust crates for the Tor network, and desktop apps for catalogs and image pipelines.'
 
+// The aggregate across every project. Bounded server-side; the endpoint never
+// returns bodies, so this costs a few hundred bytes however many posts exist.
+const { data: newsData } = await useFetch<{ posts: PostSummary[] }>('/api/posts', {
+  key: 'news-latest',
+  query: { limit: 5 },
+  default: () => ({ posts: [] }),
+})
+const news = computed(() => newsData.value?.posts ?? [])
+
+/** Display name for a post's project — `projects` is already fetched above. */
+const projectName = (slug: string) => projects.value.find((p) => p.slug === slug)?.name ?? slug
+
 const siteUrl = useSiteOrigin()
 
 /**
@@ -121,6 +133,18 @@ useSeoMeta({
     </section>
 
     <!-- ── About ────────────────────────────────────────────────────────── -->
+    <!-- Only when there is news. A "news" heading over an empty space says the
+         project is quiet, which is not the intended message. -->
+    <section v-if="news.length" id="news" class="mt-40">
+      <TermRule label="news" />
+
+      <ol class="mt-10 space-y-10">
+        <li v-for="post in news" :key="`${post.project}/${post.slug}`">
+          <PostCard :post="post" :project-name="projectName(post.project)" show-project />
+        </li>
+      </ol>
+    </section>
+
     <section id="about" class="mt-40">
       <TermRule label="about" />
       <div class="mt-8 max-w-2xl space-y-5 text-sm leading-relaxed text-pn-dim">

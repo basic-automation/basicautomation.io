@@ -7,7 +7,9 @@
  * `/onion-frame`, for the same reason and more so — it is a byte-for-byte copy
  * of the home page, fetched back over Tor for the frame on the onyums page, and
  * an indexer that found it would be looking at the home page's own content under
- * a second URL.
+ * a second URL. `/admin` likewise — though note that is tidiness and nothing
+ * more: what actually keeps the editor private is the basic auth Caddy applies
+ * to `/admin` and `/api/admin/*` before a request reaches this process.
  */
 
 export default defineEventHandler((event) => {
@@ -19,6 +21,7 @@ export default defineEventHandler((event) => {
   return `User-agent: *
 Allow: /
 Disallow: /api/
+Disallow: /admin
 Disallow: /onion-frame
 
 Sitemap: ${base}/sitemap.xml
