@@ -129,10 +129,28 @@ record. There is no run log.
       Dockerfile, asks the node image for `/etc/alpine-release`, and fails on a
       mismatch. CI's `image` job runs it, which pulls an image that job needs
       anyway. Today: node:24-alpine is Alpine 3.24.2, runtime is 3.24 — in step.
-- [ ] Move the runtime to distroless — roughly another 60 MB off. BLOCKED on the
-      healthcheck: `deploy/compose.yaml` uses `CMD-SHELL`, and distroless has no
-      shell, so this needs the compose healthcheck converted to exec form first,
-      which touches the live DeepStack stack
+- [ ] Move the runtime to distroless — roughly another 60 MB off. Distroless
+      has no shell, and the image needed one in three places:
+      - [x] The entrypoint. `docker-entrypoint.sh` ran the site and the onion
+            gateway side by side; the site now starts the gateway itself
+            (`server/plugins/onion-gateway.ts`), stops it on SIGTERM through
+            Nitro's `close` hook, and exits with it if it dies. The image's
+            command is `node .output/server/index.mjs` in exec form. Not a node
+            supervisor: that is a second heap (~40 MB) against 145 MB for the
+            whole container today.
+      - [x] The image's own `HEALTHCHECK`, and `deploy/compose.yaml`'s, are exec
+            form now.
+      - [ ] BLOCKED — the live healthcheck in `compose-linux/infra.yaml` is still
+            `CMD-SHELL`, and it overrides the image's. It is the owner's stack:
+            convert it to the exec form `deploy/compose.yaml` now carries, then
+            the runtime stage can change base.
+- [ ] Fix the onion gateway ignoring SIGTERM until it is ready. `shutdown()` in
+      `onion/src/main.rs` registers its signal handlers only after
+      `ready_timeout` returns — up to 600 s after start — so a stop in that
+      window kills the gateway outright instead of letting onyums withdraw its
+      service. Seen while verifying the entrypoint change: a `docker stop` about
+      30 s after a cold start logged the gateway ending by SIGTERM rather than
+      "shutting down".
 - [x] Evaluated GitHub REST API version `2026-03-10` and moved to it. Its breaking
       changes touch `GET /repos/{owner}/{repo}` only, and only fields this site has
       never read (`has_downloads`, `use_squash_pr_title_as_default`,
@@ -175,7 +193,8 @@ record. There is no run log.
             the request's own host via `siteOrigin()` / `useSiteOrigin()`, so an
             onion visitor is not handed clearnet links.
       - [x] **Slice 3** — the gateway ships in the site's own image, started
-            beside Nitro by `docker-entrypoint.sh`, with the keystore volume in
+            beside Nitro (by `docker-entrypoint.sh` then; by the site's own
+            `server/plugins/onion-gateway.ts` since 2026-09-27), with the keystore volume in
             `compose-linux/infra.yaml`. The onyums project page advertises the
             address, read live from `/api/onion`.
 - [ ] `Onion-Location` on the clearnet site, so Tor Browser offers the onion address

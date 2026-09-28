@@ -118,8 +118,10 @@ would actually be given, with the crate's own defences in front of it.
     healthcheck, neither of which is a name the public site has.
 
 - **Slice 3 — deploy. Landed, in one container rather than two.** The gateway
-  ships in the site's own image and `docker-entrypoint.sh` runs the two
-  processes side by side. Two containers would have made a loopback proxy hop
+  ships in the site's own image and runs beside the site. (Originally
+  `docker-entrypoint.sh` ran the two processes side by side; since 2026-09-27
+  the site starts the gateway itself, from `server/plugins/onion-gateway.ts`,
+  so the image needs no shell.) Two containers would have made a loopback proxy hop
   into a network hop and the address file into a shared volume, for nothing:
   the gateway is a front for this exact site and has no life without it.
 
