@@ -150,6 +150,67 @@ function checkJsonLd(path, html) {
 }
 
 /**
+ * The sources a CSP names for one directive, lowercased and space-joined, or
+ * `undefined` if the policy does not mention it. Directive names are
+ * case-insensitive, and so are the `'self'` and `'none'` keywords this is used
+ * to read.
+ */
+function cspDirective(csp, name) {
+  for (const part of (csp ?? '').split(';')) {
+    const [directive, ...sources] = part.trim().split(/\s+/)
+    if (directive.toLowerCase() === name) return sources.join(' ').toLowerCase()
+  }
+  return undefined
+}
+
+/**
+ * JSON and ld+json blocks are data, never executed, and CSP does not apply to
+ * them; everything else a <script> can be is code.
+ */
+function executes(attrs) {
+  const type = attrs.match(/\btype=["']([^"']*)["']/i)?.[1]?.toLowerCase()
+  return !type || type === 'module' || type === 'importmap' || type.includes('javascript')
+}
+
+/**
+ * The one response that runs no JavaScript, held to the policy that lets it get
+ * away with carrying no nonce.
+ *
+ * `/onion-frame` serves the document this server fetched over Tor, for the frame
+ * on the onyums page. Everything the nonce does elsewhere — deciding what in a
+ * document assembled from someone else's content may act — is done here by the
+ * directives below instead, so they are checked rather than assumed: only this
+ * site may frame it, the snapshot may not re-point relative URLs or submit
+ * anywhere, and a directive nobody thought of falls back to same-origin.
+ */
+function checkScriptlessCsp(path, html, csp) {
+  const required = {
+    'default-src': "'self'",
+    'frame-ancestors': "'self'",
+    'base-uri': "'none'",
+    'form-action': "'none'",
+  }
+  for (const [name, expected] of Object.entries(required)) {
+    const sources = cspDirective(csp, name)
+    if (sources === undefined) fail(path, `CSP forbids scripts but names no ${name} — here it has to be ${expected}`)
+    else if (sources !== expected) fail(path, `CSP forbids scripts but ${name} is ${sources}, not ${expected}`)
+  }
+
+  // The header is the guarantee and the stripping is defence in depth, so a
+  // script that survived the strip is still a bug: the browser refuses it and
+  // logs a CSP error in the console of every visitor to the pages that show the
+  // frame, for a fetch that could never have been used.
+  for (const m of html.matchAll(/<script\b([^>]*)>/gi)) {
+    if (executes(m[1])) fail(path, `a <script${m[1].slice(0, 40)}> survived the strip — the frame forbids scripts`)
+  }
+  for (const m of html.matchAll(/<link\b[^>]*>/gi)) {
+    if (/\brel=["']?modulepreload/i.test(m[0]) || /\bas=["']?script/i.test(m[0])) {
+      fail(path, `a script preload survived the strip: ${m[0].slice(0, 60)}`)
+    }
+  }
+}
+
+/**
  * The script nonce holds together, on every page.
  *
  * `server/plugins/csp-nonce.ts` stamps a per-request nonce on the scripts and
@@ -162,19 +223,25 @@ function checkJsonLd(path, html) {
  * block carries that same nonce, and nothing inside the app body carries any.
  */
 function checkNonces(path, html, csp) {
+  // A response that forbids scripts outright needs no nonce, and this is not a
+  // hole in the rule below: a nonce says *which* scripts may run, and
+  // `script-src 'none'` says none may, which is strictly stricter than any list
+  // of permitted ones. `/onion-frame` is the case — it strips the scripts out of
+  // the Tor snapshot and then forbids them in the header, so there is no script
+  // left for a nonce to be about. Such a response is not waved through; it is
+  // held to the rest of the policy instead, which is what an ordinary page that
+  // arrived here by mistake would fail.
+  if (cspDirective(csp, 'script-src') === "'none'") {
+    checkScriptlessCsp(path, html, csp)
+    return
+  }
+
   const nonce = csp?.match(/'nonce-([^']+)'/)?.[1]
   if (!nonce) {
     fail(path, 'Content-Security-Policy carries no nonce — the CSP plugin did not run')
     return
   }
   if (!/style-src-elem [^;]*'nonce-/.test(csp)) fail(path, 'style-src-elem carries no nonce')
-
-  // JSON and ld+json blocks are data, never executed, and CSP does not apply to
-  // them; everything else a <script> can be is code.
-  const executes = (attrs) => {
-    const type = attrs.match(/\btype=["']([^"']*)["']/i)?.[1]?.toLowerCase()
-    return !type || type === 'module' || type === 'importmap' || type.includes('javascript')
-  }
 
   const appAt = html.indexOf('<div id="__nuxt"')
   const appEnd = appAt === -1 ? -1 : html.indexOf('<div id="teleports"', appAt)
