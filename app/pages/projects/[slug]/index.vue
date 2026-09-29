@@ -10,10 +10,22 @@
  * one page is duplicate content, and the canonical link, `og:url` and the
  * sitemap would each have to pick one anyway. 301 because this is permanent —
  * the old address is not coming back as a page.
+ *
+ * An unknown slug is a 404 here, directly, not after a redirect.
  */
+import { bySlug } from '~~/data/projects'
+
 definePageMeta({
   middleware: [
-    (to) => navigateTo(`/projects/${to.params.slug}/about`, { redirectCode: 301 }),
+    (to) => {
+      // Only a project that exists has an about tab to go to. Redirecting an
+      // unknown slug too sent a crawler on a 301 to learn it had found a 404,
+      // and told it "moved permanently" about something that never existed.
+      if (!bySlug(String(to.params.slug))) {
+        return abortNavigation(createError({ statusCode: 404, statusMessage: 'No such project', fatal: import.meta.client }))
+      }
+      return navigateTo(`/projects/${to.params.slug}/about`, { redirectCode: 301 })
+    },
   ],
 })
 </script>

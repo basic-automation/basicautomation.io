@@ -676,9 +676,12 @@ for (const [variant, want] of [['/PROJECTS', '/projects'], ['/news/', '/news'], 
 notes.push('other spellings of a page name its canonical address')
 
 // ── A 404 has to be a 404 ───────────────────────────────────────────────────
+// Answered directly, not at the end of a redirect: "moved permanently" about a
+// page that never existed sends a crawler on an extra request to learn nothing.
 for (const path of MUST_404) {
-  const res = await fetchOnce(BASE + path)
-  if (res.status !== 404) fail(path, `expected 404, got ${res.status}`)
+  const res = await fetch(BASE + path, { headers: HEADERS, redirect: 'manual' })
+    .catch((err) => ({ status: 0, error: err.message }))
+  if (res.status !== 404) fail(path, `expected 404, got ${res.status || res.error}`)
   else console.log(`  404  ${path}`)
 }
 
