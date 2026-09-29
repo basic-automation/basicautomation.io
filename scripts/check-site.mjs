@@ -558,8 +558,14 @@ while (queue.length) {
   checkAccessibility(path, res.body, isUpstream)
   checkJsonLd(path, res.body)
   checkNonces(path, res.body, res.csp)
-  await checkSocialCard(path, res.body)
-  await checkCanonical(path, res.body)
+  // A document that may run no script is the Tor snapshot `/onion-frame`
+  // serves — a copy of another page, carrying that page's own address and
+  // card, and refreshed only as often as the gateway fetches it. It is not a
+  // page of this site with an identity to check.
+  if (cspDirective(res.csp, 'script-src') !== "'none'") {
+    await checkSocialCard(path, res.body)
+    await checkCanonical(path, res.body)
+  }
 
   for (const [ref, index] of extractRefs(res.body)) {
     if (/^(mailto|tel|data|javascript):/i.test(ref)) continue
