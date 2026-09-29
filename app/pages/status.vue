@@ -196,7 +196,7 @@ useSeoMeta({
     <section class="mb-24">
       <TermRule label="endpoints" />
       <ul class="mt-8 space-y-2 text-xs">
-        <li v-for="path in ['/healthz', '/api/projects', '/sitemap.xml', '/robots.txt', '/releases.xml']" :key="path">
+        <li v-for="path in ['/healthz', '/api/projects', '/sitemap.xml', '/robots.txt', '/releases.xml', '/news.xml']" :key="path">
           <!-- Server routes, not pages: plain anchors, nothing for the router. -->
           <a :href="path" class="text-pn-dim transition-colors hover:text-pn-fg-bright">{{ path }}</a>
         </li>

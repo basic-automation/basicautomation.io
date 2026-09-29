@@ -26,6 +26,7 @@ bars the way a terminal does it.
 | `/admin` | The post editor — behind basic auth in Caddy, and absent over Tor (below) |
 | `/status` | Whether the site is rendering live data or the fallback snapshot, whether the onion service was last reached over Tor, and how long it has been up |
 | `/releases.xml` | An Atom feed of every release across every project |
+| `/news.xml` | An Atom feed of every published post, the site's own and every project's — `/news` as a feed |
 | `/sitemap.xml` | Built from the same project list the pages render from |
 | `/robots.txt` | Allows everything, points at the sitemap |
 | `/api/projects` | Card-level JSON for every project |

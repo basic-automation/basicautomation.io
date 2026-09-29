@@ -25,7 +25,7 @@ const BASE = (args.find((a) => !a.startsWith('--'))
   ?? 'http://127.0.0.1:3000').replace(/\/$/, '')
 
 /** Routes that no page links to, but that have to work anyway. */
-const UNLINKED_ROUTES = ['/healthz', '/sitemap.xml', '/robots.txt', '/releases.xml', '/api/projects']
+const UNLINKED_ROUTES = ['/healthz', '/sitemap.xml', '/robots.txt', '/releases.xml', '/news.xml', '/api/projects']
 
 /** Paths that must answer 404 — a soft 200 on a missing page is the bug. */
 const MUST_404 = ['/projects/no-such-project', '/no-such-page-at-all', '/api/projects/nope']
@@ -360,7 +360,9 @@ function checkXml(path, xml) {
   }
   if (stack.length) fail(path, `unclosed <${stack[stack.length - 1]}>`)
 
-  if (path.endsWith('releases.xml')) {
+  // Every Atom feed — `/releases.xml` and `/news.xml` — by what it is, not by
+  // name, so a third one is checked the day it exists.
+  if (/<feed\b/.test(xml)) {
     // What a reader needs to identify the feed and to de-duplicate entries.
     for (const el of ['title', 'id', 'updated']) {
       if (!new RegExp(`<${el}>`).test(xml)) fail(path, `the feed has no <${el}>`)
@@ -387,7 +389,7 @@ function checkXml(path, xml) {
       if (seenIds.has(id)) fail(path, `two entries share the id ${id}`)
       seenIds.add(id)
     }
-    notes.push(`${ids.length} feed entries, each with an id, a title and a date`)
+    notes.push(`${path}: ${ids.length} feed entries, each with an id, a title and a date`)
   }
 
   if (path.endsWith('sitemap.xml')) {

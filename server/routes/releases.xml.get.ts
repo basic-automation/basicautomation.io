@@ -54,7 +54,7 @@ export default defineEventHandler(async (event) => {
     <title>${xmlEscape(`${project.name} ${release.tag}`)}</title>
     <id>${xmlEscape(release.url)}</id>
     <link rel="alternate" type="text/html" href="${xmlEscape(release.url)}"/>
-    <link rel="related" type="text/html" href="${xmlEscape(`${base}/projects/${project.slug}`)}"/>
+    <link rel="related" type="text/html" href="${xmlEscape(`${base}/projects/${project.slug}/about`)}"/>
     <updated>${xmlEscape(release.publishedAt)}</updated>
     <category term="${xmlEscape(project.slug)}"/>
     <summary>${xmlEscape(summary)}</summary>

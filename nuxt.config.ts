@@ -54,6 +54,13 @@ export default defineNuxtConfig({
           title: 'Basic Automation — releases',
           href: '/releases.xml',
         },
+        // …and the posts feed, the same way: `/news` as Atom.
+        {
+          rel: 'alternate',
+          type: 'application/atom+xml',
+          title: 'Basic Automation — news',
+          href: '/news.xml',
+        },
         {
           rel: 'preload',
           as: 'font',
