@@ -102,7 +102,8 @@ service was last reached over Tor, from the gateway's own ten-minute self-fetch.
 Thirty minutes without one turns `/healthz`'s `status` to `degraded` (still a
 200: the clearnet site is serving). The server
 also logs one JSON object per request on stdout — `docker logs
-basicautomation-site | jq 'select(.status >= 400)'` — and warns once an hour for
+basicautomation-site | jq 'select(.status >= 400)'`, or `select(.via == "onion")`
+for the visits that came over Tor — and warns once an hour for
 as long as it has been answering from the snapshot, and once when the GitHub
 quota runs out (`event: "upstream.rate_limited"`).
 
