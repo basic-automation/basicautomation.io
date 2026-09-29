@@ -31,13 +31,14 @@ useHead({
   }],
 })
 
+useCanonical(() => `/news/${postSlug.value}`)
+
 useSeoMeta({
   title: () => `${post.value?.title} — basic automation`,
   description: () => post.value?.summary,
   ogTitle: () => post.value?.title,
   ogDescription: () => post.value?.summary,
   ogType: 'article',
-  ogUrl: () => `${siteUrl}/news/${postSlug.value}`,
   articlePublishedTime: () => post.value?.date,
   ogImage: () => `${siteUrl}${socialCardPath(SITE_SECTION)}`,
   ogImageWidth: 1200,

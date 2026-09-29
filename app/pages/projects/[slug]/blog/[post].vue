@@ -35,13 +35,14 @@ useHead({
   }],
 })
 
+useCanonical(() => `/projects/${slug.value}/blog/${postSlug.value}`)
+
 useSeoMeta({
   title: () => `${post.value?.title} — ${project.value?.name ?? 'basic automation'}`,
   description: () => post.value?.summary,
   ogTitle: () => post.value?.title,
   ogDescription: () => post.value?.summary,
   ogType: 'article',
-  ogUrl: () => `${siteUrl}/projects/${slug.value}/blog/${postSlug.value}`,
   articlePublishedTime: () => post.value?.date,
   ogImage: () => `${siteUrl}${socialCardPath(slug.value)}`,
   ogImageWidth: 1200,

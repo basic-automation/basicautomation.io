@@ -33,6 +33,8 @@ useHead({
   script: [{ type: 'application/ld+json', innerHTML: () => jsonLd.value }],
 })
 
+useCanonical('/projects')
+
 useSeoMeta({
   title: 'projects — basic automation',
   description:

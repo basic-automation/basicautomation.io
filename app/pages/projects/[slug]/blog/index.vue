@@ -29,11 +29,12 @@ const posts = computed(() => data.value?.posts ?? [])
 
 const siteUrl = useSiteOrigin()
 
+useCanonical(() => `/projects/${slug.value}/blog`)
+
 useSeoMeta({
   title: () => `news — ${project.value?.name}`,
   description: () => `Release notes and news for ${project.value?.name}.`,
   ogTitle: () => `${project.value?.name} — news`,
-  ogUrl: () => `${siteUrl}/projects/${slug.value}/blog`,
   ogImage: () => `${siteUrl}${socialCardPath(slug.value)}`,
   ogImageWidth: 1200,
   ogImageHeight: 630,

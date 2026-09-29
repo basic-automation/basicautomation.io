@@ -84,11 +84,17 @@ const rows = computed(() => {
   ]
 })
 
+const siteUrl = useSiteOrigin()
+
+useCanonical('/status')
+
 useSeoMeta({
   title: 'status — basic automation',
   description:
     'Whether basicautomation.io is rendering from live GitHub and crates.io data '
     + 'or from its committed fallback snapshot, and how long it has been up.',
+  ogImage: () => `${siteUrl}/og.png`,
+  twitterCard: 'summary_large_image',
 })
 </script>
 

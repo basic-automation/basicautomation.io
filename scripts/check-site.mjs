@@ -237,6 +237,41 @@ async function checkSocialCard(path, html) {
   if (res.status !== 200) fail(path, `og:image ${url.pathname} answered ${res.status || 'nothing'}`)
 }
 
+/** The canonical link's href, or every one of them when there is more than one. */
+function canonicalsOf(html) {
+  return [...html.matchAll(/<link[^>]+rel="canonical"[^>]*>/g)]
+    .map((m) => m[0].match(/href="([^"]*)"/)?.[1])
+}
+
+/**
+ * One address per page. The router answers `/PROJECTS`, `/news/` and any query
+ * string with the same page, so each page names its own with a canonical link
+ * (`app/composables/useCanonical.ts`) — exactly one, absolute, the same string
+ * as its `og:url`, and a URL that itself answers 200 rather than redirecting.
+ */
+async function checkCanonical(path, html) {
+  const ogUrl = html.match(/<meta[^>]+property="og:url"[^>]+content="([^"]*)"/)?.[1]
+  const canonicals = canonicalsOf(html)
+  if (!ogUrl && !canonicals.length) return
+  if (canonicals.length !== 1) {
+    fail(path, `has ${canonicals.length} canonical links; a page names exactly one address`)
+    return
+  }
+  const [href] = canonicals
+  if (href !== ogUrl) fail(path, `canonical ${href} and og:url ${ogUrl} disagree`)
+  let url
+  try {
+    url = new URL(href)
+  }
+  catch {
+    fail(path, `canonical ${href} is not an absolute URL`)
+    return
+  }
+  const res = await fetch(BASE + url.pathname, { headers: HEADERS, redirect: 'manual' })
+    .catch((err) => ({ status: 0, error: err.message }))
+  if (res.status !== 200) fail(path, `canonical ${url.pathname} answered ${res.status || res.error}, not 200`)
+}
+
 /**
  * The script nonce holds together, on every page.
  *
@@ -503,6 +538,7 @@ while (queue.length) {
   checkJsonLd(path, res.body)
   checkNonces(path, res.body, res.csp)
   await checkSocialCard(path, res.body)
+  await checkCanonical(path, res.body)
 
   for (const [ref, index] of extractRefs(res.body)) {
     if (/^(mailto|tel|data|javascript):/i.test(ref)) continue
@@ -625,6 +661,19 @@ for (const path of ['/admin', '/ADMIN', '/admin/', '/api/admin/posts', '/api/adm
   }
 }
 notes.push('the editor is refused to requests from the onion gateway')
+
+// ── Other spellings name the real address ───────────────────────────────────
+// The router ignores case, a trailing slash and the query, so these all render
+// a page that lives somewhere else. Each has to point there.
+for (const [variant, want] of [['/PROJECTS', '/projects'], ['/news/', '/news'], ['/projects?utm_source=check', '/projects']]) {
+  const res = await fetch(BASE + variant, { headers: HEADERS }).catch(() => null)
+  const body = res?.ok ? await res.text() : ''
+  const href = canonicalsOf(body)[0]
+  if (!href || new URL(href).pathname !== want) {
+    fail(variant, `should name ${want} as its canonical address, names ${href ?? 'nothing'}`)
+  }
+}
+notes.push('other spellings of a page name its canonical address')
 
 // ── A 404 has to be a 404 ───────────────────────────────────────────────────
 for (const path of MUST_404) {

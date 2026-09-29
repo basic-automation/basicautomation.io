@@ -144,13 +144,14 @@ useHead({
  */
 const ogImage = computed(() => `${siteUrl}/projects/og/${slug.value}.png`)
 
+useCanonical(() => `/projects/${slug.value}/about`)
+
 useSeoMeta({
   title: () => `${project.value?.name} — ${project.value?.tagline}`,
   description: () => project.value?.summary,
   ogTitle: () => `${project.value?.name} — ${project.value?.hero}`,
   ogDescription: () => project.value?.summary,
   ogType: 'article',
-  ogUrl: () => `${siteUrl}/projects/${slug.value}/about`,
   ogImage: () => ogImage.value,
   ogImageWidth: 1200,
   ogImageHeight: 630,

@@ -30,11 +30,12 @@ const nameFor = (slug: string): string =>
 
 const siteUrl = useSiteOrigin()
 
+useCanonical('/news')
+
 useSeoMeta({
   title: 'news — basic automation',
   description: 'Release notes and announcements from every Basic Automation project.',
   ogTitle: 'basic automation — news',
-  ogUrl: () => `${siteUrl}/news`,
   ogImage: () => `${siteUrl}${socialCardPath(SITE_SECTION)}`,
   ogImageWidth: 1200,
   ogImageHeight: 630,
