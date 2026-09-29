@@ -11,7 +11,7 @@
  * which is why it carries a fragment that resolves to nothing.
  */
 
-import { blogIndexPath, isSiteSection, postPath } from '~~/shared/posts/section'
+import { blogIndexPath, postPath, socialCardPath } from '~~/shared/posts/section'
 
 export const ORG_ID = '#organization'
 export const SITE_ID = '#website'
@@ -62,7 +62,7 @@ export function blogPostingLd(siteUrl: string, post: PostSummary, blogName: stri
 		'inLanguage': 'en',
 		'author': organizationRef(siteUrl),
 		'publisher': organizationRef(siteUrl),
-		'image': isSiteSection(post.project) ? `${siteUrl}/og.png` : `${siteUrl}/projects/og/${post.project}.png`,
+		'image': `${siteUrl}${socialCardPath(post.project)}`,
 		'isPartOf': { '@type': 'Blog', '@id': `${blogUrl}#blog`, 'name': blogName, 'url': blogUrl },
 	}
 	if (post.summary) data.description = post.summary

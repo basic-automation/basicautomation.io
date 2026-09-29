@@ -5,6 +5,7 @@
  * Posts live on a volume rather than in the bundle, so this is a request-time
  * fetch rather than build-time content — see `server/utils/posts.ts` for why.
  */
+import { socialCardPath } from '~~/shared/posts/section'
 const route = useRoute()
 const slug = computed(() => String(route.params.slug))
 
@@ -33,6 +34,11 @@ useSeoMeta({
   description: () => `Release notes and news for ${project.value?.name}.`,
   ogTitle: () => `${project.value?.name} — news`,
   ogUrl: () => `${siteUrl}/projects/${slug.value}/blog`,
+  ogImage: () => `${siteUrl}${socialCardPath(slug.value)}`,
+  ogImageWidth: 1200,
+  ogImageHeight: 630,
+  twitterCard: 'summary_large_image',
+  twitterImage: () => `${siteUrl}${socialCardPath(slug.value)}`,
 })
 </script>
 

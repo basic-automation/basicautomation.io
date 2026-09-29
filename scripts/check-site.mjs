@@ -211,6 +211,33 @@ function checkScriptlessCsp(path, html, csp) {
 }
 
 /**
+ * A page that says what its URL is to a social network says what its picture
+ * is too. Without `og:image` a shared link previews as a bare title, which is
+ * how every post and blog page shipped. The image is a `<meta>` content, which
+ * the crawl below never follows, so it is fetched here: a card that 404s is
+ * the same bare preview.
+ */
+async function checkSocialCard(path, html) {
+  const meta = (property) => html.match(new RegExp(`<meta[^>]+property="${property}"[^>]+content="([^"]*)"`))?.[1]
+  if (!meta('og:url')) return
+  const image = meta('og:image')
+  if (!image) {
+    fail(path, 'has an og:url but no og:image — a shared link previews without a card')
+    return
+  }
+  let url
+  try {
+    url = new URL(image)
+  }
+  catch {
+    fail(path, `og:image ${image} is not an absolute URL`)
+    return
+  }
+  const res = await fetchOnce(BASE + url.pathname)
+  if (res.status !== 200) fail(path, `og:image ${url.pathname} answered ${res.status || 'nothing'}`)
+}
+
+/**
  * The script nonce holds together, on every page.
  *
  * `server/plugins/csp-nonce.ts` stamps a per-request nonce on the scripts and
@@ -475,6 +502,7 @@ while (queue.length) {
   checkAccessibility(path, res.body, isUpstream)
   checkJsonLd(path, res.body)
   checkNonces(path, res.body, res.csp)
+  await checkSocialCard(path, res.body)
 
   for (const [ref, index] of extractRefs(res.body)) {
     if (/^(mailto|tel|data|javascript):/i.test(ref)) continue

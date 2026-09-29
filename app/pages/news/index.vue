@@ -11,6 +11,7 @@
  * whether a post is about artiqwest or about Basic Automation before deciding
  * to open it.
  */
+import { SITE_SECTION, socialCardPath } from '~~/shared/posts/section'
 const { data } = await useFetch<{ posts: PostSummary[] }>('/api/posts', {
   key: 'posts-all',
   default: () => ({ posts: [] }),
@@ -34,6 +35,11 @@ useSeoMeta({
   description: 'Release notes and announcements from every Basic Automation project.',
   ogTitle: 'basic automation — news',
   ogUrl: () => `${siteUrl}/news`,
+  ogImage: () => `${siteUrl}${socialCardPath(SITE_SECTION)}`,
+  ogImageWidth: 1200,
+  ogImageHeight: 630,
+  twitterCard: 'summary_large_image',
+  twitterImage: () => `${siteUrl}${socialCardPath(SITE_SECTION)}`,
 })
 </script>
 
