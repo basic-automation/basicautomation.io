@@ -111,6 +111,13 @@ record. There is no run log.
       <https://docs.github.com/en/rest/using-the-rest-api/best-practices-for-using-the-rest-api>
 
 - [x] Structured request logging, and a `status` page fed by `/healthz`
+- [x] …logging each request once. Internal SSR calls to `/api/*` inherit the
+      visitor's `x-forwarded-for`, which the internal-call filter trusted, so
+      every page view through Caddy logged its API calls as visits too — each
+      uptime check of `/` was three lines. And each line now carries `via`
+      (`onion` or `web`), unforgeable from either side.
+- [x] `/api/posts?project=<unknown>` is a 404, like `/api/projects/<unknown>`,
+      not an empty list.
 - [x] Answer HEAD wherever GET is answered. Nitro routes by filename suffix, so
       `healthz.get.ts` bound GET alone and every non-page route — `/healthz`,
       `/sitemap.xml`, `/robots.txt`, `/releases.xml` and both `/api` routes —
