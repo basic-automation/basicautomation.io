@@ -7,7 +7,7 @@
  * is further down the project page. The source is a file this site's own admin
  * wrote, on a volume only this container can reach.
  */
-import { socialCardPath } from '~~/shared/posts/section'
+import { blogName, socialCardPath } from '~~/shared/posts/section'
 const route = useRoute()
 const slug = computed(() => String(route.params.slug))
 const postSlug = computed(() => String(route.params.post))
@@ -31,7 +31,7 @@ const exact = computed(() =>
 useHead({
   script: [{
     type: 'application/ld+json',
-    innerHTML: () => post.value ? ldJson(blogPostingLd(siteUrl, post.value, `${project.value?.name ?? slug.value} news`)) : '',
+    innerHTML: () => post.value ? ldJson(blogPostingLd(siteUrl, post.value, blogName(slug.value, project.value?.name))) : '',
   }],
 })
 

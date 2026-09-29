@@ -5,7 +5,7 @@
  * The same renderer and the same typography as a project's post — the only
  * difference is which blog it belongs to, and therefore where it sits.
  */
-import { SITE_SECTION, socialCardPath } from '~~/shared/posts/section'
+import { SITE_SECTION, blogName, socialCardPath } from '~~/shared/posts/section'
 
 const route = useRoute()
 const postSlug = computed(() => String(route.params.post))
@@ -27,7 +27,7 @@ const exact = computed(() =>
 useHead({
   script: [{
     type: 'application/ld+json',
-    innerHTML: () => post.value ? ldJson(blogPostingLd(siteUrl, post.value, 'basic automation news')) : '',
+    innerHTML: () => post.value ? ldJson(blogPostingLd(siteUrl, post.value, blogName(SITE_SECTION, undefined))) : '',
   }],
 })
 

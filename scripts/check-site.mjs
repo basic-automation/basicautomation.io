@@ -102,6 +102,26 @@ function extractRefs(html) {
  * an absolute one was meant, which is the failure mode of building these out of
  * a request-derived origin.
  */
+/**
+ * The site's structured data is one graph spread across pages: a project page
+ * names the organization by `@id` rather than describing it again, and a post
+ * names its blog the same way. A reference to an `@id` that no page describes
+ * is a dangling edge — a consumer following it finds nothing. Nodes that carry
+ * an `@type` and an `@id` are definitions; an object that is only an `@id` is
+ * a reference. Checked once the whole crawl has been seen.
+ */
+const definedIds = new Set()
+const referencedIds = []
+
+function collectIds(path, value) {
+  if (Array.isArray(value)) return value.forEach((v) => collectIds(path, v))
+  if (!value || typeof value !== 'object') return
+  const keys = Object.keys(value)
+  if (value['@id'] && value['@type']) definedIds.add(value['@id'])
+  else if (value['@id'] && keys.every((k) => k === '@id')) referencedIds.push({ path, id: value['@id'] })
+  for (const v of Object.values(value)) collectIds(path, v)
+}
+
 function checkJsonLd(path, html) {
   const blocks = [...html.matchAll(
     /<script[^>]+type=["']application\/ld\+json["'][^>]*>([\s\S]*?)<\/script>/gi,
@@ -144,6 +164,7 @@ function checkJsonLd(path, html) {
         }
       }
       walk(node, null)
+      collectIds(path, node)
     }
   }
   notes.push(`${path}: ${blocks.length} structured-data block(s), all parsed`)
@@ -579,6 +600,16 @@ while (queue.length) {
 }
 
 console.log('')
+
+// ── Every @id referenced is described somewhere ─────────────────────────────
+{
+  const dangling = new Map()
+  for (const { path, id } of referencedIds) {
+    if (!definedIds.has(id) && !dangling.has(id)) dangling.set(id, path)
+  }
+  for (const [id, path] of dangling) fail(path, `ld+json references ${id}, which no page describes`)
+  notes.push(`${referencedIds.length} structured-data references, ${definedIds.size} described nodes, none dangling`)
+}
 
 // ── Routes nothing links to ─────────────────────────────────────────────────
 for (const path of UNLINKED_ROUTES) {

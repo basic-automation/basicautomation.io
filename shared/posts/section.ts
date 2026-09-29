@@ -52,3 +52,8 @@ export function sectionLabel(project: string, projectName: string | undefined): 
 export function socialCardPath(project: string): string {
   return isSiteSection(project) ? '/og.png' : `/projects/og/${project}.png`
 }
+
+/** A blog's name, the same everywhere it is named — its index and every post in it. */
+export function blogName(project: string, projectName: string | undefined): string {
+  return `${sectionLabel(project, projectName)} news`
+}

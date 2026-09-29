@@ -5,7 +5,7 @@
  * Posts live on a volume rather than in the bundle, so this is a request-time
  * fetch rather than build-time content — see `server/utils/posts.ts` for why.
  */
-import { socialCardPath } from '~~/shared/posts/section'
+import { blogName, socialCardPath } from '~~/shared/posts/section'
 const route = useRoute()
 const slug = computed(() => String(route.params.slug))
 
@@ -30,6 +30,13 @@ const posts = computed(() => data.value?.posts ?? [])
 const siteUrl = useSiteOrigin()
 
 useCanonical(() => `/projects/${slug.value}/blog`)
+
+useHead({
+  script: [{
+    type: 'application/ld+json',
+    innerHTML: () => ldJson(blogLd(siteUrl, slug.value, blogName(slug.value, project.value?.name), posts.value)),
+  }],
+})
 
 useSeoMeta({
   title: () => `news — ${project.value?.name}`,
