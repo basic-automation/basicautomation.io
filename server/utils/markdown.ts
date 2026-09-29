@@ -1,6 +1,6 @@
 import { Marked } from 'marked'
 import { createSlugger } from '~~/shared/markdown/slug'
-import { readmeHeading } from '~~/shared/markdown/heading'
+import { postHeading, readmeHeading } from '~~/shared/markdown/heading'
 
 /**
  * Markdown to HTML, in this site's palette.
@@ -22,7 +22,7 @@ import { readmeHeading } from '~~/shared/markdown/heading'
  * under the page's own h1. The slugger is per-document: duplicate heading text
  * numbers from 1 within one README, not across all of them.
  */
-export async function renderMarkdown(md: string): Promise<string> {
+export async function renderMarkdown(md: string, kind: 'readme' | 'post' = 'readme'): Promise<string> {
   const fences: { lang: string | undefined, code: string }[] = []
   const slug = createSlugger()
 
@@ -35,9 +35,10 @@ export async function renderMarkdown(md: string): Promise<string> {
         fences.push({ lang, code: text })
         return `\u0000FENCE${fences.length - 1}\u0000`
       },
-      // Demoted a level so the README nests under the page's own h1, with the
-      // ids left where GitHub minted them. See shared/markdown/heading.ts.
-      heading: readmeHeading(slug),
+      // A README is demoted a level so it nests under the page's own h1, with
+      // the ids left where GitHub minted them; a post is already written under
+      // its title and keeps its levels. See shared/markdown/heading.ts.
+      heading: kind === 'post' ? postHeading(slug) : readmeHeading(slug),
     },
   })
 

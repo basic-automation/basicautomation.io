@@ -12,5 +12,5 @@ export default defineEventHandler(async (event) => {
   if (!post) throw createError({ statusCode: 404, statusMessage: 'No such post' })
 
   const { body, ...meta } = post
-  return { ...meta, html: await renderMarkdown(body) }
+  return { ...meta, html: await renderMarkdown(body, 'post') }
 })

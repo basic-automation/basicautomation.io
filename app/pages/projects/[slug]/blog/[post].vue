@@ -73,6 +73,6 @@ useSeoMeta({
     <!-- Same `readme` typography as a rendered README, because it is the same
          renderer and should read the same. -->
     <!-- eslint-disable-next-line vue/no-v-html -->
-    <div class="readme mb-32 max-w-3xl" v-html="post.html" />
+    <div class="readme readme-post mb-32 max-w-3xl" v-html="post.html" />
   </article>
 </template>

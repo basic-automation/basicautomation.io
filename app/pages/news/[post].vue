@@ -64,6 +64,6 @@ useSeoMeta({
     </header>
 
     <!-- eslint-disable-next-line vue/no-v-html -->
-    <div class="readme mb-32 max-w-3xl" v-html="post.html" />
+    <div class="readme readme-post mb-32 max-w-3xl" v-html="post.html" />
   </article>
 </template>
