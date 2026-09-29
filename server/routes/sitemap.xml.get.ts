@@ -5,13 +5,14 @@
  *
  * `lastmod` on a project page is the repo's last push: the page's editorial
  * copy is only half of what it shows, and the live half moves when the repo
- * does. The static pages carry no `lastmod` rather than a made-up one.
+ * does. A blog index's is its newest post's date. The static pages carry no
+ * `lastmod` rather than a made-up one.
  */
 
-import { postPath } from '~~/shared/posts/section'
+import { SITE_BLOG_PATH, postPath } from '~~/shared/posts/section'
 import { xmlEscape } from '~~/shared/xml/escape'
 
-const STATIC_ROUTES = ['/', '/projects', '/status', '/news']
+const STATIC_ROUTES = ['/', '/projects', '/status']
 
 function urlEntry(loc: string, lastmod?: string | null): string {
   const mod = lastmod ? `\n    <lastmod>${xmlEscape(lastmod.split('T')[0] ?? '')}</lastmod>` : ''
@@ -26,13 +27,19 @@ export default defineEventHandler(async (event) => {
   // previewed, which is not the same as asking a crawler to index it.
   const posts = (await allPosts()).filter((p) => !p.draft)
 
+  // A blog index changes exactly when a post lands on it, so its newest post's
+  // date is its `lastmod` — the same kind of honest as a post's own. `posts` is
+  // newest first. `/news` lists every blog, so every post counts for it.
+  const newest = (project?: string) => posts.find((p) => project === undefined || p.project === project)?.date
+
   const entries = [
     ...STATIC_ROUTES.map((path) => urlEntry(`${base}${path}`)),
+    urlEntry(`${base}${SITE_BLOG_PATH}`, newest()),
     // `/about` rather than `/projects/<slug>`: the latter is a 301 to it, and a
     // sitemap listing redirects asks every crawler to make two requests to learn
     // one page.
     ...projects.map((p) => urlEntry(`${base}/projects/${p.slug}/about`, p.meta?.pushedAt)),
-    ...projects.map((p) => urlEntry(`${base}/projects/${p.slug}/blog`)),
+    ...projects.map((p) => urlEntry(`${base}/projects/${p.slug}/blog`, newest(p.slug))),
     // A post's own date is its `lastmod`, which is honest: the file is written
     // once and the date in its front matter is when the thing it describes
     // happened. `postPath` so the two URL shapes cannot diverge from the links

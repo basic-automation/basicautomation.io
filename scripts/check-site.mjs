@@ -640,7 +640,14 @@ if (sitemap.status === 200 && sitemap.body) {
       continue
     }
     const res = await fetchOnce(BASE + path)
-    if (res.status !== 200) fail('/sitemap.xml', `promises ${path}, which answered ${res.status}`)
+    if (res.status !== 200) {
+      fail('/sitemap.xml', `promises ${path}, which answered ${res.status}`)
+      continue
+    }
+    // The sitemap and the page have to agree on the page's address, or a
+    // crawler is handed one URL and told by the page that it is another.
+    const canonical = res.body ? canonicalsOf(res.body)[0] : undefined
+    if (canonical && canonical !== loc) fail('/sitemap.xml', `lists ${loc}, whose canonical is ${canonical}`)
   }
   notes.push(`sitemap lists ${locs.length} urls, all reachable`)
 }
