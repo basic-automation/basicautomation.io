@@ -289,6 +289,12 @@ record. There is no run log.
       hydration, colour mode and client navigation log nothing.
       `'unsafe-inline'` stays in the list only as the CSP1 fallback, which a
       nonce-aware browser ignores. <https://www.w3.org/TR/CSP3/#allow-all-inline>
+      One response is deliberately outside all of this: `/onion-frame` strips the
+      Tor snapshot's scripts and then serves `script-src 'none'`, so there is no
+      script left for a nonce to name. `npm run check` exempts a response whose
+      `script-src` is `'none'` — strictly stricter than a nonce, not a hole in the
+      rule — and holds the rest of that policy, `frame-ancestors`, `base-uri`,
+      `form-action` and `default-src`, to the letter instead.
 - [x] …and styles, split with CSP Level 3's `style-src-elem` (nonced: Nuxt UI's
       one head `<style>` is allowed, a README's `<style>` block is refused) and
       `style-src-attr 'unsafe-inline'` (Shiki's per-token colours and Vue's

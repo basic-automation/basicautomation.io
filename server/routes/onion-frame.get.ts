@@ -53,6 +53,12 @@ export default defineEventHandler(async (event) => {
     // unstyled markup — a broken-looking demo of a working thing. With scripts
     // already at `'none'` and everything else pinned to `'self'`, inline CSS here
     // can neither execute nor reach off-origin.
+    //
+    // This is the one response on the site that carries no script nonce, and
+    // `checkNonces` in `scripts/check-site.mjs` exempts it for that reason — a
+    // nonce would name scripts that may run where this names none. It still
+    // holds the rest of this policy to the letter, so a loosening here is where
+    // the check goes red.
     "default-src 'self'; script-src 'none'; style-src 'self' 'unsafe-inline'; frame-ancestors 'self'; base-uri 'none'; form-action 'none'",
   )
   setResponseHeader(event, 'x-frame-options', 'SAMEORIGIN')
