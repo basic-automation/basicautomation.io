@@ -49,6 +49,11 @@ record. There is no run log.
       out relative — which is the failure mode of building these from a
       request-derived origin. All five were proved against broken markup.
 - [x] RSS/Atom feed of releases across the org — `/releases.xml`
+- [x] `BlogPosting` JSON-LD on every post, naming the blog it is part of by
+      `@id`, so the site's news and each project's news are distinguishable
+      without parsing URLs. The project page's `SoftwareSourceCode.url` had been
+      left pointing at `/projects/<slug>`, a 301 since the about/blog tabs; it
+      names `/about` now.
 
 ## Phase 3 — Operations
 
@@ -207,6 +212,8 @@ record. There is no run log.
       vuejs/language-tools#6124 and closed as a duplicate of #5381, the
       TypeScript 7 / `tsgo` support request, which is closed too — so there is
       no open issue to watch. Check the release notes instead.
+      Re-checked 2026-09-28: unchanged (vue-tsc 3.3.11 is still the latest
+      release, of 2026-08-21; golar 0.1.10; TypeScript 7.0.2).
       <https://github.com/vuejs/language-tools/issues/6124>
       <https://github.com/vuejs/language-tools/issues/5381>
 - [x] Silenced Nitro's own `[request error]` stack-trace block on a 404, without
@@ -406,6 +413,34 @@ record. There is no run log.
       (2.97:1) — both under the 3:1 WCAG 1.4.11 asks of a focus indicator at AA.
       `pn-fg` or `pn-dim` would pass without leaving the palette.
       <https://www.w3.org/WAI/WCAG22/Understanding/non-text-contrast.html>
+- [x] The post editor was open to anyone on Tor. `/admin` and `/api/admin/*`
+      are guarded by basic auth in Caddy, and the onion gateway proxies straight
+      to the site over loopback without going through Caddy — so over the onion
+      address, which this site prints on two of its own pages, anyone could list
+      drafts and write or delete posts on a volume that is their only copy. The
+      classic onion-service mistake: whatever a front proxy or a loopback-only
+      rule protects is exposed once the onion service reaches the app from
+      inside. <https://riseup.net/en/security/network-security/tor/onionservices-best-practices>
+      The gateway now marks every request it forwards `x-via-onion: 1`,
+      overwriting any copy a visitor sent (`onion/src/proxy.rs`, unit-tested),
+      and every handler under `server/api/admin/` refuses a marked request with
+      a 404 before doing anything (`refuseOverOnion`), as does the editor page.
+      In the handler rather than by path in a middleware, because a handler only
+      runs when the router resolved to it, whatever the spelling — Nuxt itself
+      fixed route rules matching encoded rather than decoded paths as recently
+      as 4.5.2. <https://github.com/nuxt/nuxt/releases/tag/v4.5.2>
+      `test/admin-guard.test.ts` fails if a new handler forgets the guard, and
+      `npm run check` sends the mark to six spellings of the editor's URLs and
+      fails on anything but 404 or 401.
+- [ ] Authenticate the editor in the app, not by where the request came from —
+      **owner decision**. Caddy and the onion mark cover the two public ways in,
+      but any other container on `caddy-shared-network` reaches
+      `basicautomation-site:3000` directly with neither, and the editor is a
+      write API. A credential the app checks itself (the same basic-auth hash as
+      Caddy's gate, read from a secret) would make the network path irrelevant.
+- [ ] Rule for the future, until the item above lands: anything added to the
+      Caddy site block for `basicautomation.io` that restricts access must also
+      be enforced in the app, or the onion service serves around it.
 - [x] A real 404 check: every internal link, every render, on every route — `npm run check`
 - [x] …and the two XML documents nobody looks at, checked the same way. A feed
       breaks silently for every subscriber at once, and both documents carry
