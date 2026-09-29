@@ -11,6 +11,8 @@
  * a log that is 90% noise does not get read.
  */
 
+import { VIA_ONION, cameOverOnion } from '~~/shared/onion/via'
+
 const SILENT = [/^\/healthz$/, /^\/_nuxt\//, /^\/fonts\//, /\.(?:ico|png|webp|svg|woff2?)$/]
 
 /**
@@ -26,14 +28,29 @@ const SILENT = [/^\/healthz$/, /^\/_nuxt\//, /^\/fonts\//, /\.(?:ico|png|webp|sv
  *   internal  { hasSocket: true, remote: "",          ctor: "A"      }
  *   external  { hasSocket: true, remote: "127.0.0.1", ctor: "Socket" }
  *
- * A real request always has either a peer address — Nitro listens on TCP here,
- * in the container and out of it — or an `x-forwarded-for` from Caddy, so
- * "neither" means internal. A request arriving through the onion proxy has no
- * forwarded address by design but does have a peer, and is still logged.
+ * A real request always has a peer address — Nitro listens on TCP here, in the
+ * container and out of it, and both Caddy and the onion gateway connect to it —
+ * so no peer means internal. The socket alone decides, NOT `x-forwarded-for`:
+ * rendering a page forwards the visitor's headers to those internal calls, so
+ * every page view that came through Caddy used to log its internal `/api/*`
+ * calls as visits too — each uptime check of `/` was three lines.
  */
 function isInternal(event: InstanceType<typeof H3Event>): boolean {
-  const socket = event.node?.req?.socket
-  return !socket || (!socket.remoteAddress && !getRequestHeader(event, 'x-forwarded-for'))
+  return !event.node?.req?.socket?.remoteAddress
+}
+
+/**
+ * Which way in: `onion` through the Tor gateway, `web` through Caddy.
+ *
+ * The gateway marks what it forwards (`shared/onion/via.ts`) and strips
+ * `x-forwarded-for`; Caddy always sets `x-forwarded-for`, and would pass a
+ * clearnet visitor's forged mark straight through. So it is the mark AND no
+ * forwarded address — neither side can be dressed up as the other.
+ */
+function via(event: InstanceType<typeof H3Event>): 'onion' | 'web' {
+  return cameOverOnion(getRequestHeader(event, VIA_ONION)) && !getRequestHeader(event, 'x-forwarded-for')
+    ? 'onion'
+    : 'web'
 }
 
 export default defineNitroPlugin((nitro) => {
@@ -59,6 +76,7 @@ export default defineNitroPlugin((nitro) => {
       // Caddy terminates TLS and proxies in, so the real client is in the
       // forwarded header; the socket address is Caddy's every time.
       ip: getRequestHeader(event, 'x-forwarded-for')?.split(',')[0]?.trim() ?? null,
+      via: via(event),
       ua: getRequestHeader(event, 'user-agent') ?? null,
       ref: getRequestHeader(event, 'referer') ?? null,
     }))
@@ -80,6 +98,7 @@ export default defineNitroPlugin((nitro) => {
       path: event?.path ?? null,
       status,
       ms: started === undefined ? null : Math.round(performance.now() - started),
+      via: event ? via(event) : null,
       message: error.message,
     }))
   })
