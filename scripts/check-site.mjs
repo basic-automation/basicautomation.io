@@ -496,6 +496,22 @@ for (const path of ['/', '/projects', ...UNLINKED_ROUTES]) {
 }
 notes.push('HEAD answers the same as GET on every route')
 
+// ── The editor does not exist over Tor ──────────────────────────────────────
+// Caddy's basic auth guards /admin and /api/admin/*, and the onion gateway
+// reaches the site without going through Caddy — it marks every request it
+// forwards with `x-via-onion` instead (shared/onion/via.ts). Sent here with that
+// mark, the editor has to be refused: 404 from the site itself, or 401 where
+// Caddy is in front and asks first. A 200 is the editor open to anyone on Tor.
+// The odd spellings are routes the router still resolves to the same handler.
+for (const path of ['/admin', '/ADMIN', '/admin/', '/api/admin/posts', '/api/admin/posts/', '/api/admin/post?project=site&slug=x']) {
+  const res = await fetch(BASE + path, { headers: { ...HEADERS, 'x-via-onion': '1' }, redirect: 'manual' })
+    .catch((err) => ({ status: 0, error: err.message }))
+  if (res.status !== 404 && res.status !== 401) {
+    fail(path, `over the onion gateway the editor answered ${res.status || res.error}; it must be refused`)
+  }
+}
+notes.push('the editor is refused to requests from the onion gateway')
+
 // ── A 404 has to be a 404 ───────────────────────────────────────────────────
 for (const path of MUST_404) {
   const res = await fetchOnce(BASE + path)
