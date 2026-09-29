@@ -24,6 +24,13 @@ const siteUrl = useSiteOrigin()
 const exact = computed(() =>
   post.value ? new Date(post.value.date).toLocaleDateString('en-GB', { year: 'numeric', month: 'long', day: 'numeric' }) : '')
 
+useHead({
+  script: [{
+    type: 'application/ld+json',
+    innerHTML: () => post.value ? ldJson(blogPostingLd(siteUrl, post.value, 'basic automation news')) : '',
+  }],
+})
+
 useSeoMeta({
   title: () => `${post.value?.title} — basic automation`,
   description: () => post.value?.summary,

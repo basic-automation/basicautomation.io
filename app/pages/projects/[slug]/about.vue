@@ -106,7 +106,8 @@ const jsonLd = computed(() => {
     'alternateName': p.repo,
     'headline': p.hero,
     'description': p.summary,
-    'url': `${siteUrl}/projects/${p.slug}`,
+    // The tab's own address: `/projects/<slug>` is a 301 to it.
+    'url': `${siteUrl}/projects/${p.slug}/about`,
     'codeRepository': m?.htmlUrl ?? `https://github.com/basic-automation/${p.repo}`,
     // Referenced, not repeated: the description lives on the landing page, and
     // a consumer reading two pages of this site can tell it is one organization.
