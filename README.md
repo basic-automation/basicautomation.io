@@ -35,7 +35,10 @@ bars the way a terminal does it.
 
 Each project page also carries `SoftwareSourceCode` JSON-LD and its own Open
 Graph card, so a link to it previews as itself rather than as the organization.
-Each post carries `BlogPosting` JSON-LD naming the blog it belongs to.
+Each post carries `BlogPosting` JSON-LD naming the blog it belongs to. Every
+page names its one address with `<link rel="canonical">`, the same string as its
+`og:url` and its sitemap entry, so `/PROJECTS` or `/news/` or a tracking query
+string is never mistaken for a second page.
 
 ## Posts
 
@@ -43,8 +46,16 @@ Posts are markdown files at `$CONTENT_DIR/posts/<project>/<slug>.md`, on the
 named volume `basicautomation-content` — that volume is the only copy, so it
 belongs in the backup set. `site` is the reserved section for `/news`. They are
 rendered at request time by the same `marked` + Shiki pipeline as the READMEs,
-so a post needs no rebuild. Drafts are hidden from every listing but reachable
-by URL, for previewing.
+so a post needs no rebuild — except that a post's headings keep their level
+(its title is the page's `h1`, so its `##` is an `h2`), where a README's are
+demoted one. Drafts are hidden from every listing, the feed and the sitemap,
+and carry `noindex`, but are reachable by URL, for previewing.
+
+Every post and blog page names one canonical address, previews with its
+blog's card (the project's own, or the organization's for `/news`), and
+carries structured data: `BlogPosting` per post, `Blog` on each blog's index.
+`/news.xml` is the feed. CI renders all of this against a few test posts in
+`test/fixtures/content/` — never the live content.
 
 `/admin` writes them. It and `/api/admin/*` are guarded by basic auth in Caddy —
 and the onion gateway does not go through Caddy, so the site also refuses the
@@ -69,6 +80,11 @@ the same seven projects refresh every 5 minutes — 252 calls an hour; the
 deployed site has one. A visitor always gets freshly rendered markup, and adding
 a project lengthens the freshness window instead of quietly running the site
 into the rate limit. `/status` says which of the two it is running on.
+
+Each GitHub request is conditional: the site keeps the ETag of the last answer
+and sends `If-None-Match`, and a repo that has not changed comes back
+`304 Not Modified` — which, with a token, costs none of the quota
+(`shared/github/conditional.ts`). `/status` shows how many of its calls were.
 
 If GitHub or crates.io is unreachable, the render falls back to
 `data/projects.generated.json` — a committed snapshot refreshed by `npm run sync`.
