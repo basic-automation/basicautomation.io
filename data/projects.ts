@@ -425,51 +425,64 @@ default_low_stock_threshold = 5    # overridable per product in the app
     name: 'Skidbladnir',
     logo: '/projects/skidbladnir.svg',
     screenshot: '/projects/shots/skidbladnir-screenshot.webp',
-    tagline: 'Smaller images for the web, without touching a command line',
-    hero: 'The whole WebP encoder, in a window.',
+    tagline: 'Smaller images, in every modern format, without touching a command line',
+    hero: 'Every modern image format, in one window.',
     summary:
-      'Convert images to WebP through a window instead of a command line — the encoder\'s full '
-      + 'control surface, not just a quality slider. Queue a batch, set it up once, and get '
-      + 'exactly what the reference tool produces. Windows today; a rewrite for Linux and '
-      + 'macOS is in progress.',
+      'Convert images to WebP, AVIF, JPEG XL or HEIC through a window instead of a command '
+      + 'line — each encoder\'s full control surface, not just a quality slider. See the result '
+      + 'beside the original before anything is written, then convert a batch or a whole '
+      + 'folder. Windows, macOS and Linux.',
     problem:
-      'The official WebP converter is excellent and almost unusable — a wall of options you '
-      + 'relearn every time you need them, and one wrong flag away from a ruined batch. '
-      + 'Skidbladnir puts a window in front of it and gets the same result.',
+      'The reference encoders are excellent and almost unusable: four separate command-line '
+      + 'tools, each a wall of options you relearn every time you need them, each one wrong '
+      + 'flag away from a ruined batch. Skidbladnir puts a window in front of all four and '
+      + 'gets the same files out.',
     kind: 'Desktop app',
     status: 'active',
     accent: 'green',
     order: 6,
     features: [
       {
-        title: 'A batch at a time',
-        body: 'Queue up a whole set of images and convert them in one go. It reports the original and the converted size for each one, so you can see what you actually saved.',
+        title: 'Four formats, one window',
+        body: 'WebP, AVIF, JPEG XL and HEIC, each with its own controls. Convert between any of them, and each format remembers its own settings while you try another.',
       },
       {
-        title: 'Lighter pages, same picture',
-        body: 'WebP carries the same image in a fraction of the file size — faster pages for your visitors, less bandwidth on your bill.',
+        title: 'The same files as the reference tool',
+        body: 'WebP output is byte-for-byte identical to what the official converter produces at the same settings, checked against it on every build. If you have been hitting a particular look, you keep hitting it.',
       },
       {
-        title: 'Aim at a size, not a number',
-        body: 'Ask for a target file size or a target quality score and let the encoder find the settings, instead of guessing at a quality slider.',
+        title: 'See it before you write it',
+        body: 'Preview the encoded result beside your original, with the size and the saving, before anything touches your disk.',
       },
       {
-        title: 'The reference encoder\'s output',
-        body: 'It drives Google\'s own converter rather than reimplementing it, so what comes out is what the reference tool produces.',
+        title: 'Your photo library, a fifth smaller',
+        body: 'JPEG XL repacks a JPEG about 20% smaller without decoding it, and the original can be rebuilt from it exactly. Nothing is thrown away and nothing is guessed.',
+      },
+      {
+        title: 'iPhone photos in, anything out',
+        body: 'Reads HEIC, AVIF, JPEG XL, PNG, JPEG and TIFF — including the CMYK JPEGs Photoshop writes and the official WebP tool refuses — and works out which is which by looking inside the file rather than trusting its name.',
+      },
+      {
+        title: 'A batch, or a whole folder',
+        body: 'Queue files or point it at a directory, with subfolders if you want them. Progress per file, and a Cancel that never leaves a half-written image behind.',
       },
       {
         title: 'Expert dials, out of the way',
-        body: 'Noise shaping, filter strength, multi-pass, sharp colour conversion, segment count — every control the encoder has, folded behind a disclosure so the simple path stays simple.',
+        body: 'Noise shaping, filter strength, multi-pass, sharp colour conversion, segment count — every control the encoders have, folded behind a disclosure so the simple path stays simple. Save the settings you settle on as named presets.',
       },
       {
-        title: 'Presets for the usual jobs',
-        body: 'Photo, drawing, icon, text: pick the kind of image you have and start from settings that already suit it.',
+        title: 'Honest about where it is',
+        body: 'Still a prerelease. The Windows and Linux builds are installed and exercised automatically on every change; the macOS builds are compiled but have not yet been launched, and nothing is code-signed. It updates itself from here on, verifying each release against the project\'s signing key.',
       },
     ],
     // The argument for a GUI over a CLI is the command line it replaces, so
-    // show it. Every flag here is one the app exposes in its own window.
+    // show it. Every flag here is one the app exposes in its own window — and
+    // this is only the WebP one; there is a separate tool, with its own flags,
+    // behind each of the other three formats. Deliberately still `cwebp`: it is
+    // the line this project has always been measured against, and the one whose
+    // output the app matches byte for byte.
     example: {
-      label: 'the command line you no longer have to remember',
+      label: 'one of the four command lines you no longer have to remember',
       lang: 'shellscript',
       code: `cwebp -q 80 -m 6 -sharp_yuv -sns 80 -f 60 -segments 4 \\
       -mt -resize 1600 0 \\
@@ -477,9 +490,10 @@ default_low_stock_threshold = 5    # overridable per product in the app
     },
     links: [
       {
-        label: 'Download for Windows',
+        label: 'Download for Windows, macOS or Linux',
         href: 'https://github.com/basic-automation/Skidbladnir/releases',
       },
+      { label: 'Built with Tauri', href: 'https://v2.tauri.app' },
     ],
   },
   {
