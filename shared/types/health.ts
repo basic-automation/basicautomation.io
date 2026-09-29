@@ -41,6 +41,15 @@ export interface Health {
     observedAt: string
   } | null
   /**
+   * GitHub requests since this process started, and how many were answered
+   * `304 Not Modified` to a conditional request — which, authorized, cost no
+   * quota. See `shared/github/conditional.ts`.
+   */
+  githubCalls: {
+    made: number
+    notModified: number
+  }
+  /**
    * The onion service, judged by the gateway's own self-fetch over Tor.
    * `off` where no gateway runs (outside the image, or `ONION_ENABLED=0`);
    * `starting` until it has an address; `launched` until the first fetch over

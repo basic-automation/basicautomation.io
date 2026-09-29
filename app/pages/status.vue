@@ -75,6 +75,12 @@ const rows = computed(() => {
         ? `${h.github.remaining} of ${h.github.limit} left, resets in ${duration(h.github.resetsInSeconds)}`
         : 'not yet asked',
     },
+    // A `304` to a conditional request costs no quota, so the second number is
+    // how much of the first was free.
+    {
+      label: 'github calls',
+      value: `${h.githubCalls.made} since start, ${h.githubCalls.notModified} unchanged (304, free)`,
+    },
     { label: 'onion', value: onionLine(h.onion) },
     {
       label: 'refresh',

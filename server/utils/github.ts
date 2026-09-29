@@ -16,6 +16,7 @@
 // type-instantiation depth limit. These calls go off-site, so use ofetch
 // directly — it is the same client without the internal-route inference.
 import { ofetch } from 'ofetch'
+import { ConditionalCache } from '~~/shared/github/conditional'
 import { projects, type Project } from '~~/data/projects'
 import type { EnrichedProject, Release, RepoMeta } from '~~/shared/types/project'
 import { absolutize, stripLeadingLogo } from '~~/shared/markdown/readme'
@@ -115,15 +116,35 @@ async function gh<T>(
   }
   const t = token()
   if (t) headers.authorization = `Bearer ${t}`
-  return ofetch(`https://api.github.com${path}`, {
-    headers,
-    timeout: 8000,
-    responseType: responseType as 'json',
-    // Every response, refusals included: ofetch runs this before it decides
-    // the status is an error, and a 403 is exactly when the numbers matter.
-    onResponse: ({ response }) => recordRateLimit(response.headers),
-  }) as Promise<T>
+
+  // Conditional: a `304` to an authorized request costs no quota, and most
+  // refreshes change nothing. See `shared/github/conditional.ts`.
+  const key = `${accept} ${path}`
+  const etag = conditional.etag(key)
+  if (etag) headers['if-none-match'] = etag
+
+  let notModified = false
+  try {
+    const res = await ofetch.raw(`https://api.github.com${path}`, {
+      headers,
+      timeout: 8000,
+      responseType: responseType as 'json',
+      // Every response, refusals included: ofetch runs this before it decides
+      // the status is an error, and a 403 is exactly when the numbers matter.
+      onResponse: ({ response }) => recordRateLimit(response.headers),
+    })
+    // ofetch only throws from 400 up, so a `304` arrives here as a "success"
+    // with no body; `answer` turns it back into the stored one.
+    const answer = conditional.answer(key, res.status, res.headers.get('etag'), res._data)
+    notModified = answer.notModified
+    return answer.body as T
+  }
+  finally {
+    recordGithubCall(notModified)
+  }
 }
+
+const conditional = new ConditionalCache()
 
 async function fetchRepo(project: Project): Promise<RepoMeta> {
   const { repo } = project
