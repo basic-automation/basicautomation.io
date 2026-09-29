@@ -176,6 +176,11 @@ export async function allPosts(): Promise<Post[]> {
   return out
 }
 
+/** Whether a `project` value names a blog at all — a project, or the site's own. */
+export function isKnownSection(project: string): boolean {
+  return knownProjects.has(project)
+}
+
 /** Published posts for one project, newest first. */
 export async function postsFor(project: string): Promise<PostSummary[]> {
   const all = await allPosts()

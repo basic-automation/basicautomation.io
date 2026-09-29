@@ -28,7 +28,7 @@ const BASE = (args.find((a) => !a.startsWith('--'))
 const UNLINKED_ROUTES = ['/healthz', '/sitemap.xml', '/robots.txt', '/releases.xml', '/news.xml', '/api/projects']
 
 /** Paths that must answer 404 — a soft 200 on a missing page is the bug. */
-const MUST_404 = ['/projects/no-such-project', '/no-such-page-at-all', '/api/projects/nope']
+const MUST_404 = ['/projects/no-such-project', '/no-such-page-at-all', '/api/projects/nope', '/api/posts?project=nope']
 
 /**
  * crates.io serves its app only to something that says it wants HTML; asked

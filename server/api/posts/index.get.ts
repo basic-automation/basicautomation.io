@@ -14,6 +14,9 @@ export default defineEventHandler(async (event) => {
   const { project, limit } = getQuery(event)
 
   if (typeof project === 'string' && project) {
+    // An unknown blog is a 404, as `/api/projects/<nope>` is — an empty list
+    // would say "this blog exists and is quiet", which is a different answer.
+    if (!isKnownSection(project)) throw createError({ statusCode: 404, statusMessage: 'No such blog' })
     return { posts: await postsFor(project) }
   }
 
