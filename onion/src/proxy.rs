@@ -64,30 +64,7 @@ async fn forward(State(upstream): State<Upstream>, req: Request) -> Response {
 	let (parts, body) = req.into_parts();
 	let target = upstream.target(&parts.uri);
 
-	let mut headers = HeaderMap::new();
-	for (name, value) in parts.headers.iter() {
-		if !is_hop_by_hop(name) {
-			headers.insert(name.clone(), value.clone());
-		}
-	}
-
-	// The site is behind Caddy in its other life and reads `x-forwarded-*`.
-	// `x-forwarded-for` is deliberately NOT set: a visitor over an onion
-	// service has no address to forward, and inventing one would put a
-	// meaningless value in the site's request log where a human reads it.
-	headers.remove("x-forwarded-for");
-	headers.insert("x-forwarded-proto", HeaderValue::from_static("https"));
-
-	// `host` was just dropped as hop-by-hop — correctly, it describes the
-	// connection being made, and the one being made is to loopback. But that
-	// leaves the site with no way to know it was reached on the onion name, and
-	// it needs to know: it renders `og:url`, JSON-LD and its sitemap absolute,
-	// and without this it hands an onion visitor a page whose every absolute
-	// link points at the clearnet domain. So the name goes back on as
-	// `x-forwarded-host`, which is what the site already reads behind Caddy.
-	if let Some(host) = original_host(&parts) {
-		headers.insert("x-forwarded-host", host);
-	}
+	let headers = forwarded_headers(&parts);
 
 	let stream = body_to_stream(body);
 
@@ -119,6 +96,52 @@ async fn forward(State(upstream): State<Upstream>, req: Request) -> Response {
 		tracing::error!(error = %err, "could not build the proxied response");
 		(StatusCode::BAD_GATEWAY, "The site is not answering.").into_response()
 	})
+}
+
+/// The header the site reads to know a request came through this gateway.
+///
+/// The site's post editor (`/admin`, `/api/admin/*`) is authenticated by Caddy,
+/// and this gateway does not go through Caddy — it proxies straight to the site
+/// over loopback. Without this, the editor would be open to anyone who can
+/// reach the onion address, which is printed on the site's own pages. The site
+/// refuses the editor to any request carrying it (`server/utils/adminGuard.ts`).
+///
+/// It is always overwritten, never passed through: a visitor sending their own
+/// copy must not be able to remove the mark, and a clearnet visitor sending it
+/// through Caddy only locks themselves out.
+pub const VIA_ONION: &str = "x-via-onion";
+
+/// The headers to send upstream for a visitor's request.
+fn forwarded_headers(parts: &axum::http::request::Parts) -> HeaderMap {
+	let mut headers = HeaderMap::new();
+	for (name, value) in parts.headers.iter() {
+		if !is_hop_by_hop(name) {
+			headers.append(name.clone(), value.clone());
+		}
+	}
+
+	// The site is behind Caddy in its other life and reads `x-forwarded-*`.
+	// `x-forwarded-for` is deliberately NOT set: a visitor over an onion
+	// service has no address to forward, and inventing one would put a
+	// meaningless value in the site's request log where a human reads it.
+	headers.remove("x-forwarded-for");
+	headers.insert("x-forwarded-proto", HeaderValue::from_static("https"));
+
+	// `host` was just dropped as hop-by-hop — correctly, it describes the
+	// connection being made, and the one being made is to loopback. But that
+	// leaves the site with no way to know it was reached on the onion name, and
+	// it needs to know: it renders `og:url`, JSON-LD and its sitemap absolute,
+	// and without this it hands an onion visitor a page whose every absolute
+	// link points at the clearnet domain. So the name goes back on as
+	// `x-forwarded-host`, which is what the site already reads behind Caddy.
+	// A visitor's own `x-forwarded-host` is replaced, never kept.
+	headers.remove("x-forwarded-host");
+	if let Some(host) = original_host(parts) {
+		headers.insert("x-forwarded-host", host);
+	}
+
+	headers.insert(VIA_ONION, HeaderValue::from_static("1"));
+	headers
 }
 
 /// The name the visitor asked for, from whichever place this HTTP version put it.
@@ -193,5 +216,33 @@ mod tests {
 		let b = Upstream::new("http://site:3000///").unwrap();
 		let uri: Uri = "/healthz".parse().unwrap();
 		assert_eq!(a.target(&uri), b.target(&uri));
+	}
+	fn parts(req: Request) -> axum::http::request::Parts {
+		req.into_parts().0
+	}
+
+	#[test]
+	fn every_forwarded_request_is_marked_as_coming_over_tor() {
+		let p = parts(Request::builder().uri("/api/admin/posts").header("host", "example.onion").body(Body::empty()).unwrap());
+		assert_eq!(forwarded_headers(&p).get(VIA_ONION).unwrap(), "1");
+	}
+
+	#[test]
+	fn a_visitor_cannot_remove_or_multiply_the_mark() {
+		// Whatever a visitor sends under the same name is replaced by one value,
+		// so the site never sees an empty or ambiguous mark it might misread.
+		let p = parts(Request::builder().uri("/admin").header(VIA_ONION, "").header(VIA_ONION, "0").body(Body::empty()).unwrap());
+		let h = forwarded_headers(&p);
+		let marks: Vec<_> = h.get_all(VIA_ONION).iter().collect();
+		assert_eq!(marks, vec!["1"]);
+	}
+
+	#[test]
+	fn a_visitors_own_forwarded_host_is_replaced() {
+		let p = parts(Request::builder().uri("/").header("host", "example.onion").header("x-forwarded-host", "basicautomation.io").header("x-forwarded-for", "1.2.3.4").body(Body::empty()).unwrap());
+		let h = forwarded_headers(&p);
+		assert_eq!(h.get_all("x-forwarded-host").iter().collect::<Vec<_>>(), vec!["example.onion"]);
+		assert!(h.get("x-forwarded-for").is_none());
+		assert!(h.get("host").is_none());
 	}
 }

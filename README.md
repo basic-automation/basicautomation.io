@@ -20,7 +20,10 @@ bars the way a terminal does it.
 | --- | --- |
 | `/` | The pitch, live project stats, and the catalogue |
 | `/projects` | Every public project |
-| `/projects/<slug>` | A marketing page per project: hero, why it exists, features, a worked example, the recent releases, and the repo's README folded away underneath |
+| `/projects/<slug>/about` | A marketing page per project: hero, why it exists, features, a worked example, the recent releases, and the repo's README folded away underneath. `/projects/<slug>` redirects here |
+| `/projects/<slug>/blog` | That project's news, and `/projects/<slug>/blog/<post>` for one post |
+| `/news` | The organization's own news, for what is about Basic Automation rather than one tool |
+| `/admin` | The post editor — behind basic auth in Caddy, and absent over Tor (below) |
 | `/status` | Whether the site is rendering live data or the fallback snapshot, whether the onion service was last reached over Tor, and how long it has been up |
 | `/releases.xml` | An Atom feed of every release across every project |
 | `/sitemap.xml` | Built from the same project list the pages render from |
@@ -31,6 +34,23 @@ bars the way a terminal does it.
 
 Each project page also carries `SoftwareSourceCode` JSON-LD and its own Open
 Graph card, so a link to it previews as itself rather than as the organization.
+Each post carries `BlogPosting` JSON-LD naming the blog it belongs to.
+
+## Posts
+
+Posts are markdown files at `$CONTENT_DIR/posts/<project>/<slug>.md`, on the
+named volume `basicautomation-content` — that volume is the only copy, so it
+belongs in the backup set. `site` is the reserved section for `/news`. They are
+rendered at request time by the same `marked` + Shiki pipeline as the READMEs,
+so a post needs no rebuild. Drafts are hidden from every listing but reachable
+by URL, for previewing.
+
+`/admin` writes them. It and `/api/admin/*` are guarded by basic auth in Caddy —
+and the onion gateway does not go through Caddy, so the site also refuses the
+editor to every request the gateway forwards (it marks them `x-via-onion`,
+overwriting any a visitor sent). Over Tor the editor is a 404. Every handler
+under `server/api/admin/` checks this first, and a unit test fails if one does
+not.
 
 ## How the data works
 

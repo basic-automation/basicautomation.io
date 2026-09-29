@@ -6,6 +6,8 @@
  * same file rather than accumulate.
  */
 export default defineEventHandler(async (event) => {
+  refuseOverOnion(event)
+
   const parsed = parsePost(await readBody(event))
   if (!parsed.ok) throw createError({ statusCode: 400, statusMessage: parsed.reason })
 

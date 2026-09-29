@@ -1,5 +1,7 @@
 /** Remove a post. */
 export default defineEventHandler(async (event) => {
+  refuseOverOnion(event)
+
   const { project, slug } = getQuery(event)
   if (typeof project !== 'string' || typeof slug !== 'string') {
     throw createError({ statusCode: 400, statusMessage: 'project and slug are required' })

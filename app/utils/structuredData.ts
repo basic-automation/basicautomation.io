@@ -11,6 +11,8 @@
  * which is why it carries a fragment that resolves to nothing.
  */
 
+import { blogIndexPath, isSiteSection, postPath } from '~~/shared/posts/section'
+
 export const ORG_ID = '#organization'
 export const SITE_ID = '#website'
 
@@ -36,4 +38,33 @@ export function organizationLd(siteUrl: string): Record<string, unknown> {
 /** A reference to it, for a page that is not the one describing it. */
 export function organizationRef(siteUrl: string): Record<string, unknown> {
 	return { '@id': `${siteUrl}/${ORG_ID}` }
+}
+
+/**
+ * A post, as a `BlogPosting` in the blog it belongs to.
+ *
+ * `isPartOf` names the blog by `@id` so that every post in one blog points at
+ * the same node — the site's own news and each project's news are separate
+ * blogs, and a consumer should be able to tell which a post came from without
+ * parsing its URL. The image is the social card the post's page already
+ * advertises: its project's card, or the organization's for the site's own.
+ */
+export function blogPostingLd(siteUrl: string, post: PostSummary, blogName: string): Record<string, unknown> {
+	const url = `${siteUrl}${postPath(post.project, post.slug)}`
+	const blogUrl = `${siteUrl}${blogIndexPath(post.project)}`
+	const data: Record<string, unknown> = {
+		'@context': 'https://schema.org',
+		'@type': 'BlogPosting',
+		'headline': post.title,
+		'url': url,
+		'mainEntityOfPage': url,
+		'datePublished': post.date,
+		'inLanguage': 'en',
+		'author': organizationRef(siteUrl),
+		'publisher': organizationRef(siteUrl),
+		'image': isSiteSection(post.project) ? `${siteUrl}/og.png` : `${siteUrl}/projects/og/${post.project}.png`,
+		'isPartOf': { '@type': 'Blog', '@id': `${blogUrl}#blog`, 'name': blogName, 'url': blogUrl },
+	}
+	if (post.summary) data.description = post.summary
+	return data
 }

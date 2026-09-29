@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import { VIA_ONION, cameOverOnion } from '~~/shared/onion/via'
+
 /**
  * The post editor.
  *
@@ -21,6 +23,15 @@
  * you something else would be showing you a second opinion about your own post.
  */
 definePageMeta({ layout: 'default' })
+
+// Caddy's basic auth never sees a request that came through the onion gateway,
+// so over Tor this page does not exist — see `shared/onion/via.ts`. Checked
+// here, in the page, rather than by path in a middleware: this only runs when
+// the router matched the editor, however the URL was spelled. The API routes
+// it calls refuse the same requests on their own (`refuseOverOnion`).
+if (import.meta.server && cameOverOnion(useRequestHeader(VIA_ONION))) {
+  throw createError({ statusCode: 404, statusMessage: 'Page not found', fatal: import.meta.client })
+}
 
 useSeoMeta({ title: 'post editor', robots: 'noindex, nofollow' })
 
