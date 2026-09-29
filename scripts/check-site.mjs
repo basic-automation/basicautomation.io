@@ -548,6 +548,23 @@ if (sitemap.status === 200 && sitemap.body) {
   notes.push(`sitemap lists ${locs.length} urls, all reachable`)
 }
 
+// ── Drafts are listed nowhere ───────────────────────────────────────────────
+// A draft is reachable by its URL for previewing and must not appear in any
+// listing. Every listing — the home page, /news, each project's blog — is
+// built from /api/posts, so a draft there is a draft on all of them.
+const postList = await fetch(`${BASE}/api/posts`, { headers: HEADERS })
+  .catch((err) => ({ status: 0, error: err.message }))
+if (postList.status !== 200) {
+  fail('/api/posts', `expected 200, got ${postList.status || postList.error}`)
+}
+else {
+  const posts = (await postList.json()).posts ?? []
+  for (const p of posts.filter((p) => p.draft)) {
+    fail('/api/posts', `lists the draft ${p.project}/${p.slug}`)
+  }
+  notes.push(`${posts.length} published post(s) listed, no drafts among them`)
+}
+
 // ── HEAD answers wherever GET does ──────────────────────────────────────────
 // Nitro routes by filename suffix, so `healthz.get.ts` binds GET alone and a
 // HEAD for it used to fall through to the catch-all as a 404. That is the
