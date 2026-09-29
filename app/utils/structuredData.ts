@@ -11,7 +11,7 @@
  * which is why it carries a fragment that resolves to nothing.
  */
 
-import { blogIndexPath, isSiteSection, postPath } from '~~/shared/posts/section'
+import { blogIndexPath, postPath, socialCardPath } from '~~/shared/posts/section'
 
 export const ORG_ID = '#organization'
 export const SITE_ID = '#website'
@@ -62,9 +62,37 @@ export function blogPostingLd(siteUrl: string, post: PostSummary, blogName: stri
 		'inLanguage': 'en',
 		'author': organizationRef(siteUrl),
 		'publisher': organizationRef(siteUrl),
-		'image': isSiteSection(post.project) ? `${siteUrl}/og.png` : `${siteUrl}/projects/og/${post.project}.png`,
+		'image': `${siteUrl}${socialCardPath(post.project)}`,
 		'isPartOf': { '@type': 'Blog', '@id': `${blogUrl}#blog`, 'name': blogName, 'url': blogUrl },
 	}
 	if (post.summary) data.description = post.summary
 	return data
+}
+
+/**
+ * A blog, as the node every one of its posts' `isPartOf` names by `@id`.
+ *
+ * Emitted by the blog's own index — `/news` for the site's, the blog tab for a
+ * project's — so the `@id` a post points at is described somewhere rather than
+ * dangling. `blogPost` lists what the index lists, by URL and headline; each
+ * post describes itself in full on its own page.
+ */
+export function blogLd(siteUrl: string, project: string, name: string, posts: PostSummary[]): Record<string, unknown> {
+	const url = `${siteUrl}${blogIndexPath(project)}`
+	return {
+		'@context': 'https://schema.org',
+		'@type': 'Blog',
+		'@id': `${url}#blog`,
+		'name': name,
+		'url': url,
+		'inLanguage': 'en',
+		'publisher': organizationRef(siteUrl),
+		'image': `${siteUrl}${socialCardPath(project)}`,
+		'blogPost': posts.map((p) => ({
+			'@type': 'BlogPosting',
+			'headline': p.title,
+			'url': `${siteUrl}${postPath(p.project, p.slug)}`,
+			'datePublished': p.date,
+		})),
+	}
 }

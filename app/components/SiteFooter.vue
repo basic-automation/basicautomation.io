@@ -66,6 +66,12 @@ const year = new Date().getFullYear()
               class="inline-block py-1 text-pn-dim transition-colors hover:text-pn-fg-bright"
             >releases feed</a>
           </li>
+          <li>
+            <a
+              href="/news.xml"
+              class="inline-block py-1 text-pn-dim transition-colors hover:text-pn-fg-bright"
+            >news feed</a>
+          </li>
         </ul>
       </div>
     </div>

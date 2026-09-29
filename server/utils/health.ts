@@ -67,6 +67,18 @@ export function recordRateLimit(headers: Headers | undefined): void {
   rateLimit = { limit, remaining, reset, at: Date.now() }
 }
 
+let githubCalls = 0
+let githubNotModified = 0
+
+/**
+ * Called once per GitHub request, by `gh()` in `github.ts`. `notModified` is a
+ * `304` to a conditional request — one that cost no quota.
+ */
+export function recordGithubCall(notModified: boolean): void {
+  githubCalls++
+  if (notModified) githubNotModified++
+}
+
 /** Called once per resolved repo, by the cached fetch in `github.ts`. */
 export function recordSource(source: 'live' | 'snapshot'): void {
   if (source === 'live') {
@@ -183,6 +195,7 @@ export async function health(): Promise<Health> {
       resetsInSeconds: Math.max(0, Math.round(rateLimit.reset - now / 1000)),
       observedAt: new Date(rateLimit.at).toISOString(),
     },
+    githubCalls: { made: githubCalls, notModified: githubNotModified },
     onion,
     authenticated: githubRefresh.authenticated,
     refreshSeconds: githubRefresh.ttl,

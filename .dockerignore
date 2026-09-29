@@ -9,8 +9,11 @@
 **/.data
 **/*.log
 
-# Worktrees created by tooling alongside the repo.
+# Worktrees created by tooling alongside the repo — including Claude Code's,
+# under `.claude/worktrees/`: other sessions' in-progress trees, their own
+# `scratch/` dirs and all, which have no business in this image's build stage.
 .worktrees
+.claude
 
 .git
 .github

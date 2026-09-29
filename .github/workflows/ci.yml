@@ -69,7 +69,11 @@ jobs:
       # crawls every page, follows every internal link and asset, walks the
       # sitemap, and asserts the 404s are 404s. External links are not followed:
       # somebody else's uptime must not decide whether this PR is green.
+      # With the test posts in `test/fixtures/content`: with no posts at all,
+      # every blog page is an empty state and a post page never renders.
       - name: Check the rendered site
+        env:
+          CONTENT_DIR: test/fixtures/content
         run: |
           node .output/server/index.mjs &
           server=$!

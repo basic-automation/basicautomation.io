@@ -11,6 +11,7 @@
  * whether a post is about artiqwest or about Basic Automation before deciding
  * to open it.
  */
+import { SITE_SECTION, blogName, isSiteSection, socialCardPath } from '~~/shared/posts/section'
 const { data } = await useFetch<{ posts: PostSummary[] }>('/api/posts', {
   key: 'posts-all',
   default: () => ({ posts: [] }),
@@ -29,11 +30,32 @@ const nameFor = (slug: string): string =>
 
 const siteUrl = useSiteOrigin()
 
+useCanonical('/news')
+
+// The page lists every blog, but the `Blog` it describes is the site's own —
+// the one `/news/<post>` pages name in `isPartOf`. Project blogs are described
+// on their own tabs.
+useHead({
+  script: [{
+    type: 'application/ld+json',
+    innerHTML: () => ldJson(blogLd(
+      siteUrl,
+      SITE_SECTION,
+      blogName(SITE_SECTION, undefined),
+      posts.value.filter((p) => isSiteSection(p.project)),
+    )),
+  }],
+})
+
 useSeoMeta({
   title: 'news — basic automation',
   description: 'Release notes and announcements from every Basic Automation project.',
   ogTitle: 'basic automation — news',
-  ogUrl: () => `${siteUrl}/news`,
+  ogImage: () => `${siteUrl}${socialCardPath(SITE_SECTION)}`,
+  ogImageWidth: 1200,
+  ogImageHeight: 630,
+  twitterCard: 'summary_large_image',
+  twitterImage: () => `${siteUrl}${socialCardPath(SITE_SECTION)}`,
 })
 </script>
 

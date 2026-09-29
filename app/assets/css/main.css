@@ -235,6 +235,31 @@ body {
 .readme h5 { font-size: 0.875rem; color: var(--color-pn-dim); }
 .readme h6 { font-size: 0.875rem; color: var(--color-pn-dim); }
 
+/* A post is NOT demoted — its title is the page's h1, so its `##` is an `h2`
+   (shared/markdown/heading.ts, `underTitle`). The labels still follow the
+   markdown the author wrote, so on a post they sit one tag higher: `h2` looks
+   the way a README's `##` does, `h3` the way its `###` does. */
+.readme-post h2 {
+  font-size: 1.05rem;
+  border-top: 1px dashed color-mix(in srgb, var(--color-pn-rule) 70%, transparent);
+  padding-top: 1.5rem;
+}
+.readme-post h2::before,
+.readme-post h3::before {
+  color: var(--color-pn-accent);
+  font-weight: 400;
+}
+.readme-post h2::before { content: "## "; }
+.readme-post h3 {
+  font-size: 0.95rem;
+  color: var(--color-pn-blue);
+  border-top: 0;
+  padding-top: 0;
+}
+.readme-post h3::before { content: "### "; }
+.readme-post h4 { font-size: 0.875rem; color: var(--color-pn-dim); }
+.readme-post h4::before { content: none; }
+
 .readme p { margin: 0.9rem 0; }
 .readme a {
   color: var(--color-pn-cyan);

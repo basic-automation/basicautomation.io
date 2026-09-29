@@ -7,6 +7,7 @@
  * is further down the project page. The source is a file this site's own admin
  * wrote, on a volume only this container can reach.
  */
+import { blogName, socialCardPath } from '~~/shared/posts/section'
 const route = useRoute()
 const slug = computed(() => String(route.params.slug))
 const postSlug = computed(() => String(route.params.post))
@@ -30,9 +31,11 @@ const exact = computed(() =>
 useHead({
   script: [{
     type: 'application/ld+json',
-    innerHTML: () => post.value ? ldJson(blogPostingLd(siteUrl, post.value, `${project.value?.name ?? slug.value} news`)) : '',
+    innerHTML: () => post.value ? ldJson(blogPostingLd(siteUrl, post.value, blogName(slug.value, project.value?.name))) : '',
   }],
 })
+
+useCanonical(() => `/projects/${slug.value}/blog/${postSlug.value}`)
 
 useSeoMeta({
   title: () => `${post.value?.title} — ${project.value?.name ?? 'basic automation'}`,
@@ -40,8 +43,15 @@ useSeoMeta({
   ogTitle: () => post.value?.title,
   ogDescription: () => post.value?.summary,
   ogType: 'article',
-  ogUrl: () => `${siteUrl}/projects/${slug.value}/blog/${postSlug.value}`,
   articlePublishedTime: () => post.value?.date,
+  ogImage: () => `${siteUrl}${socialCardPath(slug.value)}`,
+  ogImageWidth: 1200,
+  ogImageHeight: 630,
+  twitterCard: 'summary_large_image',
+  twitterImage: () => `${siteUrl}${socialCardPath(slug.value)}`,
+  // A draft is reachable by URL so it can be previewed, which is not the same
+  // as asking a search engine to index it.
+  robots: () => (post.value?.draft ? 'noindex, nofollow' : undefined),
 })
 </script>
 
@@ -73,6 +83,6 @@ useSeoMeta({
     <!-- Same `readme` typography as a rendered README, because it is the same
          renderer and should read the same. -->
     <!-- eslint-disable-next-line vue/no-v-html -->
-    <div class="readme mb-32 max-w-3xl" v-html="post.html" />
+    <div class="readme readme-post mb-32 max-w-3xl" v-html="post.html" />
   </article>
 </template>

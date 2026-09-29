@@ -43,3 +43,17 @@ export function blogIndexPath(project: string): string {
 export function sectionLabel(project: string, projectName: string | undefined): string {
   return isSiteSection(project) ? 'basic automation' : (projectName ?? project)
 }
+
+/**
+ * The social card a blog's pages preview with: its project's own card, or the
+ * organization's for the site's news. Both are 1200×630. One function because
+ * the Open Graph tags and the JSON-LD `image` must name the same picture.
+ */
+export function socialCardPath(project: string): string {
+  return isSiteSection(project) ? '/og.png' : `/projects/og/${project}.png`
+}
+
+/** A blog's name, the same everywhere it is named — its index and every post in it. */
+export function blogName(project: string, projectName: string | undefined): string {
+  return `${sectionLabel(project, projectName)} news`
+}

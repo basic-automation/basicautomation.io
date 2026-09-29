@@ -25,10 +25,10 @@ const BASE = (args.find((a) => !a.startsWith('--'))
   ?? 'http://127.0.0.1:3000').replace(/\/$/, '')
 
 /** Routes that no page links to, but that have to work anyway. */
-const UNLINKED_ROUTES = ['/healthz', '/sitemap.xml', '/robots.txt', '/releases.xml', '/api/projects']
+const UNLINKED_ROUTES = ['/healthz', '/sitemap.xml', '/robots.txt', '/releases.xml', '/news.xml', '/api/projects']
 
 /** Paths that must answer 404 — a soft 200 on a missing page is the bug. */
-const MUST_404 = ['/projects/no-such-project', '/no-such-page-at-all', '/api/projects/nope']
+const MUST_404 = ['/projects/no-such-project', '/no-such-page-at-all', '/api/projects/nope', '/api/posts?project=nope']
 
 /**
  * crates.io serves its app only to something that says it wants HTML; asked
@@ -102,6 +102,26 @@ function extractRefs(html) {
  * an absolute one was meant, which is the failure mode of building these out of
  * a request-derived origin.
  */
+/**
+ * The site's structured data is one graph spread across pages: a project page
+ * names the organization by `@id` rather than describing it again, and a post
+ * names its blog the same way. A reference to an `@id` that no page describes
+ * is a dangling edge — a consumer following it finds nothing. Nodes that carry
+ * an `@type` and an `@id` are definitions; an object that is only an `@id` is
+ * a reference. Checked once the whole crawl has been seen.
+ */
+const definedIds = new Set()
+const referencedIds = []
+
+function collectIds(path, value) {
+  if (Array.isArray(value)) return value.forEach((v) => collectIds(path, v))
+  if (!value || typeof value !== 'object') return
+  const keys = Object.keys(value)
+  if (value['@id'] && value['@type']) definedIds.add(value['@id'])
+  else if (value['@id'] && keys.every((k) => k === '@id')) referencedIds.push({ path, id: value['@id'] })
+  for (const v of Object.values(value)) collectIds(path, v)
+}
+
 function checkJsonLd(path, html) {
   const blocks = [...html.matchAll(
     /<script[^>]+type=["']application\/ld\+json["'][^>]*>([\s\S]*?)<\/script>/gi,
@@ -144,6 +164,7 @@ function checkJsonLd(path, html) {
         }
       }
       walk(node, null)
+      collectIds(path, node)
     }
   }
   notes.push(`${path}: ${blocks.length} structured-data block(s), all parsed`)
@@ -208,6 +229,68 @@ function checkScriptlessCsp(path, html, csp) {
       fail(path, `a script preload survived the strip: ${m[0].slice(0, 60)}`)
     }
   }
+}
+
+/**
+ * A page that says what its URL is to a social network says what its picture
+ * is too. Without `og:image` a shared link previews as a bare title, which is
+ * how every post and blog page shipped. The image is a `<meta>` content, which
+ * the crawl below never follows, so it is fetched here: a card that 404s is
+ * the same bare preview.
+ */
+async function checkSocialCard(path, html) {
+  const meta = (property) => html.match(new RegExp(`<meta[^>]+property="${property}"[^>]+content="([^"]*)"`))?.[1]
+  if (!meta('og:url')) return
+  const image = meta('og:image')
+  if (!image) {
+    fail(path, 'has an og:url but no og:image — a shared link previews without a card')
+    return
+  }
+  let url
+  try {
+    url = new URL(image)
+  }
+  catch {
+    fail(path, `og:image ${image} is not an absolute URL`)
+    return
+  }
+  const res = await fetchOnce(BASE + url.pathname)
+  if (res.status !== 200) fail(path, `og:image ${url.pathname} answered ${res.status || 'nothing'}`)
+}
+
+/** The canonical link's href, or every one of them when there is more than one. */
+function canonicalsOf(html) {
+  return [...html.matchAll(/<link[^>]+rel="canonical"[^>]*>/g)]
+    .map((m) => m[0].match(/href="([^"]*)"/)?.[1])
+}
+
+/**
+ * One address per page. The router answers `/PROJECTS`, `/news/` and any query
+ * string with the same page, so each page names its own with a canonical link
+ * (`app/composables/useCanonical.ts`) — exactly one, absolute, the same string
+ * as its `og:url`, and a URL that itself answers 200 rather than redirecting.
+ */
+async function checkCanonical(path, html) {
+  const ogUrl = html.match(/<meta[^>]+property="og:url"[^>]+content="([^"]*)"/)?.[1]
+  const canonicals = canonicalsOf(html)
+  if (!ogUrl && !canonicals.length) return
+  if (canonicals.length !== 1) {
+    fail(path, `has ${canonicals.length} canonical links; a page names exactly one address`)
+    return
+  }
+  const [href] = canonicals
+  if (href !== ogUrl) fail(path, `canonical ${href} and og:url ${ogUrl} disagree`)
+  let url
+  try {
+    url = new URL(href)
+  }
+  catch {
+    fail(path, `canonical ${href} is not an absolute URL`)
+    return
+  }
+  const res = await fetch(BASE + url.pathname, { headers: HEADERS, redirect: 'manual' })
+    .catch((err) => ({ status: 0, error: err.message }))
+  if (res.status !== 200) fail(path, `canonical ${url.pathname} answered ${res.status || res.error}, not 200`)
 }
 
 /**
@@ -360,7 +443,9 @@ function checkXml(path, xml) {
   }
   if (stack.length) fail(path, `unclosed <${stack[stack.length - 1]}>`)
 
-  if (path.endsWith('releases.xml')) {
+  // Every Atom feed — `/releases.xml` and `/news.xml` — by what it is, not by
+  // name, so a third one is checked the day it exists.
+  if (/<feed\b/.test(xml)) {
     // What a reader needs to identify the feed and to de-duplicate entries.
     for (const el of ['title', 'id', 'updated']) {
       if (!new RegExp(`<${el}>`).test(xml)) fail(path, `the feed has no <${el}>`)
@@ -387,7 +472,7 @@ function checkXml(path, xml) {
       if (seenIds.has(id)) fail(path, `two entries share the id ${id}`)
       seenIds.add(id)
     }
-    notes.push(`${ids.length} feed entries, each with an id, a title and a date`)
+    notes.push(`${path}: ${ids.length} feed entries, each with an id, a title and a date`)
   }
 
   if (path.endsWith('sitemap.xml')) {
@@ -473,6 +558,14 @@ while (queue.length) {
   checkAccessibility(path, res.body, isUpstream)
   checkJsonLd(path, res.body)
   checkNonces(path, res.body, res.csp)
+  // A document that may run no script is the Tor snapshot `/onion-frame`
+  // serves — a copy of another page, carrying that page's own address and
+  // card, and refreshed only as often as the gateway fetches it. It is not a
+  // page of this site with an identity to check.
+  if (cspDirective(res.csp, 'script-src') !== "'none'") {
+    await checkSocialCard(path, res.body)
+    await checkCanonical(path, res.body)
+  }
 
   for (const [ref, index] of extractRefs(res.body)) {
     if (/^(mailto|tel|data|javascript):/i.test(ref)) continue
@@ -514,6 +607,16 @@ while (queue.length) {
 
 console.log('')
 
+// ── Every @id referenced is described somewhere ─────────────────────────────
+{
+  const dangling = new Map()
+  for (const { path, id } of referencedIds) {
+    if (!definedIds.has(id) && !dangling.has(id)) dangling.set(id, path)
+  }
+  for (const [id, path] of dangling) fail(path, `ld+json references ${id}, which no page describes`)
+  notes.push(`${referencedIds.length} structured-data references, ${definedIds.size} described nodes, none dangling`)
+}
+
 // ── Routes nothing links to ─────────────────────────────────────────────────
 for (const path of UNLINKED_ROUTES) {
   const res = await fetchOnce(BASE + path)
@@ -543,9 +646,33 @@ if (sitemap.status === 200 && sitemap.body) {
       continue
     }
     const res = await fetchOnce(BASE + path)
-    if (res.status !== 200) fail('/sitemap.xml', `promises ${path}, which answered ${res.status}`)
+    if (res.status !== 200) {
+      fail('/sitemap.xml', `promises ${path}, which answered ${res.status}`)
+      continue
+    }
+    // The sitemap and the page have to agree on the page's address, or a
+    // crawler is handed one URL and told by the page that it is another.
+    const canonical = res.body ? canonicalsOf(res.body)[0] : undefined
+    if (canonical && canonical !== loc) fail('/sitemap.xml', `lists ${loc}, whose canonical is ${canonical}`)
   }
   notes.push(`sitemap lists ${locs.length} urls, all reachable`)
+}
+
+// ── Drafts are listed nowhere ───────────────────────────────────────────────
+// A draft is reachable by its URL for previewing and must not appear in any
+// listing. Every listing — the home page, /news, each project's blog — is
+// built from /api/posts, so a draft there is a draft on all of them.
+const postList = await fetch(`${BASE}/api/posts`, { headers: HEADERS })
+  .catch((err) => ({ status: 0, error: err.message }))
+if (postList.status !== 200) {
+  fail('/api/posts', `expected 200, got ${postList.status || postList.error}`)
+}
+else {
+  const posts = (await postList.json()).posts ?? []
+  for (const p of posts.filter((p) => p.draft)) {
+    fail('/api/posts', `lists the draft ${p.project}/${p.slug}`)
+  }
+  notes.push(`${posts.length} published post(s) listed, no drafts among them`)
 }
 
 // ── HEAD answers wherever GET does ──────────────────────────────────────────
@@ -579,10 +706,26 @@ for (const path of ['/admin', '/ADMIN', '/admin/', '/api/admin/posts', '/api/adm
 }
 notes.push('the editor is refused to requests from the onion gateway')
 
+// ── Other spellings name the real address ───────────────────────────────────
+// The router ignores case, a trailing slash and the query, so these all render
+// a page that lives somewhere else. Each has to point there.
+for (const [variant, want] of [['/PROJECTS', '/projects'], ['/news/', '/news'], ['/projects?utm_source=check', '/projects']]) {
+  const res = await fetch(BASE + variant, { headers: HEADERS }).catch(() => null)
+  const body = res?.ok ? await res.text() : ''
+  const href = canonicalsOf(body)[0]
+  if (!href || new URL(href).pathname !== want) {
+    fail(variant, `should name ${want} as its canonical address, names ${href ?? 'nothing'}`)
+  }
+}
+notes.push('other spellings of a page name its canonical address')
+
 // ── A 404 has to be a 404 ───────────────────────────────────────────────────
+// Answered directly, not at the end of a redirect: "moved permanently" about a
+// page that never existed sends a crawler on an extra request to learn nothing.
 for (const path of MUST_404) {
-  const res = await fetchOnce(BASE + path)
-  if (res.status !== 404) fail(path, `expected 404, got ${res.status}`)
+  const res = await fetch(BASE + path, { headers: HEADERS, redirect: 'manual' })
+    .catch((err) => ({ status: 0, error: err.message }))
+  if (res.status !== 404) fail(path, `expected 404, got ${res.status || res.error}`)
   else console.log(`  404  ${path}`)
 }
 

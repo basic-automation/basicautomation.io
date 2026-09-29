@@ -34,9 +34,11 @@ const exact = computed(() =>
       </template>
     </p>
 
-    <h3 class="mt-2 text-xl leading-snug text-pn-fg-bright group-hover:text-pn-accent sm:text-2xl">
+    <!-- h2, like a ProjectCard's: every list of these sits directly under the
+         page's h1 (the dashed rule above it is a separator, not a heading). -->
+    <h2 class="mt-2 text-xl leading-snug text-pn-fg-bright group-hover:text-pn-accent sm:text-2xl">
       {{ post.title }}
-    </h3>
+    </h2>
 
     <p v-if="post.summary" class="mt-2 text-base leading-relaxed text-pn-fg">
       {{ post.summary }}

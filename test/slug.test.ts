@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { createSlugger, slugify } from '~~/shared/markdown/slug'
-import { MAX_HEADING, demote, readmeHeading } from '~~/shared/markdown/heading'
+import { MAX_HEADING, demote, postHeading, readmeHeading, underTitle } from '~~/shared/markdown/heading'
 
 /**
  * These are not invented cases. A README's own table of contents links to
@@ -103,5 +103,29 @@ describe('readmeHeading', () => {
 			.toContain('id="usage"')
 		expect(heading.call(ctx as never, { depth: 2, text: 'Usage', tokens: [{ raw: 'Usage' }] }))
 			.toContain('id="usage-1"')
+	})
+})
+
+describe('underTitle', () => {
+	it('keeps a post section at its own level, directly under the page h1', () => {
+		expect(underTitle(2)).toBe(2)
+		expect(underTitle(3)).toBe(3)
+	})
+
+	it('lifts a stray # to h2, so a post never has a second h1', () => {
+		expect(underTitle(1)).toBe(2)
+	})
+
+	it('stops at h6', () => {
+		expect(underTitle(6)).toBe(MAX_HEADING)
+	})
+})
+
+describe('postHeading', () => {
+	const ctx = { parser: { parseInline: (tokens: unknown[]) => (tokens as { raw: string }[])[0]!.raw } }
+
+	it('renders ## as an h2 with the same anchor a README heading would get', () => {
+		expect(postHeading(createSlugger()).call(ctx as never, { depth: 2, text: 'Where to find them', tokens: [{ raw: 'Where to find them' }] }))
+			.toBe('<h2 id="where-to-find-them">Where to find them</h2>\n')
 	})
 })

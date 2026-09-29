@@ -48,8 +48,32 @@ interface RendererThis {
  * GitHub minted and the README links to.
  */
 export function readmeHeading(slug: (text: string) => string) {
+	return markdownHeading(slug, demote)
+}
+
+/**
+ * A blog post's headings keep their own level, except that a stray `#` is
+ * lifted to `h2`.
+ *
+ * A post is not a README. Its title is not in the body — it is front matter,
+ * rendered as the page's `h1` — so the body is written from `##` down, and
+ * `##` already means "a section under the title". Demoting it the README way
+ * made every section an `h3` straight under the `h1`, which is the skipped
+ * level axe's `heading-order` reports. A `#` in a post would be a second `h1`,
+ * so it becomes an `h2` like the sections beside it.
+ */
+export function underTitle(depth: number): number {
+	return Math.min(Math.max(depth, 2), MAX_HEADING)
+}
+
+/** The `heading` renderer for a post. Same anchors as a README's. */
+export function postHeading(slug: (text: string) => string) {
+	return markdownHeading(slug, underTitle)
+}
+
+function markdownHeading(slug: (text: string) => string, levelFor: (depth: number) => number) {
 	return function heading(this: RendererThis, { tokens, depth, text }: HeadingToken): string {
-		const level = demote(depth)
+		const level = levelFor(depth)
 		const inner = this.parser.parseInline(tokens as never[])
 		return `<h${level} id="${slug(text)}">${inner}</h${level}>\n`
 	}

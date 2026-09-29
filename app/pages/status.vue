@@ -75,6 +75,12 @@ const rows = computed(() => {
         ? `${h.github.remaining} of ${h.github.limit} left, resets in ${duration(h.github.resetsInSeconds)}`
         : 'not yet asked',
     },
+    // A `304` to a conditional request costs no quota, so the second number is
+    // how much of the first was free.
+    {
+      label: 'github calls',
+      value: `${h.githubCalls.made} since start, ${h.githubCalls.notModified} unchanged (304, free)`,
+    },
     { label: 'onion', value: onionLine(h.onion) },
     {
       label: 'refresh',
@@ -84,11 +90,17 @@ const rows = computed(() => {
   ]
 })
 
+const siteUrl = useSiteOrigin()
+
+useCanonical('/status')
+
 useSeoMeta({
   title: 'status — basic automation',
   description:
     'Whether basicautomation.io is rendering from live GitHub and crates.io data '
     + 'or from its committed fallback snapshot, and how long it has been up.',
+  ogImage: () => `${siteUrl}/og.png`,
+  twitterCard: 'summary_large_image',
 })
 </script>
 
@@ -196,7 +208,7 @@ useSeoMeta({
     <section class="mb-24">
       <TermRule label="endpoints" />
       <ul class="mt-8 space-y-2 text-xs">
-        <li v-for="path in ['/healthz', '/api/projects', '/sitemap.xml', '/robots.txt', '/releases.xml']" :key="path">
+        <li v-for="path in ['/healthz', '/api/projects', '/sitemap.xml', '/robots.txt', '/releases.xml', '/news.xml']" :key="path">
           <!-- Server routes, not pages: plain anchors, nothing for the router. -->
           <a :href="path" class="text-pn-dim transition-colors hover:text-pn-fg-bright">{{ path }}</a>
         </li>

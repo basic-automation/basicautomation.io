@@ -54,6 +54,23 @@ record. There is no run log.
       without parsing URLs. The project page's `SoftwareSourceCode.url` had been
       left pointing at `/projects/<slug>`, a 301 since the about/blog tabs; it
       names `/about` now.
+- [x] …and each blog describes itself: `/news` and every blog tab emit the
+      `Blog` node their posts' `isPartOf` names, with `blogPost` listing what
+      the index lists. `npm run check` fails on a bare `@id` reference no page
+      describes — the organization is referenced that way from every page.
+- [x] `/news.xml` — an Atom feed of every published post across every blog,
+      advertised in every page's head and the footer. Both feeds get the same
+      checks, matched by content rather than by file name.
+- [x] Posts and blog pages preview with a card when shared. Five page kinds
+      arrived with the blogs naming an `og:url` and no `og:image`; they carry
+      their blog's card now, and drafts are `noindex`. `npm run check` fails a
+      page with one and not the other, and fetches the image.
+- [x] One address per page: `<link rel="canonical">` everywhere, equal to
+      `og:url` and to the sitemap `<loc>`. The router is case-, slash- and
+      query-insensitive, so `/PROJECTS` and `/news/` were live duplicates.
+- [x] An unknown `/projects/<slug>` is a 404, not a 301 to one; `npm run check`
+      no longer follows redirects when it asks for a 404.
+- [x] Blog indexes carry their newest post's date as `lastmod` in the sitemap.
 
 ## Phase 3 — Operations
 
@@ -83,13 +100,24 @@ record. There is no run log.
       installation token has its own 5,000-an-hour limit and needs only
       read access to public repos' metadata.
       <https://docs.github.com/en/rest/using-the-rest-api/rate-limits-for-the-rest-api>
-- [ ] Conditional requests (`If-None-Match`) for the GitHub calls: a `304` to an
-      authorized request does not count against the limit, so with the token
-      live, refreshes of unchanged repos would be nearly free. Not needed for
-      the budget at 252 of 5,000; worth it only if the refresh shortens again.
-      <https://docs.github.com/rest/guides/best-practices-for-using-the-rest-api>
+- [x] Conditional requests (`If-None-Match`) for the GitHub calls: a `304` to an
+      authorized request does not count against the limit. Parked as unneeded
+      at 252 of 5,000 — but the token is a person's, and its pool had spent 990
+      of the hour when this was checked on 2026-09-28, so every call the site
+      saves is theirs. `shared/github/conditional.ts` keeps each answer's ETag;
+      three `304`s left GitHub's `x-ratelimit-used` where it was while one plain
+      request moved it. All three endpoints the site calls (repo, raw README,
+      releases) answer `304`. `/healthz` and `/status` count them.
+      <https://docs.github.com/en/rest/using-the-rest-api/best-practices-for-using-the-rest-api>
 
 - [x] Structured request logging, and a `status` page fed by `/healthz`
+- [x] …logging each request once. Internal SSR calls to `/api/*` inherit the
+      visitor's `x-forwarded-for`, which the internal-call filter trusted, so
+      every page view through Caddy logged its API calls as visits too — each
+      uptime check of `/` was three lines. And each line now carries `via`
+      (`onion` or `web`), unforgeable from either side.
+- [x] `/api/posts?project=<unknown>` is a 404, like `/api/projects/<unknown>`,
+      not an empty list.
 - [x] Answer HEAD wherever GET is answered. Nitro routes by filename suffix, so
       `healthz.get.ts` bound GET alone and every non-page route — `/healthz`,
       `/sitemap.xml`, `/robots.txt`, `/releases.xml` and both `/api` routes —
@@ -175,6 +203,8 @@ record. There is no run log.
             convert it to the exec form `deploy/compose.yaml` now carries, then
             the runtime stage can change base. (Harmless to do either way: the
             exec form works on the Alpine runtime too.)
+- [x] Claude Code's worktrees (`.claude/worktrees/`) were in the image's build
+      context — 11 of its 14 MB, other sessions' in-progress source. Ignored.
 - [x] The onion gateway ignored SIGTERM until it was ready: `shutdown()` in
       `onion/src/main.rs` registered its handlers only after `ready_timeout`
       returned — up to 600 s after start — so a stop in that window killed it
@@ -270,6 +300,13 @@ record. There is no run log.
       or leave it — with nothing on this site depending on the answer.
 
 ## Cross-cutting
+
+- [ ] Reconcile the masthead with the flat design language — **owner decision**.
+      `843aae8` and `0d1cb73` made it a "glass" pane with a bevel, a drop shadow
+      and visibly rounded ends, while the README and the routine's locked
+      principles still say one background, no shadows, no rounded corners, no
+      blur. Either the principle has an exception for the masthead, or the
+      masthead goes back to flat; right now the rule and the site disagree.
 
 - [x] A Content-Security-Policy, in `nuxt.config.ts`'s `/**` route rule. The
       project pages render each repo's README HTML as-is, fetched at request
@@ -391,6 +428,12 @@ record. There is no run log.
       shows the whole address. Both a11y scripts now take their pages from the
       sitemap: the typed list had never included Nanna.
       <https://dequeuniversity.com/rules/axe/4.13/target-size>
+- [x] Posts skipped a heading level — `PostCard` was an `h3` straight under the
+      page `h1`, and post bodies were demoted like READMEs though their title is
+      not in the body. Found by axe the moment CI had posts to render: CI now
+      starts the server on `test/fixtures/content/` (three test posts, one a
+      draft), so `check`, `a11y` and `a11y:browser` see post pages at all, and
+      `check` asserts no draft is listed.
 - [ ] Run axe's `color-contrast` in the browser pass too, once the contrast item
       below is decided. Left out deliberately: it would be red today on the
       shortfalls already waiting on that decision.

@@ -63,13 +63,14 @@ useHead({
   link: [{ rel: 'preload', as: 'image', href: '/bg/hero.webp', type: 'image/webp', fetchpriority: 'high' }],
 })
 
+useCanonical('/')
+
 useSeoMeta({
   title: 'basic automation — software for the productive',
   description,
   ogTitle: 'basic automation — software for the productive',
   ogDescription: description,
   ogType: 'website',
-  ogUrl: () => siteUrl,
   ogImage: () => `${siteUrl}/og.png`,
   twitterCard: 'summary_large_image',
   twitterImage: () => `${siteUrl}/og.png`,
