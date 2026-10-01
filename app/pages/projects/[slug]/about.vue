@@ -233,7 +233,7 @@ useSeoMeta({
            it the aspect ratio; the classes still decide the drawn size. -->
       <img
         :src="project.screenshot"
-        :alt="`${project.name} screenshot`"
+        :alt="project.screenshotAlt ?? `${project.name} screenshot`"
         v-bind="assetSize(project.screenshot)"
         class="mt-8 w-full max-w-5xl"
       >

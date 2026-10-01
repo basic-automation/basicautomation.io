@@ -48,6 +48,9 @@ export interface Project {
   logo?: string
   /** Screenshot in public/projects/shots/, shown on the card and the page */
   screenshot?: string
+  /** What the screenshot shows, for its `alt`. Without one it is "<name> screenshot",
+   *  which tells a screen reader nothing the heading has not already said. */
+  screenshotAlt?: string
   /** This project serves basicautomation.io itself — show the site's own
    *  onion address on its page, as evidence rather than as a claim */
   servesThisSite?: boolean
@@ -425,18 +428,22 @@ default_low_stock_threshold = 5    # overridable per product in the app
     name: 'Skidbladnir',
     logo: '/projects/skidbladnir.svg',
     screenshot: '/projects/shots/skidbladnir-screenshot.webp',
+    screenshotAlt:
+      'The Skidbladnir window with WebP selected: the format rail with WebP, AVIF, JPEG XL '
+      + 'and HEIC, and cwebp\'s options as controls, each labelled with the flag it sets: '
+      + 'compression, transparency and lossy tuning',
     tagline: 'Smaller images, in every modern format, without touching a command line',
     hero: 'Every modern image format, in one window.',
     summary:
       'Convert images to WebP, AVIF, JPEG XL or HEIC through a window instead of a command '
-      + 'line — each encoder\'s full control surface, not just a quality slider. See the result '
-      + 'beside the original before anything is written, then convert a batch or a whole '
-      + 'folder. Windows, macOS and Linux.',
+      + 'line — every option each encoder has for a still image, not just a quality slider. '
+      + 'See the result beside the original before anything is written, then convert a batch '
+      + 'or a whole folder. Windows and Linux, with an experimental macOS build.',
     problem:
       'The reference encoders are excellent and almost unusable: four separate command-line '
       + 'tools, each a wall of options you relearn every time you need them, each one wrong '
-      + 'flag away from a ruined batch. Skidbladnir puts a window in front of all four and '
-      + 'gets the same files out.',
+      + 'flag away from a ruined batch. Skidbladnir puts a window in front of all four and, '
+      + 'for a still image, gets the same files out.',
     kind: 'Desktop app',
     status: 'active',
     accent: 'green',
@@ -446,21 +453,26 @@ default_low_stock_threshold = 5    # overridable per product in the app
         title: 'Four formats, one window',
         body: 'WebP, AVIF, JPEG XL and HEIC, each with its own controls. Convert between any of them, and each format remembers its own settings while you try another.',
       },
+      // The claim is scoped on purpose, the way the README scopes it: still
+      // images, the four named tools, and its exceptions one click away. Never
+      // widen it to "anything the command line can do", and never type a case
+      // count here — the count moves with every release and is the README's to
+      // state.
       {
-        title: 'The same files as the reference tool',
-        body: 'WebP output is byte-for-byte identical to what the official converter produces at the same settings, checked against it on every build. If you have been hitting a particular look, you keep hitting it.',
+        title: 'The same files as the official tools',
+        body: 'For a still image, every option of cwebp, avifenc (with libaom), cjxl and heif-enc (with Kvazaar) is a control here, labelled with the flag it sets, and Skidbladnir writes the same bytes those tools write, checked against the real tools on every change. The exceptions are listed in the readme below.',
       },
       {
         title: 'See it before you write it',
         body: 'Preview the encoded result beside your original, with the size and the saving, before anything touches your disk.',
       },
       {
-        title: 'Your photo library, a fifth smaller',
-        body: 'JPEG XL repacks a JPEG about 20% smaller without decoding it, and the original can be rebuilt from it exactly. Nothing is thrown away and nothing is guessed.',
+        title: 'JPEGs about a fifth smaller, losslessly',
+        body: 'JPEG XL repacks a JPEG typically about 20% smaller without decoding it (libjxl\'s own figure), and the original can be rebuilt from it exactly. Nothing is thrown away and nothing is guessed.',
       },
       {
-        title: 'iPhone photos in, anything out',
-        body: 'Reads HEIC, AVIF, JPEG XL, PNG, JPEG and TIFF — including the CMYK JPEGs Photoshop writes and the official WebP tool refuses — and works out which is which by looking inside the file rather than trusting its name.',
+        title: 'iPhone photos in, any modern format out',
+        body: 'Reads HEIC, AVIF, JPEG XL, WebP, PNG, JPEG, TIFF, GIF, PNM/PAM and PFM — including the CMYK JPEGs Photoshop writes and the official WebP tool refuses — and works out which is which by looking inside the file rather than trusting its name. An animated GIF or WebP comes out as an animated WebP, every frame kept.',
       },
       {
         title: 'A batch, or a whole folder',
@@ -468,11 +480,15 @@ default_low_stock_threshold = 5    # overridable per product in the app
       },
       {
         title: 'Expert dials, out of the way',
-        body: 'Noise shaping, filter strength, multi-pass, sharp colour conversion, segment count — every control the encoders have, folded behind a disclosure so the simple path stays simple. Save the settings you settle on as named presets.',
+        body: 'Noise shaping, filter strength, multi-pass, sharp colour conversion, segment count — every option the encoders have for a still image, folded behind a disclosure so the simple path stays simple. Save the settings you settle on as named presets.',
+      },
+      {
+        title: 'Two editions, one app',
+        body: 'The standard edition writes HEIC with Kvazaar. The GPL edition uses x265 instead, which adds its lossless mode, 4:4:4 and 4:2:2 chroma, and 10-bit HEIC. Everything else is the same and both are free; if you are not sure, take the standard one.',
       },
       {
         title: 'Honest about where it is',
-        body: 'Still a prerelease. The Windows and Linux builds are installed and exercised automatically on every change; the macOS builds are compiled but have not yet been launched, and nothing is code-signed. It updates itself from here on, verifying each release against the project\'s signing key.',
+        body: 'Stable since 1.0. On every change, CI installs the standard edition on Windows and drives it, and launches and drives the Linux app. macOS is experimental: built and launched in CI, not yet tried by a person on a real Mac. Nothing is code-signed yet. It updates itself, checking each release against the project\'s signing key before installing it.',
       },
     ],
     // The argument for a GUI over a CLI is the command line it replaces, so
@@ -490,8 +506,11 @@ default_low_stock_threshold = 5    # overridable per product in the app
     },
     links: [
       {
-        label: 'Download for Windows, macOS or Linux',
-        href: 'https://github.com/basic-automation/Skidbladnir/releases',
+        // `/releases/latest` names the newest stable release. Before the first
+        // one, GitHub answers it with the full release list, so it is never a
+        // dead link.
+        label: 'Download (Windows, Linux; macOS experimental)',
+        href: 'https://github.com/basic-automation/Skidbladnir/releases/latest',
       },
       { label: 'Built with Tauri', href: 'https://v2.tauri.app' },
     ],

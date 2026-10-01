@@ -26,6 +26,15 @@ record. There is no run log.
 - [ ] Screenshots for Nisaba and Enlil — Skidbladnir has one, the rest are all type
       (BLOCKED — needs someone who can run the two apps and capture them; the
       routine cannot produce these and will not fabricate them)
+- [ ] Keep Skidbladnir's screenshot in step with the app. It is the top 1,304 px
+      of the Skidbladnir README's `resources/images/screenshot.webp` (the per-flag
+      WebP panel of 0.14), cut at the gap above "Metadata"; re-cut it whenever
+      that file changes, then `npm run sizes`. A screenshot two releases behind
+      the copy beside it — the v0.9.0 window, two formats and no flag labels —
+      is what this replaced.
+- [ ] Skidbladnir's `status` is still `active` ("in development" on the page and
+      on its social card) — **owner decision** once 1.0.0 is out: `stable` changes
+      the card, so it needs `npm run og` (local Chromium) in the same commit.
 - [x] A card and its data can no longer drift apart. Rendering still needs a local
       Chromium, so it stays manual — but every render records what it was rendered
       from in `public/projects/og/cards.json`, and `npm run og:check` recomputes
