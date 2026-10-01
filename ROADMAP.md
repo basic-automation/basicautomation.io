@@ -242,8 +242,9 @@ record. There is no run log.
       vuejs/language-tools#6124 and closed as a duplicate of #5381, the
       TypeScript 7 / `tsgo` support request, which is closed too — so there is
       no open issue to watch. Check the release notes instead.
-      Re-checked 2026-09-28: unchanged (vue-tsc 3.3.11 is still the latest
-      release, of 2026-08-21; golar 0.1.10; TypeScript 7.0.2).
+      Re-checked 2026-09-28 and 2026-10-01: unchanged (vue-tsc 3.3.11 is
+      still the latest release, of 2026-08-21; golar 0.1.10, still only
+      `./unstable` and `./unstable-tsgo`; TypeScript 7.0.2).
       <https://github.com/vuejs/language-tools/issues/6124>
       <https://github.com/vuejs/language-tools/issues/5381>
 - [x] Silenced Nitro's own `[request error]` stack-trace block on a 404, without
