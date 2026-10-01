@@ -11,7 +11,8 @@
  * sitemap would each have to pick one anyway. 301 because this is permanent —
  * the old address is not coming back as a page.
  *
- * An unknown slug is a 404 here, directly, not after a redirect.
+ * An unknown slug is a 404 here, directly, not after a redirect. The query
+ * string is carried over to the new address.
  */
 import { bySlug } from '~~/data/projects'
 
@@ -24,7 +25,11 @@ definePageMeta({
       if (!bySlug(String(to.params.slug))) {
         return abortNavigation(createError({ statusCode: 404, statusMessage: 'No such project', fatal: import.meta.client }))
       }
-      return navigateTo(`/projects/${to.params.slug}/about`, { redirectCode: 301 })
+      // The query goes along: a link from a campaign carries its `utm_*` tags
+      // on this address, and a redirect that dropped them would erase where
+      // the visit came from. The canonical link on the target stays query-free
+      // either way (`useCanonical`).
+      return navigateTo({ path: `/projects/${to.params.slug}/about`, query: to.query }, { redirectCode: 301 })
     },
   ],
 })
