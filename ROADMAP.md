@@ -242,8 +242,9 @@ record. There is no run log.
       vuejs/language-tools#6124 and closed as a duplicate of #5381, the
       TypeScript 7 / `tsgo` support request, which is closed too — so there is
       no open issue to watch. Check the release notes instead.
-      Re-checked 2026-09-28: unchanged (vue-tsc 3.3.11 is still the latest
-      release, of 2026-08-21; golar 0.1.10; TypeScript 7.0.2).
+      Re-checked 2026-09-28 and 2026-10-01: unchanged (vue-tsc 3.3.11 is
+      still the latest release, of 2026-08-21; golar 0.1.10, still only
+      `./unstable` and `./unstable-tsgo`; TypeScript 7.0.2).
       <https://github.com/vuejs/language-tools/issues/6124>
       <https://github.com/vuejs/language-tools/issues/5381>
 - [x] Silenced Nitro's own `[request error]` stack-trace block on a 404, without
@@ -508,8 +509,10 @@ record. There is no run log.
       A dead link never fails the job, because almost none of them are ours to
       fix; only a build or a server that will not come up does, since that means
       the report itself is not trustworthy.
-- [ ] Upstream: the Skidbladnir README links to `blob/master/LICENSE`, a file that
-      repo does not contain — a 404 on this site's Skidbladnir page. Not fixable
-      here; the weekly report will keep saying so until someone commits a LICENSE.
+- [x] Upstream: the Skidbladnir README linked to `blob/master/LICENSE`, a file that
+      repo did not contain — a 404 on this site's Skidbladnir page. Fixed
+      upstream: the repo has a LICENSE now (GitHub reads it as ISC), the link
+      answers 200, and `npm run check -- --external` against production found
+      no dead link on 2026-10-01.
 - [ ] Upstream: the onyums README's table of contents links
       `#multiple-services-on-one-tor-client`, an anchor no heading in it produces.
