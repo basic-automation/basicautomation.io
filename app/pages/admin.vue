@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { EDITOR_CHALLENGE } from '~~/shared/admin/basicAuth'
 import { VIA_ONION, cameOverOnion } from '~~/shared/onion/via'
 
 /**
@@ -6,15 +7,15 @@ import { VIA_ONION, cameOverOnion } from '~~/shared/onion/via'
  *
  * # What guards this page
  *
- * Caddy, in front of the app: `/admin` and `/api/admin/*` sit behind basic auth
- * in the reverse proxy, so an unauthenticated request never reaches Nitro and
- * this component never renders for a stranger. There is deliberately no login
- * form here — a second authentication mechanism in the app would be a second
- * thing to get wrong, and the one in front already works for the API routes
- * this page calls.
+ * The app: `/api/admin/session` runs the same `requireEditor` check as every
+ * API route this page calls (`server/utils/adminGuard.ts`), and the page asks
+ * it before rendering anything. The credential is the one Caddy's basic auth
+ * prompts for in front, so a visitor through Caddy is asked once; anyone who
+ * reaches the app some other way is asked by the app, or refused. There is
+ * deliberately no login form — the browser's own prompt is the form.
  *
  * `robots.txt` disallows it and `noindex` is set, which is hygiene rather than
- * protection: neither stops anybody, the basic auth does.
+ * protection: neither stops anybody, the credential does.
  *
  * # Why a textarea and not a rich editor
  *
@@ -31,6 +32,21 @@ definePageMeta({ layout: 'default' })
 // it calls refuse the same requests on their own (`refuseOverOnion`).
 if (import.meta.server && cameOverOnion(useRequestHeader(VIA_ONION))) {
   throw createError({ statusCode: 404, statusMessage: 'Page not found', fatal: import.meta.client })
+}
+
+// Everyone else needs the editor's credential. Asked of the API rather than
+// checked here so there is one implementation of it; the request's own
+// `Authorization` header goes with the internal call.
+if (import.meta.server) {
+  const refused = await useRequestFetch()('/api/admin/session')
+    .then(() => null, (err: { statusCode?: number }) => err.statusCode ?? 500)
+  if (refused === 401) {
+    useResponseHeader('WWW-Authenticate').value = EDITOR_CHALLENGE
+    throw createError({ statusCode: 401, statusMessage: 'Unauthorized', fatal: import.meta.client })
+  }
+  if (refused !== null) {
+    throw createError({ statusCode: 404, statusMessage: 'Page not found', fatal: import.meta.client })
+  }
 }
 
 useSeoMeta({ title: 'post editor', robots: 'noindex, nofollow' })

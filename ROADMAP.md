@@ -302,12 +302,11 @@ record. There is no run log.
 
 ## Cross-cutting
 
-- [ ] Reconcile the masthead with the flat design language — **owner decision**.
-      `843aae8` and `0d1cb73` made it a "glass" pane with a bevel, a drop shadow
-      and visibly rounded ends, while the README and the routine's locked
-      principles still say one background, no shadows, no rounded corners, no
-      blur. Either the principle has an exception for the masthead, or the
-      masthead goes back to flat; right now the rule and the site disagree.
+- [x] Reconcile the masthead with the flat design language — **decided by the
+      owner 2026-10-01: the masthead is an exception.** `843aae8` and `0d1cb73`
+      made it a "glass" pane with a bevel, a drop shadow and rounded ends; it
+      stays that way, and the README now says so. Everything below the masthead
+      is still one flat background, no shadows, no rounded corners, no blur.
 
 - [x] A Content-Security-Policy, in `nuxt.config.ts`'s `/**` route rule. The
       project pages render each repo's README HTML as-is, fetched at request
@@ -482,15 +481,23 @@ record. There is no run log.
       `test/admin-guard.test.ts` fails if a new handler forgets the guard, and
       `npm run check` sends the mark to six spellings of the editor's URLs and
       fails on anything but 404 or 401.
-- [ ] Authenticate the editor in the app, not by where the request came from —
-      **owner decision**. Caddy and the onion mark cover the two public ways in,
-      but any other container on `caddy-shared-network` reaches
-      `basicautomation-site:3000` directly with neither, and the editor is a
-      write API. A credential the app checks itself (the same basic-auth hash as
-      Caddy's gate, read from a secret) would make the network path irrelevant.
-- [ ] Rule for the future, until the item above lands: anything added to the
-      Caddy site block for `basicautomation.io` that restricts access must also
-      be enforced in the app, or the onion service serves around it.
+- [x] Authenticate the editor in the app, not by where the request came from.
+      Caddy and the onion mark covered the two public ways in, but any other
+      container on `caddy-shared-network` reached `basicautomation-site:3000`
+      directly with neither, and the editor is a write API. Every handler under
+      `server/api/admin/` now calls `requireEditor` (`server/utils/adminGuard.ts`)
+      first: 404 over the onion gateway, then a `Basic` credential checked
+      against `NUXT_ADMIN_USER` / `NUXT_ADMIN_PASSWORD_HASH` — the same user and
+      bcrypt hash as Caddy's `admin_auth_gate`, so the browser that answered
+      Caddy's prompt is not asked twice. Without both settings the editor is a
+      404 outside `nuxt dev`. The `/admin` page asks `/api/admin/session` before
+      rendering, so a stranger gets a 401 rather than an empty editor. bcrypt at
+      Caddy's cost of 14 is ~0.8 s in pure JS: a verified header is remembered
+      for ten minutes, and verifications are serialized with at most four
+      waiting, so bad guesses from inside the network cannot occupy the site.
+      This also retires the rule that every Caddy restriction be repeated in
+      the app: the app no longer depends on Caddy for this one.
+
 - [x] A real 404 check: every internal link, every render, on every route — `npm run check`
 - [x] …and the two XML documents nobody looks at, checked the same way. A feed
       breaks silently for every subscriber at once, and both documents carry
