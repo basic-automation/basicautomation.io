@@ -302,12 +302,11 @@ record. There is no run log.
 
 ## Cross-cutting
 
-- [ ] Reconcile the masthead with the flat design language — **owner decision**.
-      `843aae8` and `0d1cb73` made it a "glass" pane with a bevel, a drop shadow
-      and visibly rounded ends, while the README and the routine's locked
-      principles still say one background, no shadows, no rounded corners, no
-      blur. Either the principle has an exception for the masthead, or the
-      masthead goes back to flat; right now the rule and the site disagree.
+- [x] Reconcile the masthead with the flat design language — **decided by the
+      owner 2026-10-01: the masthead is an exception.** `843aae8` and `0d1cb73`
+      made it a "glass" pane with a bevel, a drop shadow and rounded ends; it
+      stays that way, and the README now says so. Everything below the masthead
+      is still one flat background, no shadows, no rounded corners, no blur.
 
 - [x] A Content-Security-Policy, in `nuxt.config.ts`'s `/**` route rule. The
       project pages render each repo's README HTML as-is, fetched at request

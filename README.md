@@ -12,7 +12,9 @@ work, not products with feature lists.
 Nuxt 4 with server-side rendering, Tailwind v4, and the **Paleday Tailwind**
 palette from the Omarchy theme set. One flat background, no cards, no borders,
 no rounded corners, Fira Code throughout: structure comes from rules and accent
-bars the way a terminal does it.
+bars the way a terminal does it. The one deliberate exception is the masthead,
+a "glass" pane with a bevel, a drop shadow and rounded ends; everything below
+it is flat.
 
 ## What renders where
 
