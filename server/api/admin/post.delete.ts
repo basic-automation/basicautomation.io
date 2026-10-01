@@ -1,6 +1,6 @@
 /** Remove a post. */
 export default defineEventHandler(async (event) => {
-  refuseOverOnion(event)
+  await requireEditor(event)
 
   const { project, slug } = getQuery(event)
   if (typeof project !== 'string' || typeof slug !== 'string') {

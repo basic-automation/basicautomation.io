@@ -25,7 +25,7 @@ it is flat.
 | `/projects/<slug>/about` | A marketing page per project: hero, why it exists, features, a worked example, the recent releases, and the repo's README folded away underneath. `/projects/<slug>` redirects here |
 | `/projects/<slug>/blog` | That project's news, and `/projects/<slug>/blog/<post>` for one post |
 | `/news` | The organization's own news, for what is about Basic Automation rather than one tool |
-| `/admin` | The post editor — behind basic auth in Caddy, and absent over Tor (below) |
+| `/admin` | The post editor — behind a login the app checks itself, and absent over Tor (below) |
 | `/status` | Whether the site is rendering live data or the fallback snapshot, whether the onion service was last reached over Tor, and how long it has been up |
 | `/releases.xml` | An Atom feed of every release across every project |
 | `/news.xml` | An Atom feed of every published post, the site's own and every project's — `/news` as a feed |
@@ -59,12 +59,19 @@ carries structured data: `BlogPosting` per post, `Blog` on each blog's index.
 `/news.xml` is the feed. CI renders all of this against a few test posts in
 `test/fixtures/content/` — never the live content.
 
-`/admin` writes them. It and `/api/admin/*` are guarded by basic auth in Caddy —
-and the onion gateway does not go through Caddy, so the site also refuses the
-editor to every request the gateway forwards (it marks them `x-via-onion`,
-overwriting any a visitor sent). Over Tor the editor is a 404. Every handler
-under `server/api/admin/` checks this first, and a unit test fails if one does
-not.
+`/admin` writes them. The app authenticates the editor itself: `/admin` and
+`/api/admin/*` answer 401 without the editor's credential, which is the same
+user and bcrypt hash as the basic auth Caddy asks for in front, so a browser is
+prompted once. That makes the network path irrelevant — a request that reached
+the container without going through Caddy, from another container on its
+network, is asked for the credential too. Set `NUXT_ADMIN_USER` and
+`NUXT_ADMIN_PASSWORD_HASH` (a bcrypt hash, as `caddy hash-password` prints);
+without both, the editor is a 404 everywhere but `nuxt dev`.
+
+Over Tor the editor does not exist at all, credential or not: the onion gateway
+marks everything it forwards `x-via-onion`, overwriting any copy a visitor sent,
+and a marked request is a 404. Every handler under `server/api/admin/` calls
+`requireEditor` first, and a unit test fails if one does not.
 
 ## How the data works
 

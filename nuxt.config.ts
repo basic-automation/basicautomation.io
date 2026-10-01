@@ -30,6 +30,12 @@ export default defineNuxtConfig({
     // NUXT_GITHUB_TOKEN only — a bare GITHUB_TOKEN is not mapped; the compose
     // file sets it from BASICAUTOMATION_GITHUB_TOKEN.
     githubToken: '',
+    // The post editor's credential, checked by the app itself
+    // (server/utils/adminGuard.ts): the same user and bcrypt hash as Caddy's
+    // `admin_auth_gate`, from NUXT_ADMIN_USER and NUXT_ADMIN_PASSWORD_HASH.
+    // No user or no hash, no editor — it answers 404 outside `nuxt dev`.
+    adminUser: '',
+    adminPasswordHash: '',
     public: {
       siteUrl: 'https://basicautomation.io',
     },

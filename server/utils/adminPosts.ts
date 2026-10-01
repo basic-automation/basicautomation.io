@@ -7,15 +7,13 @@
  *
  * # What guards this
  *
- * Caddy, in front of the app. `/admin` and `/api/admin/*` sit behind basic auth
- * in the reverse proxy, so an unauthenticated request never reaches Nitro that
- * way. But Caddy is not the only way in: the onion gateway proxies straight to
- * the site over loopback, so every route under `server/api/admin/` also calls
- * `refuseOverOnion` (`server/utils/adminGuard.ts`) before it does anything.
- * Between them those are the only thing standing between the internet and
- * these functions, which is why the validation below does not lean on them: `postPath` re-derives and
- * re-checks the path on every call, and a body that fails `parsePost` is
- * refused rather than written and fixed later.
+ * The app itself. Every route under `server/api/admin/` calls `requireEditor`
+ * (`server/utils/adminGuard.ts`) before it does anything: it refuses the onion
+ * gateway outright and checks the editor's credential on everything else.
+ * Caddy's basic auth in front is a second lock on the public way in, not the
+ * one these functions depend on. Still, the validation below does not lean on
+ * either: `postPath` re-derives and re-checks the path on every call, and a
+ * body that fails `parsePost` is refused rather than written and fixed later.
  *
  * The original plan was to gate this on the onion address instead. That was
  * wrong and the reason is worth recording: the onion address is printed on two
