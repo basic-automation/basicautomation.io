@@ -7,7 +7,7 @@
  * is further down the project page. The source is a file this site's own admin
  * wrote, on a volume only this container can reach.
  */
-import { blogName, socialCardPath } from '~~/shared/posts/section'
+import { blogName, socialCardAlt, socialCardPath } from '~~/shared/posts/section'
 const route = useRoute()
 const slug = computed(() => String(route.params.slug))
 const postSlug = computed(() => String(route.params.post))
@@ -47,6 +47,7 @@ useSeoMeta({
   ogImage: () => `${siteUrl}${socialCardPath(slug.value)}`,
   ogImageWidth: 1200,
   ogImageHeight: 630,
+  ogImageAlt: () => socialCardAlt(slug.value, project.value?.name, project.value?.hero),
   twitterCard: 'summary_large_image',
   twitterImage: () => `${siteUrl}${socialCardPath(slug.value)}`,
   // A draft is reachable by URL so it can be previewed, which is not the same

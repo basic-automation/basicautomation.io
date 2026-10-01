@@ -53,6 +53,20 @@ export function socialCardPath(project: string): string {
   return isSiteSection(project) ? '/og.png' : `/projects/og/${project}.png`
 }
 
+/** What the organization's card (`/og.png`) shows, for its `og:image:alt`. */
+export const ORG_CARD_ALT = 'The Basic Automation mark: //basic on a dark square'
+
+/**
+ * The `og:image:alt` for the card `socialCardPath` names: the organization's
+ * mark, or the project's own card, which carries its name and its hero line —
+ * the same words the project page gives its own card.
+ */
+export function socialCardAlt(project: string, projectName?: string, hero?: string): string {
+  if (isSiteSection(project)) return ORG_CARD_ALT
+  const name = projectName ?? project
+  return hero ? `${name} — ${hero}` : name
+}
+
 /** A blog's name, the same everywhere it is named — its index and every post in it. */
 export function blogName(project: string, projectName: string | undefined): string {
   return `${sectionLabel(project, projectName)} news`

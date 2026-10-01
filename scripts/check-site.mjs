@@ -237,6 +237,11 @@ function checkScriptlessCsp(path, html, csp) {
  * how every post and blog page shipped. The image is a `<meta>` content, which
  * the crawl below never follows, so it is fetched here: a card that 404s is
  * the same bare preview.
+ *
+ * And it says how big the picture is and what it shows: several networks lay
+ * a preview out before they have fetched the image, and `og:image:alt` is the
+ * card's only text for someone who cannot see it. The home page, `/projects`
+ * and `/status` had shipped with neither.
  */
 async function checkSocialCard(path, html) {
   const meta = (property) => html.match(new RegExp(`<meta[^>]+property="${property}"[^>]+content="([^"]*)"`))?.[1]
@@ -245,6 +250,9 @@ async function checkSocialCard(path, html) {
   if (!image) {
     fail(path, 'has an og:url but no og:image — a shared link previews without a card')
     return
+  }
+  for (const property of ['og:image:width', 'og:image:height', 'og:image:alt']) {
+    if (!meta(property)?.trim()) fail(path, `has an og:image but no ${property}`)
   }
   let url
   try {

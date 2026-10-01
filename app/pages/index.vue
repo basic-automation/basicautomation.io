@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import { ORG_CARD_ALT } from '~~/shared/posts/section'
+
 const { projects } = await useProjects()
 
 const stats = computed(() => {
@@ -72,6 +74,9 @@ useSeoMeta({
   ogDescription: description,
   ogType: 'website',
   ogImage: () => `${siteUrl}/og.png`,
+  ogImageWidth: 1200,
+  ogImageHeight: 630,
+  ogImageAlt: ORG_CARD_ALT,
   twitterCard: 'summary_large_image',
   twitterImage: () => `${siteUrl}/og.png`,
 })
