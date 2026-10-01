@@ -11,6 +11,29 @@ export interface Release {
   prerelease: boolean
 }
 
+/** One file on a release that a person downloads to install the app. */
+export interface ReleaseAsset {
+  /** The file name, e.g. `Skidbladnir_1.0.0_x64-setup.exe` */
+  name: string
+  /** GitHub's direct download URL for it */
+  url: string
+  /** In bytes, as GitHub reports it */
+  size: number
+}
+
+/**
+ * The release a page's download links point at, with its installable files.
+ * See `pickDownload` in `shared/github/releases.ts` for which release that is
+ * and which files are left out.
+ */
+export interface DownloadRelease {
+  tag: string
+  url: string
+  publishedAt: string
+  prerelease: boolean
+  assets: ReleaseAsset[]
+}
+
 /** The live half of a project: whatever GitHub and crates.io report right now. */
 export interface RepoMeta {
   repo: string
@@ -53,6 +76,13 @@ export interface RepoMeta {
    * extra against the rate limit.
    */
   releases: Release[]
+  /**
+   * What to download: the newest full release that has installable files, or,
+   * for a repo that has only tagged pre-releases, the newest one that has.
+   * Null when no release in the list carries any. Comes from the same list
+   * call as `releases`, so it costs nothing extra against the rate limit.
+   */
+  download: DownloadRelease | null
   crateVersion?: string
   crateDownloads?: number
   crateUrl?: string

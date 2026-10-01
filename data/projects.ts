@@ -37,6 +37,27 @@ export interface CodeSample {
   code: string
 }
 
+/**
+ * The download section of a desktop app's page. The files themselves are read
+ * live from the newest release; this is only what the page says about them.
+ */
+export interface Downloads {
+  /**
+   * The app's editions, by the product name their files start with — the part
+   * before the first underscore, as Tauri names bundles (`Skidbladnir_1.0.0_…`).
+   * The first is the one to recommend and gets a link per platform; any others
+   * get one quieter line each.
+   */
+  editions: { name: string, label: string }[]
+  /** One line on which edition to take, under the links */
+  editionNote?: string
+  /** A few words beside each link for that operating system, e.g. "experimental" */
+  caveats?: Partial<Record<'windows' | 'macos' | 'linux', string>>
+  /** What to expect the first time it is opened, one line per system — for
+   *  builds that are not code-signed, the warning the system shows and the way past it */
+  firstLaunch?: { os: string, text: string }[]
+}
+
 export interface Project {
   /** URL segment: /projects/<slug> */
   slug: string
@@ -82,6 +103,9 @@ export interface Project {
   crate?: string
   /** Extra links beyond GitHub/crates.io/docs.rs */
   links?: { label: string, href: string }[]
+  /** A download section with a direct link per platform, for an app whose
+   *  releases carry installers */
+  downloads?: Downloads
 }
 
 export const projects: Project[] = [
@@ -514,6 +538,38 @@ default_low_stock_threshold = 5    # overridable per product in the app
       },
       { label: 'Built with Tauri', href: 'https://v2.tauri.app' },
     ],
+    // The standard edition first: it is the one to recommend, and the one
+    // whose HEIC matches heif-enc byte for byte. The first-launch lines are
+    // there because nothing is code-signed yet, so Windows and macOS each put
+    // a warning between a download and a running app.
+    downloads: {
+      editions: [
+        { name: 'Skidbladnir', label: 'standard edition' },
+        { name: 'Skidbladnir-GPL', label: 'GPL edition' },
+      ],
+      editionNote:
+        'Not sure which edition? Take the standard one above. The GPL edition is the same app '
+        + 'with x265 writing its HEIC; the licence only matters if you pass the app on.',
+      caveats: { macos: 'experimental' },
+      firstLaunch: [
+        {
+          os: 'Windows',
+          text: 'SmartScreen says "Windows protected your PC": click More info, then Run anyway. '
+            + 'It installs for your account only, without administrator rights.',
+        },
+        {
+          os: 'macOS',
+          text: 'Drag it to Applications and open it once, close the warning, then click Open '
+            + 'Anyway in System Settings > Privacy & Security. If macOS calls the app damaged, run '
+            + 'xattr -dr com.apple.quarantine /Applications/Skidbladnir.app in Terminal.',
+        },
+        {
+          os: 'Linux',
+          text: 'Ubuntu 22.04, Debian 12 or newer. Install the .deb with sudo apt install ./ followed '
+            + 'by the file\'s name, or make the AppImage executable (chmod +x) and run it.',
+        },
+      ],
+    },
   },
   {
     slug: 'nanna',
