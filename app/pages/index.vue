@@ -103,8 +103,8 @@ useSeoMeta({
         <NuxtLink
           to="/projects/skidbladnir/about"
           class="text-pn-accent transition-colors hover:text-pn-fg-bright"
-        >Skidbladnir</NuxtLink>, for one, puts every still-image option of the official
-        WebP, AVIF, JPEG XL and HEIC encoders in one window.
+        >Skidbladnir</NuxtLink>, for one, puts the still-image options of cwebp, avifenc,
+        cjxl and heif-enc in one window, each labelled with the flag it sets.
       </p>
 
       <div class="mt-6 flex flex-wrap items-center gap-x-7 gap-y-3 text-sm">
