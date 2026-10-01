@@ -35,6 +35,23 @@ record. There is no run log.
 - [ ] Skidbladnir's `status` is still `active` ("in development" on the page and
       on its social card) — **owner decision** once 1.0.0 is out: `stable` changes
       the card, so it needs `npm run og` (local Chromium) in the same commit.
+- [x] Skidbladnir's page, ready for its first public campaign: the parity claim
+      scoped the way its README scopes it (still images, the four named tools,
+      the exceptions in the readme below, no typed case count), the full input
+      list, the two editions, macOS marked experimental, the 0.14 window as its
+      screenshot with a real `alt`, and a download section with a direct link per
+      platform, read from the release list the page already fetches
+      (`pickDownload`, `groupInstallers`). The home page's lede names it in one
+      sentence.
+- [ ] Skidbladnir as the first card (`order: 1` in `data/projects.ts`) for the
+      campaign — **owner decision**: it also reorders the footer, `/projects`
+      and `/api/projects`.
+- [ ] Refresh the fallback snapshot (`npm run sync`, commit
+      `data/projects.generated.json`) once Skidbladnir 1.0.0 is published and its
+      GitHub description and topics are updated. Today's snapshot predates the
+      download section, so a page served from it has none, and it still carries
+      the Electron-era description and topics (`#electron #jpeg2000 #node`) that
+      the about page's topic line and JSON-LD keywords print.
 - [x] A card and its data can no longer drift apart. Rendering still needs a local
       Chromium, so it stays manual — but every render records what it was rendered
       from in `public/projects/og/cards.json`, and `npm run og:check` recomputes
@@ -80,6 +97,13 @@ record. There is no run log.
 - [x] An unknown `/projects/<slug>` is a 404, not a 301 to one; `npm run check`
       no longer follows redirects when it asks for a 404.
 - [x] Blog indexes carry their newest post's date as `lastmod` in the sitemap.
+- [x] Every social card states its size and what it shows. `/`, `/projects` and
+      `/status` named an `og:image` with no `og:image:width`, `og:image:height` or
+      `og:image:alt`, and the blogs had no alt. `npm run check` fails a card
+      without all three.
+- [x] `/projects/<slug>` hands its query string on with its 301 to `/about`, so a
+      campaign link's `utm_*` tags survive the short address; the canonical link
+      stays query-free. `npm run check` asserts it for every project.
 
 ## Phase 3 — Operations
 
@@ -308,6 +332,16 @@ record. There is no run log.
       served, and it now points at `raw.githubusercontent.com` instead (200,
       verified 2026-09-25). So this is a plain decision — retire it, redirect it,
       or leave it — with nothing on this site depending on the answer.
+- [ ] `SoftwareApplication` JSON-LD for the desktop apps (operating systems,
+      version, download URL, screenshot, free), beside `SoftwareSourceCode`, and a
+      meta description short enough not to be cut off: Skidbladnir's summary,
+      which is its description, runs to about 290 characters.
+- [ ] Cache-bust the social cards. `socialCardPath()` (`shared/posts/section.ts`)
+      names a fixed URL, so a re-rendered card can stay hidden behind the copy a
+      network cached under the same URL. A content hash from
+      `public/projects/og/cards.json`, as a query on the `og:image`, would make a
+      new card a new URL. Matters the day Skidbladnir's card stops saying
+      "In development".
 
 ## Cross-cutting
 
@@ -361,6 +395,18 @@ record. There is no run log.
       deliberate 300px shift, so there is no before/after CLS number here. What
       was verified is that the attributes render, that the remote README images
       are untouched, and that the layout is unchanged.
+- [x] A folded README costs no third-party request. Its images had no `loading`
+      attribute, and an eager image inside a closed `<details>` is fetched anyway,
+      so every visit to the Skidbladnir page fetched two screenshots from
+      raw.githubusercontent.com. `lazyImages` (`shared/markdown/readme.ts`) makes
+      README images lazy, live and in the snapshot. Checked in headless Chromium:
+      scrolling the whole page with the README folded requested nothing from
+      GitHub; opening it loaded the first screenshot.
+- [x] The organization's own repositories can see a visit came from here. Links
+      to `github.com/basic-automation/*` on the about pages carry `noopener`
+      without `noreferrer` on the clearnet site (`shared/html/rel.ts`), so
+      GitHub's "Referring sites" can count them; the `Referrer-Policy` sends the
+      origin alone. Over Tor every link keeps `noreferrer`.
 - [x] Measure Core Web Vitals for real — `npm run vitals`
       (`scripts/measure-vitals.mjs`): LCP and CLS in headless Chromium over CDP,
       every sitemap page, median of N cold loads, at a throttled phone profile
