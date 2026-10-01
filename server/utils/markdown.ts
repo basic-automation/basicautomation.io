@@ -1,6 +1,7 @@
 import { Marked } from 'marked'
 import { createSlugger } from '~~/shared/markdown/slug'
 import { postHeading, readmeHeading } from '~~/shared/markdown/heading'
+import { lazyImages } from '~~/shared/markdown/readme'
 
 /**
  * Markdown to HTML, in this site's palette.
@@ -42,7 +43,11 @@ export async function renderMarkdown(md: string, kind: 'readme' | 'post' = 'read
     },
   })
 
-  const html = collecting.parse(md) as string
+  // A README is folded away on its page, so its images wait until it is
+  // opened; a post is the page, and its first image may be what a reader
+  // sees first. See shared/markdown/readme.ts.
+  const parsed = collecting.parse(md) as string
+  const html = kind === 'readme' ? lazyImages(parsed) : parsed
   if (!fences.length) return html
 
   const rendered = await Promise.all(fences.map((f) => highlight(f.code, f.lang)))

@@ -23,7 +23,7 @@ import { readmeHeading } from '../shared/markdown/heading.ts'
 // The same two helpers the site itself renders READMEs and releases with. They
 // used to be copied here; a snapshot shaped differently from the live path is a
 // fallback that changes the page when it takes over.
-import { absolutize, stripLeadingLogo } from '../shared/markdown/readme.ts'
+import { absolutize, lazyImages, stripLeadingLogo } from '../shared/markdown/readme.ts'
 import { normaliseReleases, pickDownload, pickLatest } from '../shared/github/releases.ts'
 
 const HERE = dirname(fileURLToPath(import.meta.url))
@@ -110,7 +110,7 @@ async function fetchRepo(project) {
       'application/vnd.github.raw',
     )
     const prepared = absolutize(stripLeadingLogo(md), ORG, repo, out.defaultBranch)
-    out.readmeHtml = markdownRenderer().parse(prepared)
+    out.readmeHtml = lazyImages(markdownRenderer().parse(prepared))
   }
   catch {
     out.readmeHtml = null
