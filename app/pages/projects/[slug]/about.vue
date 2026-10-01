@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { formatSize, groupInstallers, type OsFamily } from '~~/shared/github/installers'
+import { outboundRel } from '~~/shared/html/rel'
 
 const route = useRoute()
 const slug = computed(() => String(route.params.slug))
@@ -128,6 +129,9 @@ const facts = computed(() => {
  */
 const siteUrl = useSiteOrigin()
 
+/** `noopener` alone for the org's own repos on the clearnet site; see shared/html/rel.ts. */
+const relFor = (href: string) => outboundRel(href, siteUrl)
+
 const jsonLd = computed(() => {
   const p = project.value
   if (!p) return ''
@@ -248,7 +252,7 @@ useSeoMeta({
           :key="link.href"
           :href="link.href"
           target="_blank"
-          rel="noreferrer noopener"
+          :rel="relFor(link.href)"
           class="transition-colors hover:text-pn-fg-bright"
           :style="{ color: 'var(--accent)' }"
         >→ {{ link.label }}</a>
@@ -270,7 +274,7 @@ useSeoMeta({
         <a
           :href="download.release.url"
           target="_blank"
-          rel="noreferrer noopener"
+          :rel="relFor(download.release.url)"
           class="transition-colors hover:text-pn-fg-bright"
           :style="{ color: 'var(--accent)' }"
         >{{ download.release.tag }}</a>
@@ -288,7 +292,7 @@ useSeoMeta({
           <a
             :href="item.asset.url"
             :title="item.asset.name"
-            rel="noreferrer"
+            :rel="relFor(item.asset.url)"
             class="text-sm transition-colors hover:text-pn-fg-bright sm:text-base"
             :style="{ color: 'var(--accent)' }"
           >→ {{ item.platform.label }}</a>
@@ -308,7 +312,7 @@ useSeoMeta({
           :key="item.asset.name"
           :href="item.asset.url"
           :title="`${item.asset.name}, ${formatSize(item.asset.size)}`"
-          rel="noreferrer"
+          :rel="relFor(item.asset.url)"
           class="text-pn-dim transition-colors hover:text-pn-fg-bright"
         >{{ item.platform.short }}</a>
       </p>
@@ -336,7 +340,7 @@ useSeoMeta({
       <a
         :href="releasesUrl"
         target="_blank"
-        rel="noreferrer noopener"
+        :rel="relFor(releasesUrl)"
         class="mt-8 inline-block text-xs leading-6 text-pn-muted transition-colors hover:text-pn-fg-bright"
       >→ all releases</a>
     </section>
@@ -468,7 +472,7 @@ useSeoMeta({
           <a
             :href="release.url"
             target="_blank"
-            rel="noreferrer noopener"
+            :rel="relFor(release.url)"
             class="group block"
           >
             <span class="flex flex-wrap items-baseline gap-x-4 gap-y-1">
@@ -493,7 +497,7 @@ useSeoMeta({
       <a
         :href="releasesUrl"
         target="_blank"
-        rel="noreferrer noopener"
+        :rel="relFor(releasesUrl)"
         class="mt-8 inline-block text-xs text-pn-muted transition-colors hover:text-pn-fg-bright"
       >→ full release history</a>
     </section>
