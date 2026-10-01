@@ -100,6 +100,11 @@ useSeoMeta({
         We design and build software tools for businesses — and we publish the sharp
         ones. Privacy-preserving Rust crates for the Tor network, desktop apps that
         take the tedium out of catalogs and image pipelines. All of it open source.
+        <NuxtLink
+          to="/projects/skidbladnir/about"
+          class="text-pn-accent transition-colors hover:text-pn-fg-bright"
+        >Skidbladnir</NuxtLink>, for one, puts every still-image option of the official
+        WebP, AVIF, JPEG XL and HEIC encoders in one window.
       </p>
 
       <div class="mt-6 flex flex-wrap items-center gap-x-7 gap-y-3 text-sm">
