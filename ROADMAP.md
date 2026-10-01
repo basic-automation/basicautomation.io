@@ -32,9 +32,6 @@ record. There is no run log.
       that file changes, then `npm run sizes`. A screenshot two releases behind
       the copy beside it — the v0.9.0 window, two formats and no flag labels —
       is what this replaced.
-- [ ] Skidbladnir's `status` is still `active` ("in development" on the page and
-      on its social card) — **owner decision** once 1.0.0 is out: `stable` changes
-      the card, so it needs `npm run og` (local Chromium) in the same commit.
 - [x] Skidbladnir's page, ready for its first public campaign: the parity claim
       scoped the way its README scopes it (still images, the four named tools,
       the exceptions in the readme below, no typed case count), the full input
@@ -42,7 +39,9 @@ record. There is no run log.
       screenshot with a real `alt`, and a download section with a direct link per
       platform, read from the release list the page already fetches
       (`pickDownload`, `groupInstallers`). The home page's lede names it in one
-      sentence.
+      sentence. Its `status` is `stable` from 1.0.0, its first release that is not
+      a prerelease, so the badge and the social card say "Stable". This copy is
+      held back until 1.0.0 is published, because before then it is untrue.
 - [ ] Skidbladnir as the first card (`order: 1` in `data/projects.ts`) for the
       campaign — **owner decision**: it also reorders the footer, `/projects`
       and `/api/projects`.
@@ -340,8 +339,9 @@ record. There is no run log.
       names a fixed URL, so a re-rendered card can stay hidden behind the copy a
       network cached under the same URL. A content hash from
       `public/projects/og/cards.json`, as a query on the `og:image`, would make a
-      new card a new URL. Matters the day Skidbladnir's card stops saying
-      "In development".
+      new card a new URL. Matters now: Skidbladnir's card changed from
+      "In development" to "Stable" with 1.0.0, and a network that cached the old
+      card under the same URL can keep showing it.
 
 ## Cross-cutting
 

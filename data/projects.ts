@@ -469,7 +469,10 @@ default_low_stock_threshold = 5    # overridable per product in the app
       + 'flag away from a ruined batch. Skidbladnir puts a window in front of all four and, '
       + 'for a still image, gets the same files out.',
     kind: 'Desktop app',
-    status: 'active',
+    // Stable from 1.0.0, its first release that is not a prerelease. The
+    // badge, the social card (re-render it with `npm run og`) and the
+    // "Stable since 1.0." feature below all say so; change them together.
+    status: 'stable',
     accent: 'green',
     order: 6,
     features: [
