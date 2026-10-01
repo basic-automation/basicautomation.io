@@ -237,6 +237,11 @@ function checkScriptlessCsp(path, html, csp) {
  * how every post and blog page shipped. The image is a `<meta>` content, which
  * the crawl below never follows, so it is fetched here: a card that 404s is
  * the same bare preview.
+ *
+ * And it says how big the picture is and what it shows: several networks lay
+ * a preview out before they have fetched the image, and `og:image:alt` is the
+ * card's only text for someone who cannot see it. The home page, `/projects`
+ * and `/status` had shipped with neither.
  */
 async function checkSocialCard(path, html) {
   const meta = (property) => html.match(new RegExp(`<meta[^>]+property="${property}"[^>]+content="([^"]*)"`))?.[1]
@@ -245,6 +250,9 @@ async function checkSocialCard(path, html) {
   if (!image) {
     fail(path, 'has an og:url but no og:image — a shared link previews without a card')
     return
+  }
+  for (const property of ['og:image:width', 'og:image:height', 'og:image:alt']) {
+    if (!meta(property)?.trim()) fail(path, `has an og:image but no ${property}`)
   }
   let url
   try {
@@ -718,6 +726,26 @@ for (const [variant, want] of [['/PROJECTS', '/projects'], ['/news/', '/news'], 
   }
 }
 notes.push('other spellings of a page name its canonical address')
+
+// ── A redirect keeps the query ──────────────────────────────────────────────
+// `/projects/<slug>` is a 301 to its about tab, and a campaign link to it
+// carries `utm_*` tags. The redirect has to hand them on, or the landing page
+// never learns where the visit came from. Checked on every project page the
+// crawl found, without following the redirect.
+const aboutPages = [...crawled].filter((p) => /^\/projects\/[^/]+\/about$/.test(p))
+if (!aboutPages.length) fail('/projects/<slug>', 'the crawl found no project page to check the redirect of')
+for (const about of aboutPages) {
+  const from = `${about.replace(/\/about$/, '')}?utm_source=check&utm_medium=redirect`
+  const res = await fetch(BASE + from, { headers: HEADERS, redirect: 'manual' })
+    .catch((err) => ({ status: 0, error: err.message, headers: new Headers() }))
+  const location = res.headers.get('location') ?? ''
+  const target = location ? new URL(location, BASE) : null
+  if (res.status !== 301) fail(from, `expected a 301 to ${about}, got ${res.status || res.error}`)
+  else if (target?.pathname !== about || target.searchParams.get('utm_source') !== 'check' || target.searchParams.get('utm_medium') !== 'redirect') {
+    fail(from, `redirects to ${location || 'nowhere'}; it should be ${about} with the query kept`)
+  }
+}
+notes.push(`${aboutPages.length} project redirects keep their query string`)
 
 // ── A 404 has to be a 404 ───────────────────────────────────────────────────
 // Answered directly, not at the end of a redirect: "moved permanently" about a

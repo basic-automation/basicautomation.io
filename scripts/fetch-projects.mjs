@@ -23,8 +23,8 @@ import { readmeHeading } from '../shared/markdown/heading.ts'
 // The same two helpers the site itself renders READMEs and releases with. They
 // used to be copied here; a snapshot shaped differently from the live path is a
 // fallback that changes the page when it takes over.
-import { absolutize, stripLeadingLogo } from '../shared/markdown/readme.ts'
-import { normaliseReleases, pickLatest } from '../shared/github/releases.ts'
+import { absolutize, lazyImages, stripLeadingLogo } from '../shared/markdown/readme.ts'
+import { normaliseReleases, pickDownload, pickLatest } from '../shared/github/releases.ts'
 
 const HERE = dirname(fileURLToPath(import.meta.url))
 const OUT = resolve(HERE, '../data/projects.generated.json')
@@ -110,7 +110,7 @@ async function fetchRepo(project) {
       'application/vnd.github.raw',
     )
     const prepared = absolutize(stripLeadingLogo(md), ORG, repo, out.defaultBranch)
-    out.readmeHtml = markdownRenderer().parse(prepared)
+    out.readmeHtml = lazyImages(markdownRenderer().parse(prepared))
   }
   catch {
     out.readmeHtml = null
@@ -118,8 +118,8 @@ async function fetchRepo(project) {
   }
 
   // Release history. One list call, not `releases/latest` plus a history call:
-  // the newest full release is derived from the same page, so the changelog
-  // costs nothing extra against the rate limit. Drafts are dropped — they are
+  // the newest full release and the download links are derived from the same
+  // page, so neither costs anything extra against the rate limit. Drafts are dropped — they are
   // not public. Pre-releases stay: for several of these repos that is all
   // there is, and the strip marks them.
   try {
@@ -128,10 +128,12 @@ async function fetchRepo(project) {
     )
     out.releases = normaliseReleases(list)
     out.latestRelease = pickLatest(out.releases)
+    out.download = pickDownload(list)
   }
   catch {
     out.releases = []
     out.latestRelease = null
+    out.download = null
   }
 
   // crates.io, for the published Rust crates.

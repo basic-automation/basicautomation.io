@@ -22,7 +22,7 @@ it is flat.
 | --- | --- |
 | `/` | The pitch, live project stats, and the catalogue |
 | `/projects` | Every public project |
-| `/projects/<slug>/about` | A marketing page per project: hero, why it exists, features, a worked example, the recent releases, and the repo's README folded away underneath. `/projects/<slug>` redirects here |
+| `/projects/<slug>/about` | A marketing page per project: hero, why it exists, features, a worked example, the recent releases, and the repo's README folded away underneath. A desktop app's page also gets a download section: a direct link per platform to the newest release's installers. `/projects/<slug>` redirects here |
 | `/projects/<slug>/blog` | That project's news, and `/projects/<slug>/blog/<post>` for one post |
 | `/news` | The organization's own news, for what is about Basic Automation rather than one tool |
 | `/admin` | The post editor — behind a login the app checks itself, and absent over Tor (below) |
@@ -37,10 +37,14 @@ it is flat.
 
 Each project page also carries `SoftwareSourceCode` JSON-LD and its own Open
 Graph card, so a link to it previews as itself rather than as the organization.
+Every page that names a card also gives its size and a text alternative
+(`og:image:width`, `og:image:height`, `og:image:alt`).
 Each post carries `BlogPosting` JSON-LD naming the blog it belongs to. Every
 page names its one address with `<link rel="canonical">`, the same string as its
 `og:url` and its sitemap entry, so `/PROJECTS` or `/news/` or a tracking query
-string is never mistaken for a second page.
+string is never mistaken for a second page. `/projects/<slug>`, a permanent
+redirect to the project's about tab, hands its query string on, so a campaign
+link's `utm_*` tags are not lost on the way.
 
 ## Posts
 
@@ -89,6 +93,18 @@ the same seven projects refresh every 5 minutes — 252 calls an hour; the
 deployed site has one. A visitor always gets freshly rendered markup, and adding
 a project lengthens the freshness window instead of quietly running the site
 into the rate limit. `/status` says which of the two it is running on.
+
+The download section on an app's page comes out of that same releases call,
+since each release in it lists its files: `pickDownload`
+(`shared/github/releases.ts`) takes the newest full release that has
+installers — or the newest pre-release, while there is no full one — and drops
+the files nobody installs by hand (signatures, updater archives and manifests,
+the source archive). `groupInstallers` (`shared/github/installers.ts`) sorts the
+rest by platform and edition from their Tauri bundle names. What the section
+says around the links — which edition to take, what the first launch looks like
+on an unsigned build — is editorial, in the project's `downloads` entry in
+`data/projects.ts`. With no release carrying installers, the section is not
+drawn, and the hero's link and the release strip still lead to the release page.
 
 Each GitHub request is conditional: the site keeps the ETag of the last answer
 and sends `If-None-Match`, and a repo that has not changed comes back
@@ -159,8 +175,9 @@ release shaping, heading slugs — and nothing else. It boots no Nitro and rende
 no component: what a running server does is what `npm run check` asserts.
 
 `npm run check` walks a running build: every page, every internal link and
-asset, every URL the sitemap promises, and every social card, plus three paths
-that must answer 404. It also asserts the structural accessibility of each page
+asset, every URL the sitemap promises, and every social card (which must state
+its size and alt text), plus three paths that must answer 404 and every
+project's `/projects/<slug>`, which must redirect with its query string intact. It also asserts the structural accessibility of each page
 — one `h1`, one `main`, a language, a named `nav` when there is more than one,
 an `alt` on every image, no positive `tabindex`. It is what CI runs after the build, because a bundle that
 compiles is not the same as a site that renders.
@@ -229,7 +246,15 @@ never on the page body, so an inline script, event handler or `<style>` block
 that arrives in a README does not apply. `font-src 'self'` and `connect-src 'self'` also state two of the
 site's own rules — one self-hosted typeface, no third-party calls — somewhere a
 browser enforces them. `img-src` allows any https host, because a README's
-badges are somebody else's URLs.
+badges are somebody else's URLs. Those images load lazily, so a README left
+folded costs the visitor no request to another host until it is opened.
+
+Links that leave the site carry `rel="noreferrer noopener"`, except links on the
+clearnet site to the organization's own repositories, which carry `noopener`
+alone (`shared/html/rel.ts`). GitHub's traffic page counts only visits that
+arrive with a referrer, and the site's `Referrer-Policy` sends the origin alone,
+never the page or its query. Over the onion service every link keeps
+`noreferrer`.
 
 The runtime image is plain Alpine with the node binary copied in rather than
 `node:24-alpine`: Nitro bundles its dependencies into `.output`, so npm, yarn

@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import type { Health } from '~~/shared/types/health'
+import { ORG_CARD_ALT } from '~~/shared/posts/section'
 
 /**
  * What the process behind this page is doing, rendered by that same process.
@@ -100,6 +101,9 @@ useSeoMeta({
     'Whether basicautomation.io is rendering from live GitHub and crates.io data '
     + 'or from its committed fallback snapshot, and how long it has been up.',
   ogImage: () => `${siteUrl}/og.png`,
+  ogImageWidth: 1200,
+  ogImageHeight: 630,
+  ogImageAlt: ORG_CARD_ALT,
   twitterCard: 'summary_large_image',
 })
 </script>

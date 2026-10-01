@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import { ORG_CARD_ALT } from '~~/shared/posts/section'
+
 const { projects } = await useProjects()
 
 const siteUrl = useSiteOrigin()
@@ -41,6 +43,9 @@ useSeoMeta({
     'Every public project from Basic Automation: Rust crates for the Tor network and '
     + 'desktop apps for catalogs and image conversion.',
   ogImage: () => `${siteUrl}/og.png`,
+  ogImageWidth: 1200,
+  ogImageHeight: 630,
+  ogImageAlt: ORG_CARD_ALT,
   twitterCard: 'summary_large_image',
 })
 </script>

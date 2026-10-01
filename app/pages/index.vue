@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import { ORG_CARD_ALT } from '~~/shared/posts/section'
+
 const { projects } = await useProjects()
 
 const stats = computed(() => {
@@ -72,6 +74,9 @@ useSeoMeta({
   ogDescription: description,
   ogType: 'website',
   ogImage: () => `${siteUrl}/og.png`,
+  ogImageWidth: 1200,
+  ogImageHeight: 630,
+  ogImageAlt: ORG_CARD_ALT,
   twitterCard: 'summary_large_image',
   twitterImage: () => `${siteUrl}/og.png`,
 })
@@ -95,6 +100,11 @@ useSeoMeta({
         We design and build software tools for businesses — and we publish the sharp
         ones. Privacy-preserving Rust crates for the Tor network, desktop apps that
         take the tedium out of catalogs and image pipelines. All of it open source.
+        <NuxtLink
+          to="/projects/skidbladnir/about"
+          class="text-pn-accent transition-colors hover:text-pn-fg-bright"
+        >Skidbladnir</NuxtLink>, for one, puts the still-image options of cwebp, avifenc,
+        cjxl and heif-enc in one window, each labelled with the flag it sets.
       </p>
 
       <div class="mt-6 flex flex-wrap items-center gap-x-7 gap-y-3 text-sm">

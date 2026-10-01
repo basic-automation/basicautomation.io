@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { absolutize, stripLeadingLogo } from '~~/shared/markdown/readme'
+import { absolutize, lazyImages, stripLeadingLogo } from '~~/shared/markdown/readme'
 
 const ORG = 'basic-automation'
 const RAW = `https://raw.githubusercontent.com/${ORG}/onyums/main/`
@@ -91,5 +91,32 @@ describe('stripLeadingLogo', () => {
 	it('only drops one, so a second logo image stays visible', () => {
 		expect(stripLeadingLogo('![logo](./logo.svg)\n![logo](./logo2.svg)\n# t'))
 			.toBe('![logo](./logo2.svg)\n# t')
+	})
+})
+
+describe('lazyImages', () => {
+	it('makes every image lazy and async, the markdown ones and the raw HTML ones', () => {
+		expect(lazyImages('<p><img src="https://raw.githubusercontent.com/x/y/main/shot.webp" alt="The window"></p>'))
+			.toBe('<p><img loading="lazy" decoding="async" src="https://raw.githubusercontent.com/x/y/main/shot.webp" alt="The window"></p>')
+		expect(lazyImages('<IMG SRC="a.png" width="600"/>')).toBe('<IMG loading="lazy" decoding="async" SRC="a.png" width="600"/>')
+	})
+
+	it('touches every image, badges included', () => {
+		const html = '<a href="x"><img src="badge.svg" alt="CI"></a> <img src="b.png" alt="">'
+		expect(lazyImages(html).match(/loading="lazy"/g)).toHaveLength(2)
+	})
+
+	it('leaves an image that already says how it loads', () => {
+		expect(lazyImages('<img loading="eager" src="a.png">')).toBe('<img decoding="async" loading="eager" src="a.png">')
+		expect(lazyImages('<img src="a.png" loading=lazy decoding=sync>')).toBe('<img src="a.png" loading=lazy decoding=sync>')
+	})
+
+	it('does not reach into code, which is escaped by the time it runs', () => {
+		const html = '<pre><code>&lt;img src="a.png"&gt;</code></pre><p><code>&lt;img&gt;</code></p>'
+		expect(lazyImages(html)).toBe(html)
+	})
+
+	it('leaves a tag that only starts with img alone', () => {
+		expect(lazyImages('<imgx src="a">')).toBe('<imgx src="a">')
 	})
 })

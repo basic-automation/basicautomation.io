@@ -18,9 +18,9 @@
 import { ofetch } from 'ofetch'
 import { ConditionalCache } from '~~/shared/github/conditional'
 import { projects, type Project } from '~~/data/projects'
-import type { EnrichedProject, Release, RepoMeta } from '~~/shared/types/project'
+import type { DownloadRelease, EnrichedProject, Release, RepoMeta } from '~~/shared/types/project'
 import { absolutize, stripLeadingLogo } from '~~/shared/markdown/readme'
-import { normaliseReleases, pickLatest } from '~~/shared/github/releases'
+import { normaliseReleases, pickDownload, pickLatest } from '~~/shared/github/releases'
 import { refreshPolicy } from '~~/shared/github/budget'
 import snapshot from '~~/data/projects.generated.json'
 
@@ -90,7 +90,8 @@ const MAX_RELEASES = 5
  * is a field `fromSnapshot` has to fill in — declaring it that way means adding
  * a field without a fallback fails the typecheck instead of the render.
  */
-type SnapshotRepo = Omit<RepoMeta, 'source' | 'releases'> & { releases?: Release[] }
+type SnapshotRepo = Omit<RepoMeta, 'source' | 'releases' | 'download'>
+  & { releases?: Release[], download?: DownloadRelease | null }
 
 const snapshotRepos = (snapshot as { repos: Record<string, SnapshotRepo> }).repos ?? {}
 
@@ -175,6 +176,7 @@ async function fetchRepo(project: Project): Promise<RepoMeta> {
     readmeHtml: null,
     latestRelease: null,
     releases: [],
+    download: null,
   }
 
   // README, latest release and crate data are all optional — a failure in any
@@ -182,7 +184,8 @@ async function fetchRepo(project: Project): Promise<RepoMeta> {
   const [readme, release, crate] = await Promise.allSettled([
     gh<string>(`/repos/${ORG}/${repo}/readme`, 'application/vnd.github.raw', 'text'),
     // One list call, not `releases/latest` plus a history call: `latestRelease`
-    // is derived from the same page, so the changelog costs no extra request.
+    // and the download links are derived from the same page — each release in
+    // it carries its assets — so neither costs an extra request.
     gh<any[]>(`/repos/${ORG}/${repo}/releases?per_page=${MAX_RELEASES}`),
     project.crate
       ? ofetch<any>(`https://crates.io/api/v1/crates/${project.crate}`, {
@@ -210,6 +213,7 @@ async function fetchRepo(project: Project): Promise<RepoMeta> {
   if (release.status === 'fulfilled' && Array.isArray(release.value)) {
     out.releases = normaliseReleases(release.value)
     out.latestRelease = pickLatest(out.releases)
+    out.download = pickDownload(release.value)
   }
   else {
     incomplete.push('releases')
@@ -234,9 +238,10 @@ async function fetchRepo(project: Project): Promise<RepoMeta> {
 
 function fromSnapshot(repo: string): RepoMeta | null {
   const s = snapshotRepos[repo]
-  // A snapshot written before `releases` existed has no such key; the strip
-  // renders nothing rather than throwing on an undefined array.
-  return s ? { ...s, source: 'snapshot', releases: s.releases ?? [] } : null
+  // A snapshot written before `releases` or `download` existed has no such
+  // key; the strip and the download section render nothing rather than
+  // throwing on an undefined.
+  return s ? { ...s, source: 'snapshot', releases: s.releases ?? [], download: s.download ?? null } : null
 }
 
 /**

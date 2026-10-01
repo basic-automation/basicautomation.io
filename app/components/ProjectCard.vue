@@ -29,7 +29,7 @@ const ago = useRelativeTime()
       <img
         v-else-if="project.screenshot"
         :src="project.screenshot"
-        :alt="`${project.name} screenshot`"
+        :alt="project.screenshotAlt ?? `${project.name} screenshot`"
         loading="lazy"
         class="absolute inset-0 h-full w-full object-cover object-top transition-opacity duration-300 group-hover:opacity-90"
       >

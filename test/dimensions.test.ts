@@ -47,7 +47,7 @@ describe('pngDimensions', () => {
 describe('webpDimensions', () => {
 	it('reads a lossy VP8 frame header', async () => {
 		expect(webpDimensions(await bytes('public/projects/shots/skidbladnir-screenshot.webp')))
-			.toEqual({ width: 1280, height: 1554 })
+			.toEqual({ width: 1280, height: 1304 })
 		expect(webpDimensions(await bytes('public/bg/hero.webp'))).toEqual({ width: 2000, height: 1250 })
 	})
 
@@ -84,7 +84,7 @@ describe('imageDimensions', () => {
 	it('dispatches on the bytes for every image the pages render', async () => {
 		expect(imageDimensions(await bytes('public/projects/weftdb.svg'))).toEqual({ width: 267, height: 168 })
 		expect(imageDimensions(await bytes('public/projects/shots/skidbladnir-screenshot.webp')))
-			.toEqual({ width: 1280, height: 1554 })
+			.toEqual({ width: 1280, height: 1304 })
 		expect(imageDimensions(await bytes('public/favicon-32.png'))).toEqual({ width: 32, height: 32 })
 	})
 

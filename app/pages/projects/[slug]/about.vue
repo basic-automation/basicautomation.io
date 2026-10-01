@@ -1,4 +1,7 @@
 <script setup lang="ts">
+import { formatSize, groupInstallers, type OsFamily } from '~~/shared/github/installers'
+import { outboundRel } from '~~/shared/html/rel'
+
 const route = useRoute()
 const slug = computed(() => String(route.params.slug))
 
@@ -69,6 +72,38 @@ const releases = computed(() => meta.value?.releases ?? [])
 const releasesUrl = computed(() =>
   `https://github.com/basic-automation/${project.value?.repo}/releases`)
 
+/**
+ * The download section: a direct link per platform for the edition to
+ * recommend, a quieter line for any other, from the release `pickDownload`
+ * chose — the newest full release, or the newest pre-release when there is no
+ * full one yet. Null, and the section absent, whenever there is nothing to
+ * link: no `downloads` in the project's data, no release with installers, or a
+ * fallback snapshot from before downloads were recorded. The hero's link and
+ * the release strip still lead to the release page then.
+ *
+ * It also stays absent when the recommended edition has no files of its own,
+ * because "take the standard one above" over a list with no standard one in
+ * it would be advice the page cannot follow.
+ */
+const download = computed(() => {
+  const config = project.value?.downloads
+  const release = meta.value?.download
+  if (!config || !release?.assets?.length || !config.editions.length) return null
+  const groups = groupInstallers(release.assets, config.editions.map((e) => e.name))
+  const first = groups[0]
+  if (!first || first.name !== config.editions[0]!.name) return null
+  const labelOf = (name: string) => config.editions.find((e) => e.name === name)?.label ?? name
+  return {
+    release,
+    primary: { ...first, label: labelOf(first.name) },
+    others: groups.slice(1).map((g) => ({ ...g, label: labelOf(g.name) })),
+    note: config.editionNote ?? null,
+    firstLaunch: config.firstLaunch ?? [],
+  }
+})
+
+const caveatFor = (os: OsFamily) => project.value?.downloads?.caveats?.[os] ?? null
+
 const ago = useRelativeTime()
 
 /** Kept deliberately small and late: this is a pitch, not a package listing. */
@@ -93,6 +128,9 @@ const facts = computed(() => {
  * reader could not also see.
  */
 const siteUrl = useSiteOrigin()
+
+/** `noopener` alone for the org's own repos on the clearnet site; see shared/html/rel.ts. */
+const relFor = (href: string) => outboundRel(href, siteUrl)
 
 const jsonLd = computed(() => {
   const p = project.value
@@ -214,7 +252,7 @@ useSeoMeta({
           :key="link.href"
           :href="link.href"
           target="_blank"
-          rel="noreferrer noopener"
+          :rel="relFor(link.href)"
           class="transition-colors hover:text-pn-fg-bright"
           :style="{ color: 'var(--accent)' }"
         >→ {{ link.label }}</a>
@@ -223,6 +261,89 @@ useSeoMeta({
 
       <ProjectTabs :slug="slug" current="about" />
     </header>
+
+    <!-- ── Download ─────────────────────────────────────────────────────── -->
+    <!-- Straight under the pitch, because it answers the next question. A
+         direct link per platform rather than the release page: a release of a
+         desktop app carries its updater's signatures and archives and a source
+         archive beside the five files a person wants, in two editions. Plain
+         accent links, no buttons. -->
+    <section v-if="download" id="download" class="mb-32">
+      <TermRule label="download" />
+      <p class="mt-7 flex flex-wrap gap-x-4 gap-y-1 text-xs leading-6 text-pn-muted">
+        <a
+          :href="download.release.url"
+          target="_blank"
+          :rel="relFor(download.release.url)"
+          class="transition-colors hover:text-pn-fg-bright"
+          :style="{ color: 'var(--accent)' }"
+        >{{ download.release.tag }}</a>
+        <time :datetime="download.release.publishedAt">{{ isoDate(download.release.publishedAt) }}</time>
+        <span v-if="download.release.prerelease">pre-release</span>
+        <span>{{ download.primary.label }}</span>
+      </p>
+
+      <ul class="mt-5 max-w-3xl space-y-3">
+        <li
+          v-for="item in download.primary.installers"
+          :key="item.asset.name"
+          class="flex flex-wrap items-baseline gap-x-4 gap-y-1"
+        >
+          <a
+            :href="item.asset.url"
+            :title="item.asset.name"
+            :rel="relFor(item.asset.url)"
+            class="text-sm transition-colors hover:text-pn-fg-bright sm:text-base"
+            :style="{ color: 'var(--accent)' }"
+          >→ {{ item.platform.label }}</a>
+          <span class="text-xs text-pn-muted">{{ formatSize(item.asset.size) }}</span>
+          <span v-if="caveatFor(item.platform.os)" class="text-xs text-pn-dim">{{ caveatFor(item.platform.os) }}</span>
+        </li>
+      </ul>
+
+      <p
+        v-for="other in download.others"
+        :key="other.name"
+        class="mt-6 flex max-w-3xl flex-wrap gap-x-4 text-xs leading-7 text-pn-muted"
+      >
+        <span>{{ other.label }}:</span>
+        <a
+          v-for="item in other.installers"
+          :key="item.asset.name"
+          :href="item.asset.url"
+          :title="`${item.asset.name}, ${formatSize(item.asset.size)}`"
+          :rel="relFor(item.asset.url)"
+          class="text-pn-dim transition-colors hover:text-pn-fg-bright"
+        >{{ item.platform.short }}</a>
+      </p>
+
+      <p v-if="download.note" class="mt-6 max-w-3xl text-sm leading-relaxed text-pn-dim">
+        {{ download.note }}
+      </p>
+
+      <div v-if="download.firstLaunch.length" class="mt-10 max-w-3xl">
+        <h2 class="text-sm text-pn-fg-bright">
+          <span aria-hidden="true" :style="{ color: 'var(--accent)' }">▸ </span>The first time you open it
+        </h2>
+        <dl class="mt-3 space-y-3 text-sm leading-relaxed">
+          <div v-for="step in download.firstLaunch" :key="step.os" class="sm:flex sm:gap-6">
+            <dt class="shrink-0 text-pn-muted sm:w-20">
+              {{ step.os }}
+            </dt>
+            <dd class="text-pn-dim">
+              {{ step.text }}
+            </dd>
+          </div>
+        </dl>
+      </div>
+
+      <a
+        :href="releasesUrl"
+        target="_blank"
+        :rel="relFor(releasesUrl)"
+        class="mt-8 inline-block text-xs leading-6 text-pn-muted transition-colors hover:text-pn-fg-bright"
+      >→ all releases</a>
+    </section>
 
     <!-- ── Screenshot ───────────────────────────────────────────────────── -->
     <section v-if="project.screenshot" class="mb-32">
@@ -233,7 +354,7 @@ useSeoMeta({
            it the aspect ratio; the classes still decide the drawn size. -->
       <img
         :src="project.screenshot"
-        :alt="`${project.name} screenshot`"
+        :alt="project.screenshotAlt ?? `${project.name} screenshot`"
         v-bind="assetSize(project.screenshot)"
         class="mt-8 w-full max-w-5xl"
       >
@@ -351,7 +472,7 @@ useSeoMeta({
           <a
             :href="release.url"
             target="_blank"
-            rel="noreferrer noopener"
+            :rel="relFor(release.url)"
             class="group block"
           >
             <span class="flex flex-wrap items-baseline gap-x-4 gap-y-1">
@@ -376,7 +497,7 @@ useSeoMeta({
       <a
         :href="releasesUrl"
         target="_blank"
-        rel="noreferrer noopener"
+        :rel="relFor(releasesUrl)"
         class="mt-8 inline-block text-xs text-pn-muted transition-colors hover:text-pn-fg-bright"
       >→ full release history</a>
     </section>
