@@ -508,8 +508,10 @@ record. There is no run log.
       A dead link never fails the job, because almost none of them are ours to
       fix; only a build or a server that will not come up does, since that means
       the report itself is not trustworthy.
-- [ ] Upstream: the Skidbladnir README links to `blob/master/LICENSE`, a file that
-      repo does not contain — a 404 on this site's Skidbladnir page. Not fixable
-      here; the weekly report will keep saying so until someone commits a LICENSE.
+- [x] Upstream: the Skidbladnir README linked to `blob/master/LICENSE`, a file that
+      repo did not contain — a 404 on this site's Skidbladnir page. Fixed
+      upstream: the repo has a LICENSE now (GitHub reads it as ISC), the link
+      answers 200, and `npm run check -- --external` against production found
+      no dead link on 2026-10-01.
 - [ ] Upstream: the onyums README's table of contents links
       `#multiple-services-on-one-tor-client`, an anchor no heading in it produces.
