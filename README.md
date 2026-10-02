@@ -149,7 +149,9 @@ quota runs out (`event: "upstream.rate_limited"`).
    a `metaDescription` of 160 characters or fewer (a test fails otherwise), and
    an app with `downloads` an `applicationCategory`.
 2. If it has a wordmark, drop it in `public/projects/<slug>.svg` and set `logo`.
-   Same for a screenshot in `public/projects/shots/`. Then run `npm run sizes`,
+   Same for a screenshot in `public/projects/shots/`. A card shows the
+   wordmark; set `cardImage` (16:10) only when the card should lead with art
+   instead, as Skidbladnir's does for its 1.0 campaign. Then run `npm run sizes`,
    which records each image's intrinsic size in
    `data/asset-sizes.generated.json` so the page can reserve its space before
    the file arrives. CI fails if that file and the images disagree.

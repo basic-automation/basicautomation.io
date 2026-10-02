@@ -51,9 +51,13 @@ record. There is no run log.
       sentence. Its `status` is `stable` from 1.0.0, its first release that is not
       a prerelease, so the badge and the social card say "Stable". This copy is
       held back until 1.0.0 is published, because before then it is untrue.
-- [ ] Skidbladnir as the first card (`order: 1` in `data/projects.ts`) for the
-      campaign — **owner decision**: it also reorders the footer, `/projects`
-      and `/api/projects`.
+- [x] Skidbladnir as the first card (`order: 1` in `data/projects.ts`) for the
+      campaign — **decided by the owner 2026-10-01: yes.** It also reorders the
+      footer, `/projects` and `/api/projects`; the rest keep their order. The
+      card leads with the longship illustration
+      (`public/projects/shots/skidbladnir-hero.webp`, until then referenced
+      nowhere) through a new `cardImage` field, also the owner's call; the
+      wordmark still heads the project's own page.
 - [x] Refreshed the fallback snapshot once Skidbladnir 1.0.0 was published and
       its GitHub description and topics updated (2026-10-01; it is at 1.1.0).
       The snapshot had predated the download section and still carried the
