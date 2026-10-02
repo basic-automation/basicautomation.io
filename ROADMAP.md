@@ -284,7 +284,7 @@ record. There is no run log.
       vuejs/language-tools#6124 and closed as a duplicate of #5381, the
       TypeScript 7 / `tsgo` support request, which is closed too — so there is
       no open issue to watch. Check the release notes instead.
-      Re-checked 2026-09-28 and 2026-10-01: unchanged (vue-tsc 3.3.11 is
+      Re-checked 2026-09-28 and 2026-10-01 (twice): unchanged (vue-tsc 3.3.11 is
       still the latest release, of 2026-08-21; golar 0.1.10, still only
       `./unstable` and `./unstable-tsgo`; TypeScript 7.0.2).
       <https://github.com/vuejs/language-tools/issues/6124>
@@ -349,6 +349,12 @@ record. There is no run log.
       no download section (Nisaba today) gets none. And a `metaDescription` per
       project, at most 160 characters: every summary ran 218–322, Skidbladnir's
       the longest. `test/application.test.ts` holds both.
+      What it does NOT buy: Google's software-app rich result requires an
+      `aggregateRating` or a `review` as well as `offers.price`, and this site
+      has neither to give — none will be invented. The markup is valid schema.org
+      for every other consumer; `MultimediaApplication` is one of Google's
+      supported categories.
+      <https://developers.google.com/search/docs/appearance/structured-data/software-app>
 - [x] Cache-bust the social cards. A project card's `og:image`,
       `twitter:image` and JSON-LD `image` now carry `?v=<fingerprint>` from
       `public/projects/og/cards.json` (`socialCardPath()`,
@@ -357,7 +363,9 @@ record. There is no run log.
       card, before 1.0.0 — is no longer what that URL names. The about page,
       which had built its own path, goes through the same function.
       `test/social-card.test.ts` pins it. The organization's `/og.png` is not
-      generated, has no fingerprint, and keeps its bare URL.
+      generated, has no fingerprint, and keeps its bare URL. Facebook documents
+      exactly this: images are cached by URL, so a new image needs a new URL.
+      <https://developers.facebook.com/docs/sharing/webmasters/images/>
 
 ## Cross-cutting
 
