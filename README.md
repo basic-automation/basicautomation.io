@@ -176,6 +176,8 @@ npm test             # unit tests over the pure helpers in shared/
 npm run sync         # refresh data/projects.generated.json
 npm run og           # re-render the per-project social cards (needs Chromium)
 npm run og:check     # are the committed cards still current? (no Chromium)
+npm run shot         # re-cut the screenshots from their READMEs' own (needs ImageMagick)
+npm run shot:check   # has an upstream screenshot changed since its cut? (network)
 npm run bases        # runtime Alpine still matches the node base (needs docker)
 npm run contrast     # WCAG contrast for every palette colour, against the ground
 npm run sizes        # re-read every image's intrinsic size

@@ -28,10 +28,18 @@ record. There is no run log.
       routine cannot produce these and will not fabricate them)
 - [ ] Keep Skidbladnir's screenshot in step with the app. It is the top 1,304 px
       of the Skidbladnir README's `resources/images/screenshot.webp` (the 1.0.0
-      window since 2026-10-01), cut at the gap above "Metadata"; re-cut it whenever
-      that file changes, then `npm run sizes`. A screenshot two releases behind
-      the copy beside it — the v0.9.0 window, two formats and no flag labels —
-      is what this replaced.
+      window since 2026-10-01), cut at the gap above "Metadata". A screenshot two
+      releases behind the copy beside it — the v0.9.0 window, two formats and no
+      flag labels — is what this replaced.
+      - [x] Repeatable: `npm run shot` (`scripts/cut-screenshot.mjs`) fetches,
+            cuts, squares the window's rounded top corners — on this page they were
+            two black notches — with the window's own sampled background, and
+            records the upstream blob in `public/projects/shots/sources.json`;
+            `npm run shot:check` says when upstream has moved on.
+      - [ ] Run `shot:check` on a schedule (the weekly links workflow), so a
+            new upstream screenshot is noticed without anyone remembering to
+            look. Still eyeball each re-cut: a release that adds a row moves
+            the gap the crop sits in.
 - [x] Skidbladnir's page, ready for its first public campaign: the parity claim
       scoped the way its README scopes it (still images, the four named tools,
       the exceptions in the readme below, no typed case count), the full input
