@@ -69,6 +69,13 @@ export interface Project {
   logo?: string
   /** Screenshot in public/projects/shots/, shown on the card and the page */
   screenshot?: string
+  /** Art for the project's card on `/` and `/projects`, in place of the wordmark —
+   *  for a campaign, when the card should lead with a picture rather than a mark.
+   *  The wordmark still heads the project's own page. 16:10, or near it: the card
+   *  crops to that box. */
+  cardImage?: string
+  /** What the card art shows, for its `alt` */
+  cardImageAlt?: string
   /** What the screenshot shows, for its `alt`. Without one it is "<name> screenshot",
    *  which tells a screen reader nothing the heading has not already said. */
   screenshotAlt?: string
@@ -139,7 +146,7 @@ export const projects: Project[] = [
     kind: 'Rust library',
     status: 'stable',
     accent: 'magenta',
-    order: 1,
+    order: 2,
     features: [
       {
         title: 'Nothing to install beside it',
@@ -213,7 +220,7 @@ async fn main() {
     kind: 'Rust library',
     status: 'stable',
     accent: 'cyan',
-    order: 2,
+    order: 3,
     features: [
       {
         title: 'Protected the moment it starts',
@@ -291,7 +298,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     kind: 'Database',
     status: 'alpha',
     accent: 'red',
-    order: 3,
+    order: 4,
     features: [
       {
         title: 'Ask for any resolution',
@@ -353,7 +360,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     kind: 'Operating software',
     status: 'alpha',
     accent: 'yellow',
-    order: 4,
+    order: 5,
     features: [
       {
         title: 'Try it, lose nothing',
@@ -404,7 +411,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     kind: 'Desktop app',
     status: 'active',
     accent: 'blue',
-    order: 5,
+    order: 6,
     features: [
       {
         title: 'Sell in four places, maintain one list',
@@ -473,6 +480,10 @@ default_low_stock_threshold = 5    # overridable per product in the app
     repo: 'Skidbladnir',
     name: 'Skidbladnir',
     logo: '/projects/skidbladnir.svg',
+    // The card leads with the longship for the 1.0 campaign; the wordmark still
+    // heads the page itself.
+    cardImage: '/projects/shots/skidbladnir-hero.webp',
+    cardImageAlt: 'A longship with a crescent sail on a dark blue sea, under an orange sky',
     screenshot: '/projects/shots/skidbladnir-screenshot.webp',
     screenshotAlt:
       'The Skidbladnir window with WebP selected: the format rail with WebP, AVIF, JPEG XL '
@@ -500,7 +511,7 @@ default_low_stock_threshold = 5    # overridable per product in the app
     // "Stable since 1.0." feature below all say so; change them together.
     status: 'stable',
     accent: 'green',
-    order: 6,
+    order: 1,
     features: [
       {
         title: 'Four formats, one window',

@@ -17,10 +17,19 @@ const ago = useRelativeTime()
          object. The screenshot still gets its own section on the project page,
          where it is evidence rather than identity. The name set large when
          there is neither, so every card occupies the same block and the grid
-         stays even. No frame, no fill — the media sits on the page's ground. -->
+         stays even. No frame, no fill — the media sits on the page's ground.
+         A project's `cardImage` overrides all three: campaign art, chosen
+         deliberately for one card, not a default. -->
     <div class="relative aspect-16/10 overflow-hidden">
       <img
-        v-if="project.logo"
+        v-if="project.cardImage"
+        :src="project.cardImage"
+        :alt="project.cardImageAlt ?? project.name"
+        loading="lazy"
+        class="absolute inset-0 h-full w-full object-cover transition-opacity duration-300 group-hover:opacity-90"
+      >
+      <img
+        v-else-if="project.logo"
         :src="project.logo"
         :alt="project.name"
         loading="lazy"

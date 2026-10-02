@@ -30,6 +30,7 @@ function sources() {
 	for (const p of projects) {
 		if (p.logo) paths.add(p.logo)
 		if (p.screenshot) paths.add(p.screenshot)
+		if (p.cardImage) paths.add(p.cardImage)
 	}
 	return [...paths].sort()
 }
