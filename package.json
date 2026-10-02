@@ -14,6 +14,8 @@
     "check": "node scripts/check-site.mjs",
     "og": "node scripts/build-og.mjs",
     "og:check": "node scripts/build-og.mjs --check",
+    "shot": "node scripts/cut-screenshot.mjs",
+    "shot:check": "node scripts/cut-screenshot.mjs --check",
     "typecheck": "nuxt typecheck",
     "bevel": "node scripts/build-bevel-map.mjs",
     "splash": "node scripts/build-splash.mjs",

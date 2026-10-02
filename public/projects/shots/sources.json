@@ -1,0 +1,10 @@
+{
+  "note": "Written by scripts/cut-screenshot.mjs: the upstream git blob each screenshot was cut from. `npm run shot:check` fails when upstream has moved on.",
+  "cuts": {
+    "skidbladnir-screenshot.webp": {
+      "repo": "Skidbladnir",
+      "path": "resources/images/screenshot.webp",
+      "sha": "06e2bdf8d1432ed24448a5a6fcc7c6e4470a4884"
+    }
+  }
+}

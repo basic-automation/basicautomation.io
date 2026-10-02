@@ -11,6 +11,10 @@
 # links are dead, closed the week they are all fixed. It never fails on a dead
 # link — only on the build or the server not coming up, which would mean the
 # report itself is not trustworthy.
+#
+# The second job is the same idea for the screenshots cut from upstream READMEs
+# (`npm run shot`): a new upstream screenshot is a page showing an older app
+# than its copy describes, again without a commit here. It keeps its own issue.
 
 name: External links
 
@@ -31,6 +35,7 @@ concurrency:
 
 env:
   ISSUE_TITLE: "External links: dead links found by the weekly check"
+  SHOTS_ISSUE_TITLE: "Screenshots: an upstream screenshot changed since it was cut"
 
 jobs:
   links:
@@ -119,4 +124,58 @@ jobs:
             echo "Closed #$existing"
           else
             echo "No dead links and no open issue. Nothing to do."
+          fi
+
+  screenshots:
+    name: are the screenshots cut from the current upstream file
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      # No install: the check is Node built-ins and one GitHub request per
+      # screenshot. Stale is the thing being reported, so it must not end the
+      # job; any other failure (GitHub unreachable) leaves no report and fails.
+      - name: Compare with upstream
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: |
+          set +e
+          node scripts/cut-screenshot.mjs --check > shots.log 2>&1
+          status=$?
+          set -e
+          cat shots.log
+          if [ "$status" != 0 ] && ! grep -q '^✗ ' shots.log; then exit "$status"; fi
+          grep -E '^✗ ' shots.log | sed 's/^✗ /- /' > stale.txt || true
+
+      - name: Open, update or close the tracking issue
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          existing=$(gh issue list --state open --limit 50 \
+            --json number,title \
+            --jq "[.[] | select(.title == \"$SHOTS_ISSUE_TITLE\")] | .[0].number // empty")
+
+          if [ -s stale.txt ]; then
+            {
+              echo "## Screenshots"
+              echo
+              cat stale.txt
+              echo
+              echo "Re-cut with \`npm run shot\` (needs ImageMagick), then \`npm run sizes\`,"
+              echo "and look at the result: a release that adds a row moves the gap the crop sits in."
+              echo
+              echo "[Run]($RUN_URL)"
+            } > body.md
+            if [ -n "$existing" ]; then
+              gh issue comment "$existing" --body-file body.md
+            else
+              gh issue create --title "$SHOTS_ISSUE_TITLE" --body-file body.md
+            fi
+          elif [ -n "$existing" ]; then
+            gh issue close "$existing" --comment "Every screenshot is cut from the current upstream file. Closed by [this run]($RUN_URL)."
+          else
+            echo "Every screenshot is current and no issue is open. Nothing to do."
           fi

@@ -27,11 +27,20 @@ record. There is no run log.
       (BLOCKED — needs someone who can run the two apps and capture them; the
       routine cannot produce these and will not fabricate them)
 - [ ] Keep Skidbladnir's screenshot in step with the app. It is the top 1,304 px
-      of the Skidbladnir README's `resources/images/screenshot.webp` (the per-flag
-      WebP panel of 0.14), cut at the gap above "Metadata"; re-cut it whenever
-      that file changes, then `npm run sizes`. A screenshot two releases behind
-      the copy beside it — the v0.9.0 window, two formats and no flag labels —
-      is what this replaced.
+      of the Skidbladnir README's `resources/images/screenshot.webp` (the 1.0.0
+      window since 2026-10-01), cut at the gap above "Metadata". A screenshot two
+      releases behind the copy beside it — the v0.9.0 window, two formats and no
+      flag labels — is what this replaced.
+      - [x] Repeatable: `npm run shot` (`scripts/cut-screenshot.mjs`) fetches,
+            cuts, squares the window's rounded top corners — on this page they were
+            two black notches — with the window's own sampled background, and
+            records the upstream blob in `public/projects/shots/sources.json`;
+            `npm run shot:check` says when upstream has moved on.
+      - [x] `shot:check` runs weekly, as the `screenshots` job of
+            `.github/workflows/links.yml`, and keeps one issue in sync — opened
+            while a screenshot is behind upstream, closed once it is re-cut.
+            A report, not a gate, like the link check beside it. Still eyeball
+            each re-cut: a release that adds a row moves the gap the crop sits in.
 - [x] Skidbladnir's page, ready for its first public campaign: the parity claim
       scoped the way its README scopes it (still images, the four named tools,
       the exceptions in the readme below, no typed case count), the full input
@@ -45,12 +54,13 @@ record. There is no run log.
 - [ ] Skidbladnir as the first card (`order: 1` in `data/projects.ts`) for the
       campaign — **owner decision**: it also reorders the footer, `/projects`
       and `/api/projects`.
-- [ ] Refresh the fallback snapshot (`npm run sync`, commit
-      `data/projects.generated.json`) once Skidbladnir 1.0.0 is published and its
-      GitHub description and topics are updated. Today's snapshot predates the
-      download section, so a page served from it has none, and it still carries
-      the Electron-era description and topics (`#electron #jpeg2000 #node`) that
-      the about page's topic line and JSON-LD keywords print.
+- [x] Refreshed the fallback snapshot once Skidbladnir 1.0.0 was published and
+      its GitHub description and topics updated (2026-10-01; it is at 1.1.0).
+      The snapshot had predated the download section and still carried the
+      Electron-era description and topics. Proved by forcing the fallback with a
+      bad token: `/projects/skidbladnir/about` from the snapshot has the v1.1.0
+      download section and its `SoftwareApplication`, and `npm run check` is
+      clean.
 - [x] A card and its data can no longer drift apart. Rendering still needs a local
       Chromium, so it stays manual — but every render records what it was rendered
       from in `public/projects/og/cards.json`, and `npm run og:check` recomputes
@@ -274,7 +284,7 @@ record. There is no run log.
       vuejs/language-tools#6124 and closed as a duplicate of #5381, the
       TypeScript 7 / `tsgo` support request, which is closed too — so there is
       no open issue to watch. Check the release notes instead.
-      Re-checked 2026-09-28 and 2026-10-01: unchanged (vue-tsc 3.3.11 is
+      Re-checked 2026-09-28 and 2026-10-01 (twice): unchanged (vue-tsc 3.3.11 is
       still the latest release, of 2026-08-21; golar 0.1.10, still only
       `./unstable` and `./unstable-tsgo`; TypeScript 7.0.2).
       <https://github.com/vuejs/language-tools/issues/6124>
@@ -331,17 +341,31 @@ record. There is no run log.
       served, and it now points at `raw.githubusercontent.com` instead (200,
       verified 2026-09-25). So this is a plain decision — retire it, redirect it,
       or leave it — with nothing on this site depending on the answer.
-- [ ] `SoftwareApplication` JSON-LD for the desktop apps (operating systems,
-      version, download URL, screenshot, free), beside `SoftwareSourceCode`, and a
-      meta description short enough not to be cut off: Skidbladnir's summary,
-      which is its description, runs to about 290 characters.
-- [ ] Cache-bust the social cards. `socialCardPath()` (`shared/posts/section.ts`)
-      names a fixed URL, so a re-rendered card can stay hidden behind the copy a
-      network cached under the same URL. A content hash from
-      `public/projects/og/cards.json`, as a query on the `og:image`, would make a
-      new card a new URL. Matters now: Skidbladnir's card changed from
-      "In development" to "Stable" with 1.0.0, and a network that cached the old
-      card under the same URL can keep showing it.
+- [x] `SoftwareApplication` JSON-LD for the desktop apps, beside
+      `SoftwareSourceCode` (which names it as its `targetProduct`): operating
+      systems, version, release page, screenshot, free — built by
+      `shared/seo/application.ts` from exactly what the download section
+      renders, so a system with no installer is never claimed and an app with
+      no download section (Nisaba today) gets none. And a `metaDescription` per
+      project, at most 160 characters: every summary ran 218–322, Skidbladnir's
+      the longest. `test/application.test.ts` holds both.
+      What it does NOT buy: Google's software-app rich result requires an
+      `aggregateRating` or a `review` as well as `offers.price`, and this site
+      has neither to give — none will be invented. The markup is valid schema.org
+      for every other consumer; `MultimediaApplication` is one of Google's
+      supported categories.
+      <https://developers.google.com/search/docs/appearance/structured-data/software-app>
+- [x] Cache-bust the social cards. A project card's `og:image`,
+      `twitter:image` and JSON-LD `image` now carry `?v=<fingerprint>` from
+      `public/projects/og/cards.json` (`socialCardPath()`,
+      `shared/posts/section.ts`), so a re-rendered card is a new URL and a
+      network's cached copy of the old one — Skidbladnir's "In development"
+      card, before 1.0.0 — is no longer what that URL names. The about page,
+      which had built its own path, goes through the same function.
+      `test/social-card.test.ts` pins it. The organization's `/og.png` is not
+      generated, has no fingerprint, and keeps its bare URL. Facebook documents
+      exactly this: images are cached by URL, so a new image needs a new URL.
+      <https://developers.facebook.com/docs/sharing/webmasters/images/>
 
 ## Cross-cutting
 

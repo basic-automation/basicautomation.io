@@ -11,6 +11,8 @@
  * a directory is legitimate, the pages building links, and the sitemap.
  */
 
+import ogCards from '~~/public/projects/og/cards.json'
+
 /** The reserved `project` value for the site's own blog. */
 export const SITE_SECTION = 'site'
 
@@ -45,12 +47,22 @@ export function sectionLabel(project: string, projectName: string | undefined): 
 }
 
 /**
- * The social card a blog's pages preview with: its project's own card, or the
+ * The social card a project's pages preview with: its own card, or the
  * organization's for the site's news. Both are 1200×630. One function because
  * the Open Graph tags and the JSON-LD `image` must name the same picture.
+ *
+ * A project card's URL carries the fingerprint `npm run og` recorded for it in
+ * `public/projects/og/cards.json` — of the data it was rendered from and of the
+ * card recipe — so a re-rendered card is a new URL. Networks cache a preview
+ * image by its URL, often for far longer than our own `max-age`, so under a
+ * fixed URL a card that changed ("In development" → "Stable") could go on
+ * being shown as it was. A card the manifest does not know keeps its bare URL.
+ * The organization's card is not generated and has no fingerprint.
  */
 export function socialCardPath(project: string): string {
-  return isSiteSection(project) ? '/og.png' : `/projects/og/${project}.png`
+  if (isSiteSection(project)) return '/og.png'
+  const version = (ogCards.cards as Record<string, string>)[project]
+  return version ? `/projects/og/${project}.png?v=${version}` : `/projects/og/${project}.png`
 }
 
 /** What the organization's card (`/og.png`) shows, for its `og:image:alt`. */
