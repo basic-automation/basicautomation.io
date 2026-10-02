@@ -27,8 +27,8 @@ record. There is no run log.
       (BLOCKED — needs someone who can run the two apps and capture them; the
       routine cannot produce these and will not fabricate them)
 - [ ] Keep Skidbladnir's screenshot in step with the app. It is the top 1,304 px
-      of the Skidbladnir README's `resources/images/screenshot.webp` (the per-flag
-      WebP panel of 0.14), cut at the gap above "Metadata"; re-cut it whenever
+      of the Skidbladnir README's `resources/images/screenshot.webp` (the 1.0.0
+      window since 2026-10-01), cut at the gap above "Metadata"; re-cut it whenever
       that file changes, then `npm run sizes`. A screenshot two releases behind
       the copy beside it — the v0.9.0 window, two formats and no flag labels —
       is what this replaced.
