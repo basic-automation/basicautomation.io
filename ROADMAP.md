@@ -335,13 +335,15 @@ record. There is no run log.
       version, download URL, screenshot, free), beside `SoftwareSourceCode`, and a
       meta description short enough not to be cut off: Skidbladnir's summary,
       which is its description, runs to about 290 characters.
-- [ ] Cache-bust the social cards. `socialCardPath()` (`shared/posts/section.ts`)
-      names a fixed URL, so a re-rendered card can stay hidden behind the copy a
-      network cached under the same URL. A content hash from
-      `public/projects/og/cards.json`, as a query on the `og:image`, would make a
-      new card a new URL. Matters now: Skidbladnir's card changed from
-      "In development" to "Stable" with 1.0.0, and a network that cached the old
-      card under the same URL can keep showing it.
+- [x] Cache-bust the social cards. A project card's `og:image`,
+      `twitter:image` and JSON-LD `image` now carry `?v=<fingerprint>` from
+      `public/projects/og/cards.json` (`socialCardPath()`,
+      `shared/posts/section.ts`), so a re-rendered card is a new URL and a
+      network's cached copy of the old one — Skidbladnir's "In development"
+      card, before 1.0.0 — is no longer what that URL names. The about page,
+      which had built its own path, goes through the same function.
+      `test/social-card.test.ts` pins it. The organization's `/og.png` is not
+      generated, has no fingerprint, and keeps its bare URL.
 
 ## Cross-cutting
 

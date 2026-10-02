@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { formatSize, groupInstallers, type OsFamily } from '~~/shared/github/installers'
 import { outboundRel } from '~~/shared/html/rel'
+import { socialCardPath } from '~~/shared/posts/section'
 
 const route = useRoute()
 const slug = computed(() => String(route.params.slug))
@@ -152,7 +153,7 @@ const jsonLd = computed(() => {
     'author': organizationRef(siteUrl),
     'publisher': organizationRef(siteUrl),
     'isAccessibleForFree': true,
-    'image': `${siteUrl}/projects/og/${p.slug}.png`,
+    'image': `${siteUrl}${socialCardPath(p.slug)}`,
   }
 
   if (m?.language) data.programmingLanguage = m.language
@@ -180,7 +181,7 @@ useHead({
  * declared because several networks lay the preview out before they have
  * fetched the image.
  */
-const ogImage = computed(() => `${siteUrl}/projects/og/${slug.value}.png`)
+const ogImage = computed(() => `${siteUrl}${socialCardPath(slug.value)}`)
 
 useCanonical(() => `/projects/${slug.value}/about`)
 
