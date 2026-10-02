@@ -338,6 +338,18 @@ body {
 
 .readme img { max-width: 100%; height: auto; }
 .readme p img[src*="img.shields.io"] { display: inline-block; margin: 0.15rem 0.25rem 0.15rem 0; }
+/* A README's screenshots get the same rule as the site's own screenshot, for
+   the same reason: a light-themed app photographed on a light page has no edge
+   of its own and dissolves into the layout.
+
+   Stated as an exclusion rather than a list, because the images a README is
+   likely to add later are screenshots, while the ones that must NOT be boxed
+   are a closed set — badges. Two kinds are in use: shields.io, and GitHub's own
+   `badge.svg` for workflow status. Across all seven projects today this rule
+   matches exactly the two Skidbladnir screenshots and no badge. */
+.readme img:not([src*="img.shields.io"]):not([src*="badge"]) {
+  border: 1px solid var(--color-pn-rule);
+}
 
 /* ── Highlighted code ─────────────────────────────────────────────────────── */
 /* Shiki emits inline colours from the Paleday TextMate theme

@@ -26,12 +26,16 @@ const ago = useRelativeTime()
         loading="lazy"
         class="absolute inset-0 h-full w-full object-contain p-10 transition-transform duration-300 group-hover:scale-[1.03] sm:p-14"
       >
+      <!-- Bordered for the same reason as the one on the project page: a
+           screenshot is a window onto another application, and a light-themed
+           one has no edge of its own against this page. The wordmark above
+           needs no border — it is a mark on the page's ground, not a window. -->
       <img
         v-else-if="project.screenshot"
         :src="project.screenshot"
         :alt="project.screenshotAlt ?? `${project.name} screenshot`"
         loading="lazy"
-        class="absolute inset-0 h-full w-full object-cover object-top transition-opacity duration-300 group-hover:opacity-90"
+        class="absolute inset-0 h-full w-full border border-pn-rule object-cover object-top transition-opacity duration-300 group-hover:opacity-90"
       >
       <span
         v-else

@@ -382,12 +382,19 @@ useSeoMeta({
       <!-- The one image on the site that can move the page: it is `w-full` and
            block-level, so until it lands the browser has nothing to reserve its
            height with and everything below it sits too high. `assetSize` gives
-           it the aspect ratio; the classes still decide the drawn size. -->
+           it the aspect ratio; the classes still decide the drawn size.
+
+           The border is load-bearing rather than decorative. A screenshot of a
+           light-themed app sits on a light page at almost the same value — the
+           Skidbladnir window's own background is within a few percent of this
+           page's — so without a rule the image has no edge and reads as part of
+           the layout. Same `border-pn-rule` the Tor frame uses, for the same
+           reason: it is a window onto something else, and should look like one. -->
       <img
         :src="project.screenshot"
         :alt="project.screenshotAlt ?? `${project.name} screenshot`"
         v-bind="assetSize(project.screenshot)"
-        class="mt-8 w-full max-w-5xl"
+        class="mt-8 w-full max-w-5xl border border-pn-rule"
       >
     </section>
 
