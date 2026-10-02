@@ -45,12 +45,13 @@ record. There is no run log.
 - [ ] Skidbladnir as the first card (`order: 1` in `data/projects.ts`) for the
       campaign — **owner decision**: it also reorders the footer, `/projects`
       and `/api/projects`.
-- [ ] Refresh the fallback snapshot (`npm run sync`, commit
-      `data/projects.generated.json`) once Skidbladnir 1.0.0 is published and its
-      GitHub description and topics are updated. Today's snapshot predates the
-      download section, so a page served from it has none, and it still carries
-      the Electron-era description and topics (`#electron #jpeg2000 #node`) that
-      the about page's topic line and JSON-LD keywords print.
+- [x] Refreshed the fallback snapshot once Skidbladnir 1.0.0 was published and
+      its GitHub description and topics updated (2026-10-01; it is at 1.1.0).
+      The snapshot had predated the download section and still carried the
+      Electron-era description and topics. Proved by forcing the fallback with a
+      bad token: `/projects/skidbladnir/about` from the snapshot has the v1.1.0
+      download section and its `SoftwareApplication`, and `npm run check` is
+      clean.
 - [x] A card and its data can no longer drift apart. Rendering still needs a local
       Chromium, so it stays manual — but every render records what it was rendered
       from in `public/projects/og/cards.json`, and `npm run og:check` recomputes
