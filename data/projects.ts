@@ -83,8 +83,15 @@ export interface Project {
   tagline: string
   /** The headline claim. Short, declarative, the one thing to remember. */
   hero: string
-  /** Two or three sentences for the lede and the meta description */
+  /** Two or three sentences for the lede, and the social preview's description */
   summary: string
+  /** The search-result description: one sentence, at most 160 characters, so it
+   *  is not cut off mid-thought. Without one the summary is used, which is
+   *  longer than that for every project today. */
+  metaDescription?: string
+  /** schema.org `applicationCategory` for an app with a download section, e.g.
+   *  `MultimediaApplication` — what its `SoftwareApplication` JSON-LD files it under */
+  applicationCategory?: string
   /** Why it exists — the problem, stated plainly, before any feature list */
   problem: string
   /** Short kind-of-thing label, e.g. "Rust crate" */
@@ -121,6 +128,9 @@ export const projects: Project[] = [
       'Send your application\'s web traffic through the Tor network with a single line of '
       + 'code. There is nothing to install beside it and nothing to configure — the privacy '
       + 'layer is built in, and your code looks the way it always did.',
+    metaDescription:
+      'Send your application\'s web traffic through the Tor network with a single line of '
+      + 'code — nothing to install beside it, nothing to configure.',
     problem:
       'Routing an application through Tor normally means running a second service next to it, '
       + 'wiring a proxy into your code, and keeping the two in step forever. That is a week of '
@@ -191,6 +201,9 @@ async fn main() {
       'Put a web service online so that only people you share the address with can reach it — '
       + 'with the encryption, certificates and abuse protection already switched on. No server '
       + 'to rent, no ports to open, no security stack to assemble yourself.',
+    metaDescription:
+      'Put a web service online so only people you share the address with can reach it — '
+      + 'encryption, certificates and abuse protection already switched on.',
     problem:
       'Publishing a private service is normally an assembly job: a privacy service, certificates, '
       + 'a proxy in front, rate limiting, and a long list of ways to get it quietly wrong. The '
@@ -266,6 +279,9 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
       + 'markets that trade in bursts, devices that batch-upload after hours offline. '
       + 'Ask for any resolution and it returns a continuous series, with every point '
       + 'marked as observed or reconstructed.',
+    metaDescription:
+      'A database for readings that come in irregularly: ask for any resolution and get a '
+      + 'continuous series, every point marked observed or reconstructed.',
     problem:
       'Most time-series databases assume the readings arrive on a clean, regular beat. '
       + 'Real ones do not. Ask for a value between two samples and you get a gap, a null '
@@ -326,6 +342,9 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
       'Run several independent computers on a single desktop — each with its own processors, '
       + 'memory and hardware, each behaving like a machine of its own. It starts from a USB '
       + 'stick and leaves everything already on your drives exactly as it was.',
+    metaDescription:
+      'Run several independent computers on one desktop, each with its own processors, '
+      + 'memory and hardware — started from a USB stick, your drives untouched.',
     problem:
       'Trying this normally means committing first: repartition the drive, replace how the '
       + 'machine starts, rebuild your setup, and find out afterwards whether it was worth it. '
@@ -374,6 +393,9 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
       'Keep a single product list and let it publish everywhere you sell. Prices, descriptions '
       + 'and stock levels stay in step across eBay, Squarespace, XMR Bazaar and Amazon, so a '
       + 'sale in one place is reflected in all of them.',
+    metaDescription:
+      'Keep one product list and let it publish everywhere you sell — prices, descriptions '
+      + 'and stock in step across eBay, Squarespace, XMR Bazaar and Amazon.',
     problem:
       'Selling the same products in four places means keeping four product lists, and every sale '
       + 'quietly pulls them apart. You find out at the worst moment — when something sells twice '
@@ -463,6 +485,10 @@ default_low_stock_threshold = 5    # overridable per product in the app
       + 'line — every option each encoder has for a still image, not just a quality slider. '
       + 'See the result beside the original before anything is written, then convert a batch '
       + 'or a whole folder. Windows and Linux, with an experimental macOS build.',
+    metaDescription:
+      'Convert images to WebP, AVIF, JPEG XL or HEIC in one window, with every still-image '
+      + 'option of each official encoder. Windows and Linux; macOS experimental.',
+    applicationCategory: 'MultimediaApplication',
     problem:
       'The reference encoders are excellent and almost unusable: four separate command-line '
       + 'tools, each a wall of options you relearn every time you need them, each one wrong '
@@ -585,6 +611,9 @@ default_low_stock_threshold = 5    # overridable per product in the app
       'A personal assistant that runs on a computer you own instead of someone else\'s. It stays '
       + 'on, it remembers what you told it last week, and it reaches you wherever you already are '
       + '— Telegram, Discord, Slack, Signal or WhatsApp. No account, no subscription.',
+    metaDescription:
+      'A personal assistant that runs on a computer you own, remembers what you told it, '
+      + 'and reaches you on Telegram, Discord, Slack, Signal or WhatsApp.',
     problem:
       'The assistants that know you best are the ones that keep everything they know on a server '
       + 'you do not control, and forget you the moment the tab closes. Nanna runs as a service on '

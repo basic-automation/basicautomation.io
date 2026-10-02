@@ -2,6 +2,7 @@
 import { formatSize, groupInstallers, type OsFamily } from '~~/shared/github/installers'
 import { outboundRel } from '~~/shared/html/rel'
 import { socialCardPath } from '~~/shared/posts/section'
+import { applicationId, softwareApplicationLd } from '~~/shared/seo/application'
 
 const route = useRoute()
 const slug = computed(() => String(route.params.slug))
@@ -133,6 +134,30 @@ const siteUrl = useSiteOrigin()
 /** `noopener` alone for the org's own repos on the clearnet site; see shared/html/rel.ts. */
 const relFor = (href: string) => outboundRel(href, siteUrl)
 
+const aboutUrl = computed(() => `${siteUrl}/projects/${slug.value}/about`)
+
+/**
+ * For an app with a download section, the program itself, as
+ * `SoftwareApplication` — built from exactly what that section renders, so it
+ * is absent whenever the section is. See `shared/seo/application.ts`.
+ */
+const applicationLd = computed(() => {
+  const p = project.value
+  const d = download.value
+  if (!p?.applicationCategory || !d) return null
+  return softwareApplicationLd({
+    pageUrl: aboutUrl.value,
+    name: p.name,
+    description: p.metaDescription ?? p.summary,
+    category: p.applicationCategory,
+    release: d.release,
+    installers: d.primary.installers,
+    screenshot: p.screenshot ? `${siteUrl}${p.screenshot}` : undefined,
+    image: `${siteUrl}${socialCardPath(p.slug)}`,
+    publisher: organizationRef(siteUrl),
+  })
+})
+
 const jsonLd = computed(() => {
   const p = project.value
   if (!p) return ''
@@ -146,7 +171,7 @@ const jsonLd = computed(() => {
     'headline': p.hero,
     'description': p.summary,
     // The tab's own address: `/projects/<slug>` is a 301 to it.
-    'url': `${siteUrl}/projects/${p.slug}/about`,
+    'url': aboutUrl.value,
     'codeRepository': m?.htmlUrl ?? `https://github.com/basic-automation/${p.repo}`,
     // Referenced, not repeated: the description lives on the landing page, and
     // a consumer reading two pages of this site can tell it is one organization.
@@ -167,12 +192,17 @@ const jsonLd = computed(() => {
   else if (m?.latestRelease) data.version = m.latestRelease.tag
   if (m?.crateUrl) data.downloadUrl = m.crateUrl
   if (m?.docsUrl) data.documentation = m.docsUrl
+  // The source is the source of the program described beside it.
+  if (applicationLd.value) data.targetProduct = { '@id': applicationId(aboutUrl.value) }
 
   return ldJson(data)
 })
 
 useHead({
-  script: [{ type: 'application/ld+json', innerHTML: () => jsonLd.value }],
+  script: computed(() => [
+    { type: 'application/ld+json' as const, innerHTML: jsonLd.value },
+    ...(applicationLd.value ? [{ type: 'application/ld+json' as const, innerHTML: ldJson(applicationLd.value) }] : []),
+  ]),
 })
 
 /**
@@ -187,7 +217,7 @@ useCanonical(() => `/projects/${slug.value}/about`)
 
 useSeoMeta({
   title: () => `${project.value?.name} — ${project.value?.tagline}`,
-  description: () => project.value?.summary,
+  description: () => project.value?.metaDescription ?? project.value?.summary,
   ogTitle: () => `${project.value?.name} — ${project.value?.hero}`,
   ogDescription: () => project.value?.summary,
   ogType: 'article',

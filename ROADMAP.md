@@ -331,10 +331,14 @@ record. There is no run log.
       served, and it now points at `raw.githubusercontent.com` instead (200,
       verified 2026-09-25). So this is a plain decision — retire it, redirect it,
       or leave it — with nothing on this site depending on the answer.
-- [ ] `SoftwareApplication` JSON-LD for the desktop apps (operating systems,
-      version, download URL, screenshot, free), beside `SoftwareSourceCode`, and a
-      meta description short enough not to be cut off: Skidbladnir's summary,
-      which is its description, runs to about 290 characters.
+- [x] `SoftwareApplication` JSON-LD for the desktop apps, beside
+      `SoftwareSourceCode` (which names it as its `targetProduct`): operating
+      systems, version, release page, screenshot, free — built by
+      `shared/seo/application.ts` from exactly what the download section
+      renders, so a system with no installer is never claimed and an app with
+      no download section (Nisaba today) gets none. And a `metaDescription` per
+      project, at most 160 characters: every summary ran 218–322, Skidbladnir's
+      the longest. `test/application.test.ts` holds both.
 - [x] Cache-bust the social cards. A project card's `og:image`,
       `twitter:image` and JSON-LD `image` now carry `?v=<fingerprint>` from
       `public/projects/og/cards.json` (`socialCardPath()`,

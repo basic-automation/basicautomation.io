@@ -37,8 +37,17 @@ it is flat.
 
 Each project page also carries `SoftwareSourceCode` JSON-LD and its own Open
 Graph card, so a link to it previews as itself rather than as the organization.
+An app with a download section adds `SoftwareApplication` beside it — the
+systems it has installers for, the version they are, the release page, free —
+built from exactly what that section renders, so it is absent whenever the
+section is. A project's search-result description is its `metaDescription`, at
+most 160 characters so it is not cut off; the longer `summary` is the lede and
+the social preview's text.
 Every page that names a card also gives its size and a text alternative
-(`og:image:width`, `og:image:height`, `og:image:alt`).
+(`og:image:width`, `og:image:height`, `og:image:alt`). A project card's URL
+carries the fingerprint it was rendered from (`?v=…`, from
+`public/projects/og/cards.json`), so a re-rendered card is a new URL rather than
+one a network has already cached the old picture under.
 Each post carries `BlogPosting` JSON-LD naming the blog it belongs to. Every
 page names its one address with `<link rel="canonical">`, the same string as its
 `og:url` and its sitemap entry, so `/PROJECTS` or `/news/` or a tracking query
@@ -136,7 +145,9 @@ quota runs out (`event: "upstream.rate_limited"`).
 
 1. Add an entry to `data/projects.ts`. That file is the editorial layer: the
    pitch, the feature copy, and the code sample that shows what the thing feels
-   like to use. Everything that moves on its own is fetched, not typed.
+   like to use. Everything that moves on its own is fetched, not typed. Give it
+   a `metaDescription` of 160 characters or fewer (a test fails otherwise), and
+   an app with `downloads` an `applicationCategory`.
 2. If it has a wordmark, drop it in `public/projects/<slug>.svg` and set `logo`.
    Same for a screenshot in `public/projects/shots/`. Then run `npm run sizes`,
    which records each image's intrinsic size in
