@@ -36,10 +36,11 @@ record. There is no run log.
             two black notches — with the window's own sampled background, and
             records the upstream blob in `public/projects/shots/sources.json`;
             `npm run shot:check` says when upstream has moved on.
-      - [ ] Run `shot:check` on a schedule (the weekly links workflow), so a
-            new upstream screenshot is noticed without anyone remembering to
-            look. Still eyeball each re-cut: a release that adds a row moves
-            the gap the crop sits in.
+      - [x] `shot:check` runs weekly, as the `screenshots` job of
+            `.github/workflows/links.yml`, and keeps one issue in sync — opened
+            while a screenshot is behind upstream, closed once it is re-cut.
+            A report, not a gate, like the link check beside it. Still eyeball
+            each re-cut: a release that adds a row moves the gap the crop sits in.
 - [x] Skidbladnir's page, ready for its first public campaign: the parity claim
       scoped the way its README scopes it (still images, the four named tools,
       the exceptions in the readme below, no typed case count), the full input
