@@ -120,16 +120,19 @@ and sends `If-None-Match`, and a repo that has not changed comes back
 `304 Not Modified` — which, with a token, costs none of the quota
 (`shared/github/conditional.ts`). `/status` shows how many of its calls were.
 
-If GitHub or crates.io is unreachable, the render falls back to
-`data/projects.generated.json` — a committed snapshot refreshed by `npm run sync`.
-An upstream outage degrades the numbers, not the site.
+If GitHub or crates.io is unreachable, the render keeps the last answer it had
+for that repo, marked `stale`. A process that has not reached upstream since
+it started falls back to `data/projects.generated.json` instead, a committed
+snapshot refreshed by `npm run sync`. Either way an upstream outage degrades the
+numbers, not the site. A failed refresh never swaps live numbers for older
+snapshot ones.
 
 Set `NUXT_GITHUB_TOKEN` in the server's environment to lift the anonymous rate
 limit (the compose file fills it from `BASICAUTOMATION_GITHUB_TOKEN`; a bare
 `GITHUB_TOKEN` is read by `npm run sync` but not by the server). It is optional;
 nothing needs it to work.
 
-`/status` shows which of the two is happening right now, per project, along with
+`/status` shows which of the three is happening right now (live, stale or snapshot), per project, along with
 GitHub's own count of the rate limit — how many calls are left this hour and when
 it resets, read from the headers of its last response — and when the onion
 service was last reached over Tor, from the gateway's own ten-minute self-fetch.

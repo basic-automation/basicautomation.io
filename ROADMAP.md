@@ -191,6 +191,19 @@ record. There is no run log.
       `h1` in it or a project missing from it. Proved end to end by forcing all
       seven repos onto the fallback with a bad token: `npm run check` and
       `npm run a11y` both clean.
+- [x] A failed refresh no longer rolls a page back to the snapshot. Nitro caches
+      whatever the repo function returns, and on an upstream failure that was the
+      committed snapshot, so one timed-out refresh replaced a live entry with
+      data from the last `npm run sync` for a whole refresh window. Proved
+      2026-10-02 behind a proxy switched off after the cache was warm: once the
+      TTL ran out, the old build's Skidbladnir page went from v1.3.0 to the
+      snapshot's v1.1.0, with download links to match. `server/utils/github.ts`
+      now keeps each repo's last live answer and serves it, marked `stale`, with
+      its own `fetchedAt`. The new build kept v1.3.0. The snapshot is still the
+      fallback for a repo the process has never reached. It still counts as
+      degraded (and still triggers the hourly `upstream.stale` alert, which now
+      says which kind). `/healthz` adds `staleResolutions` and
+      `data.source: 'stale'`, and `/status` shows both.
 - [x] …and notice the failure that alert could not see. `source: 'live'` only
       ever meant the repo call succeeded; its README and its release history are
       separate calls that are each allowed to fail without sinking the repo. So a

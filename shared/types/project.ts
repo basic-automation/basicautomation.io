@@ -39,8 +39,13 @@ export interface RepoMeta {
   repo: string
   /** When the upstream call behind this data was made. */
   fetchedAt: string
-  /** 'snapshot' means upstream was unreachable and the committed fallback was used. */
-  source: 'live' | 'snapshot'
+  /**
+   * 'live' is this refresh's own answer. When a refresh fails, 'stale' is the
+   * last live answer this process had — `fetchedAt` says how old — and
+   * 'snapshot' is the committed fallback, used only when there is no live
+   * answer to keep (the process has not reached upstream since it started).
+   */
+  source: 'live' | 'stale' | 'snapshot'
   /**
    * Which of the optional upstream calls failed for this repo, if any.
    *

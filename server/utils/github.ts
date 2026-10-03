@@ -6,9 +6,10 @@
  * rendered HTML reads from that. A visitor always gets freshly rendered markup;
  * the numbers inside it are at most `CACHE_TTL` old.
  *
- * If GitHub or crates.io is unreachable, `data/projects.generated.json` — the
- * snapshot committed by `npm run sync` — is served instead, so an upstream
- * outage degrades the numbers rather than the site.
+ * If GitHub or crates.io is unreachable, the last live answer this process had
+ * is served instead, marked `stale`; and if it has had none since it started,
+ * `data/projects.generated.json` — the snapshot committed by `npm run sync`.
+ * Either way an upstream outage degrades the numbers rather than the site.
  */
 
 // Nitro's `$fetch` carries typed-route overloads for the app's OWN routes;
@@ -245,6 +246,18 @@ function fromSnapshot(repo: string): RepoMeta | null {
 }
 
 /**
+ * Each repo's last successful answer, kept for when a refresh fails.
+ *
+ * Nitro caches whatever the function below returns, fallback or not. When it
+ * fell straight back to the snapshot, one timed-out refresh replaced a live
+ * entry with data from the last `npm run sync` for a whole refresh window —
+ * on 2026-10-02 that would have taken Skidbladnir's download section from
+ * v1.3.0 back to the snapshot's v1.1.0. The last live answer is never older
+ * than the snapshot and usually much newer, so it goes first.
+ */
+const lastLive = new Map<string, RepoMeta>()
+
+/**
  * Cached across requests by Nitro. `getKey` keeps one entry per repo so a
  * single slow project page doesn't invalidate the landing page's data.
  */
@@ -252,12 +265,18 @@ const cachedRepo = defineCachedFunction(
   async (project: Project): Promise<RepoMeta | null> => {
     try {
       const meta = await fetchRepo(project)
+      lastLive.set(project.repo, meta)
       recordSource('live')
       recordIncomplete(project.repo, meta.incomplete ?? [])
       return meta
     }
     catch (err) {
-      console.warn(`[github] ${project.repo} fetch failed, using snapshot:`, (err as Error).message)
+      const kept = lastLive.get(project.repo)
+      console.warn(`[github] ${project.repo} fetch failed, using ${kept ? `the last live answer, from ${kept.fetchedAt}` : 'snapshot'}:`, (err as Error).message)
+      if (kept) {
+        recordSource('stale')
+        return { ...kept, source: 'stale' }
+      }
       const meta = fromSnapshot(project.repo)
       // Only a fetch that actually produced a page's worth of data counts as
       // degraded. A repo with no snapshot either is a different problem.

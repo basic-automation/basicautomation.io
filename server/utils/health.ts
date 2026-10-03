@@ -23,9 +23,12 @@ const STALE_ALERT_AFTER = 60 * 60 * 1000 // 1 hour
 const startedAt = Date.now()
 
 let liveCount = 0
+let staleCount = 0
 let snapshotCount = 0
-/** When the current run of snapshot-only answers began. Null while any is live. */
+/** When the current run of fallback answers began. Null while any is live. */
 let degradedSince: number | null = null
+/** Whether any answer in that run came from the committed snapshot. */
+let degradedToSnapshot = false
 /** So the alert below is an hourly line, not one per request. */
 let lastAlertAt = 0
 /**
@@ -80,7 +83,7 @@ export function recordGithubCall(notModified: boolean): void {
 }
 
 /** Called once per resolved repo, by the cached fetch in `github.ts`. */
-export function recordSource(source: 'live' | 'snapshot'): void {
+export function recordSource(source: 'live' | 'stale' | 'snapshot'): void {
   if (source === 'live') {
     liveCount++
     if (degradedSince !== null) {
@@ -93,10 +96,15 @@ export function recordSource(source: 'live' | 'snapshot'): void {
       }))
     }
     degradedSince = null
+    degradedToSnapshot = false
     lastAlertAt = 0
   }
   else {
-    snapshotCount++
+    if (source === 'stale') staleCount++
+    else {
+      snapshotCount++
+      degradedToSnapshot = true
+    }
     degradedSince ??= Date.now()
     alertIfStale()
   }
@@ -158,7 +166,10 @@ function alertIfStale(): void {
     event: 'upstream.stale',
     degradedSince: new Date(degradedSince).toISOString(),
     degradedForSeconds: Math.round(degradedFor / 1000),
-    message: 'serving from the committed snapshot; GitHub has been unreachable for over an hour',
+    to: degradedToSnapshot ? 'snapshot' : 'stale',
+    message: degradedToSnapshot
+      ? 'serving from the committed snapshot; GitHub has been unreachable for over an hour'
+      : 'serving the last live answers; GitHub has been unreachable for over an hour',
   }))
 }
 
@@ -168,7 +179,7 @@ export async function health(): Promise<Health> {
   const now = Date.now()
   const onion = await onionHealth(now)
   const source = degradedSince !== null
-    ? 'snapshot'
+    ? (degradedToSnapshot ? 'snapshot' : 'stale')
     : liveCount > 0 ? 'live' : 'unknown'
 
   return {
@@ -181,6 +192,7 @@ export async function health(): Promise<Health> {
     data: {
       source,
       liveResolutions: liveCount,
+      staleResolutions: staleCount,
       snapshotResolutions: snapshotCount,
       degradedSince: degradedSince === null ? null : new Date(degradedSince).toISOString(),
       degradedForSeconds: degradedSince === null ? null : Math.round((now - degradedSince) / 1000),
