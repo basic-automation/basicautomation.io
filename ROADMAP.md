@@ -514,15 +514,21 @@ record. There is no run log.
       tabs are now 22–23 KB, with payloads of 484–741 bytes. An unknown slug
       still 404s identically, and client navigation blog ↔ about still
       renders the README (checked in a browser, no console errors).
-- [ ] The about page ships its README twice: once as rendered HTML, and again
-      as a string in the hydration payload, because `v-html` needs the string
-      to hydrate. Measured 2026-10-02: `/projects/onyums/about` is 440 KB of
-      HTML, 235 KB of it payload, 162 KB of that the README (75 KB gzipped
-      for the whole page). The README is static once rendered, so a server
-      component (`<NuxtIsland>`) or a non-hydrated wrapper could drop the
-      second copy. Medium: islands fetch over `/__nuxt_island` on client
-      navigation, which the CSP and the onion gateway both need checking
-      against.
+- [x] The about page ships its README once. It went twice: as rendered HTML,
+      and again as a string in the hydration payload, which is serialized from
+      whatever `useFetch` returns. `useProject` now takes the README out of the
+      result on the server before it is serialized, keeps it in a closure for
+      the render, and marks the payload `readmeOnServer`. Hydrating, the client
+      binds no `innerHTML`, and Vue leaves the server's markup alone because it
+      does not patch `innerHTML` during hydration. A client-side navigation
+      fetches in the client and gets the string as before. About pages,
+      2026-10-02: onyums 440 → 217 KB (gzipped 75 → 42 KB; payload 235 → 12.6
+      KB), Skidbladnir 162 → 106 KB, WeftDB → 186 KB with a 146 KB README.
+      Checked in a browser: README intact after hydration and when opened;
+      client navigation onyums → Skidbladnir → back → blog → about renders
+      each README; console empty. Also checked in snapshot-fallback mode
+      (forced with a bad token). Phone LCP unchanged (~1350 ms, text that
+      paints before the HTML ends); the win is bytes and JSON to parse.
 - [x] Preload the wallpaper on the home page (phone LCP 2580 → 2484 ms, median
       of 9, twice) and preload a 61 KB core cut of Fira Code instead of the
       113 KB full font (`npm run font`, `font:check` in CI). The full font stays

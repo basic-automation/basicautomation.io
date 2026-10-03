@@ -15,14 +15,39 @@ export async function useProjects() {
   }
 }
 
-/** One project, README included. */
+/**
+ * One project, README included — but the README only once.
+ *
+ * Whatever `useFetch` returns is serialized into the page so the client can
+ * hydrate it, and a `v-html` README is static markup the server has already
+ * rendered: the payload was a second copy of it. 162 KB of onyums' README sat
+ * in its about page's payload, beside the same README as HTML.
+ *
+ * So on the server the README is taken out of the result before it is
+ * serialized and kept in this closure for the render, and the payload carries
+ * `readmeOnServer` instead. Hydrating, the client binds no `innerHTML` and Vue
+ * leaves the server's markup in place — it does not patch `innerHTML` while
+ * hydrating. A client-side navigation fetches the project afresh, in the
+ * client, where nothing is taken out, so `readmeHtml` is the string again.
+ */
 export async function useProject(slug: MaybeRefOrGetter<string>) {
   const key = computed(() => `project:${toValue(slug)}`)
-  const { data, error } = await useFetch<EnrichedProject>(
+  let serverReadme: string | null = null
+  const { data, error } = await useFetch(
     () => `/api/projects/${toValue(slug)}`,
-    { key: () => key.value },
+    {
+      key: () => key.value,
+      transform: (p: EnrichedProject): EnrichedProject & { readmeOnServer?: true } => {
+        if (!import.meta.server || !p.meta?.readmeHtml) return p
+        serverReadme = p.meta.readmeHtml
+        return { ...p, meta: { ...p.meta, readmeHtml: null }, readmeOnServer: true }
+      },
+    },
   )
-  return { project: data, error }
+  /** The README to bind, or null where the server's markup is to be kept. */
+  const readmeHtml = computed(() => (import.meta.server ? serverReadme : data.value?.meta?.readmeHtml ?? null))
+  const hasReadme = computed(() => !!readmeHtml.value || data.value?.readmeOnServer === true)
+  return { project: data, error, readmeHtml, hasReadme }
 }
 
 /**

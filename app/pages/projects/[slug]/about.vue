@@ -7,7 +7,7 @@ import { applicationId, softwareApplicationLd } from '~~/shared/seo/application'
 const route = useRoute()
 const slug = computed(() => String(route.params.slug))
 
-const { project, error } = await useProject(slug)
+const { project, error, readmeHtml, hasReadme } = await useProject(slug)
 
 if (error.value || !project.value) {
   // Client-only `fatal`, for the reason spelled out in `app/pages/[...slug].vue`:
@@ -542,7 +542,7 @@ useSeoMeta({
 
     <!-- ── README ───────────────────────────────────────────────────────── -->
     <!-- Folded away: the pitch is above, and the full documentation is long. -->
-    <section v-if="meta?.readmeHtml">
+    <section v-if="hasReadme">
       <TermRule label="documentation" />
       <details class="mt-7 group">
         <summary
@@ -555,7 +555,9 @@ useSeoMeta({
         </summary>
         <!-- First-party content: the repo's own README, rendered at request time. -->
         <!-- eslint-disable-next-line vue/no-v-html -->
-        <div class="readme mt-8 max-w-4xl" v-html="meta.readmeHtml" />
+        <!-- Null while hydrating: the server's markup is kept, not re-sent (see
+             `useProject`). `data-allow-mismatch` says so to Vue's dev checks. -->
+        <div class="readme mt-8 max-w-4xl" data-allow-mismatch="children" v-html="readmeHtml ?? undefined" />
       </details>
     </section>
   </article>
