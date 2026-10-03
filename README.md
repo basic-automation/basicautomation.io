@@ -199,7 +199,8 @@ release shaping, heading slugs — and nothing else. It boots no Nitro and rende
 no component: what a running server does is what `npm run check` asserts.
 
 `npm run check` walks a running build: every page, every internal link and
-asset, every URL the sitemap promises, and every social card (which must state
+asset (each static file must carry a `Cache-Control`, and no rendered page may
+be cacheable), every URL the sitemap promises, and every social card (which must state
 its size and alt text), plus three paths that must answer 404 and every
 project's `/projects/<slug>`, which must redirect with its query string intact. It also asserts the structural accessibility of each page
 — one `h1`, one `main`, a language, a named `nav` when there is more than one,

@@ -203,7 +203,11 @@ record. There is no run log.
       fallback for a repo the process has never reached. It still counts as
       degraded (and still triggers the hourly `upstream.stale` alert, which now
       says which kind). `/healthz` adds `staleResolutions` and
-      `data.source: 'stale'`, and `/status` shows both.
+      `data.source: 'stale'`, and `/status` shows both. Nitro's cache docs
+      describe errors thrown by a cached function as logged, not stored;
+      what a function *returns* is cached, which is why the fallback must
+      not be the snapshot whenever a newer answer exists.
+      <https://nitro.build/docs/cache>
 - [x] …and notice the failure that alert could not see. `source: 'live'` only
       ever meant the repo call succeeded; its README and its release history are
       separate calls that are each allowed to fail without sinking the repo. So a
@@ -508,7 +512,9 @@ record. There is no run log.
       slot), while from `sm` up a 2× screen still gets the original. Result:
       2256 ms, "good"; desktop unchanged (84 ms). The home page keeps every card
       lazy, because there the hero is the LCP. `test/card-cuts.test.ts` and
-      `sizes:check` hold the cuts to the art.
+      `sizes:check` hold the cuts to the art. web.dev's LCP guidance agrees on
+      both counts: never lazy-load the LCP image, and serve it at the size it
+      is drawn. <https://web.dev/articles/optimize-lcp>
 - [x] Every static file gets a `Cache-Control`. Eleven did not: the home
       page's LCP wallpaper (`/bg/hero.webp`) and the bevel map, all seven
       wordmarks, both shots and `/logo.svg` had none, so browsers fell back to
