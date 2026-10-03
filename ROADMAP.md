@@ -504,6 +504,25 @@ record. There is no run log.
       `Cache-Control`, and fails a rendered page with a positive `max-age`. Both
       proved: the previous build fails on exactly the eleven files, and a
       deliberate `/projects/**` rule fails 16 pages.
+- [x] Blog pages stop carrying the README they do not show. The blog tab and
+      each post named their project through `useProject`, the about tab's
+      fetch, and `useFetch` serializes its whole result into the page for
+      hydration. So every blog page shipped the project's rendered README as
+      a JSON string: Nanna's blog tab was 92.7 KB of HTML, 70 KB of it payload.
+      `useProjectSummary` (`app/composables/useProjects.ts`) asks the same
+      endpoint with `pick: ['slug', 'name', 'hero']`, under its own key. Blog
+      tabs are now 22–23 KB, with payloads of 484–741 bytes. An unknown slug
+      still 404s identically, and client navigation blog ↔ about still
+      renders the README (checked in a browser, no console errors).
+- [ ] The about page ships its README twice: once as rendered HTML, and again
+      as a string in the hydration payload, because `v-html` needs the string
+      to hydrate. Measured 2026-10-02: `/projects/onyums/about` is 440 KB of
+      HTML, 235 KB of it payload, 162 KB of that the README (75 KB gzipped
+      for the whole page). The README is static once rendered, so a server
+      component (`<NuxtIsland>`) or a non-hydrated wrapper could drop the
+      second copy. Medium: islands fetch over `/__nuxt_island` on client
+      navigation, which the CSP and the onion gateway both need checking
+      against.
 - [x] Preload the wallpaper on the home page (phone LCP 2580 → 2484 ms, median
       of 9, twice) and preload a 61 KB core cut of Fira Code instead of the
       113 KB full font (`npm run font`, `font:check` in CI). The full font stays

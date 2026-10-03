@@ -24,3 +24,24 @@ export async function useProject(slug: MaybeRefOrGetter<string>) {
   )
   return { project: data, error }
 }
+
+/**
+ * One project's name and hero line, for pages that name a project without
+ * rendering it — the blog tab and its posts.
+ *
+ * Those pages used `useProject`, and everything `useFetch` returns is
+ * serialized into the page for hydration, so each one carried the project's
+ * whole rendered README without showing it: 43 KB of Nanna's on its blog tab.
+ * `pick` trims the result before it is serialized. Its own key, so it never
+ * stands in for the full entry the about tab reads.
+ */
+export async function useProjectSummary(slug: MaybeRefOrGetter<string>) {
+  const { data, error } = await useFetch(
+    () => `/api/projects/${toValue(slug)}`,
+    {
+      key: () => `project-summary:${toValue(slug)}`,
+      pick: ['slug', 'name', 'hero'] as const,
+    },
+  )
+  return { project: data, error }
+}

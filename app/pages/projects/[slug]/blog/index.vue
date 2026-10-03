@@ -9,7 +9,7 @@ import { blogName, socialCardAlt, socialCardPath } from '~~/shared/posts/section
 const route = useRoute()
 const slug = computed(() => String(route.params.slug))
 
-const { project, error } = await useProject(slug)
+const { project, error } = await useProjectSummary(slug)
 
 if (error.value || !project.value) {
   throw createError({

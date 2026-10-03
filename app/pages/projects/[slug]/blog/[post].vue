@@ -12,7 +12,7 @@ const route = useRoute()
 const slug = computed(() => String(route.params.slug))
 const postSlug = computed(() => String(route.params.post))
 
-const { project } = await useProject(slug)
+const { project } = await useProjectSummary(slug)
 
 const { data: post, error } = await useFetch<PostSummary & { html: string }>(
   () => `/api/posts/${slug.value}/${postSlug.value}`,
