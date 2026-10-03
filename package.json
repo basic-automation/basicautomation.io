@@ -20,6 +20,7 @@
     "bevel": "node scripts/build-bevel-map.mjs",
     "splash": "node scripts/build-splash.mjs",
     "bases": "node scripts/check-base-images.mjs",
+    "audit:runtime": "node scripts/audit-runtime.mjs",
     "test": "vitest run",
     "contrast": "node scripts/check-contrast.mjs",
     "sizes": "node scripts/build-asset-sizes.mjs",

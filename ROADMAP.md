@@ -581,6 +581,24 @@ record. There is no run log.
       This also retires the rule that every Caddy restriction be repeated in
       the app: the app no longer depends on Caddy for this one.
 
+- [x] Audit what ships, not what builds — `npm run audit:runtime`
+      (`scripts/audit-runtime.mjs`, `shared/security/advisories.ts`), in CI after
+      the build. On 2026-10-02 `npm audit` reported 11 high findings, and none of
+      them could reach a visitor: `braces` (GHSA-vfj7-8cjw-p6xm) under
+      nitropack's build-time globbing, and `node-forge` (GHSA-86w9-cpqp-85rv)
+      under the dev server's certificate helper. Neither has a patched release,
+      so that report stays red, and a report that is always red stops being
+      read. The new check asks the registry only about the 57 packages traced
+      into `.output/server/node_modules` and the 25 inlined into the server
+      chunks, which their sourcemaps name. It does its own range matching,
+      because the bulk endpoint returns every advisory for a name whatever
+      version was asked about. Proved by planting `braces@3.0.3` and
+      `marked@4.0.9`: it fails on exactly the three advisories that apply. The
+      client bundle has no sourcemaps and the gateway's crates are cargo's, so
+      neither is covered.
+      <https://github.com/advisories/GHSA-vfj7-8cjw-p6xm>
+      <https://github.com/advisories/GHSA-86w9-cpqp-85rv>
+
 - [x] A real 404 check: every internal link, every render, on every route — `npm run check`
 - [x] …and the two XML documents nobody looks at, checked the same way. A feed
       breaks silently for every subscriber at once, and both documents carry

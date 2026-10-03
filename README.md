@@ -183,6 +183,7 @@ npm run shot:check   # has an upstream screenshot changed since its cut? (networ
 npm run bases        # runtime Alpine still matches the node base (needs docker)
 npm run contrast     # WCAG contrast for every palette colour, against the ground
 npm run sizes        # re-read every image's intrinsic size
+npm run audit:runtime # advisories for what .output/server ships (after a build)
 ```
 
 `npm test` is Vitest over the pure functions in `shared/` — README rewriting,
@@ -234,6 +235,14 @@ punctuation, arrows, maths and box drawing, which is everything the pages and
 READMEs set — that every page preloads, and the full 113 KB font behind it by
 `unicode-range`, which a browser fetches only for a character the core lacks.
 `npm run font:check` (in CI) fails if either cut or its declared range drifts.
+
+`npm run audit:runtime` (in CI, after the build) is `npm audit` narrowed to the
+code a visitor's request can reach: the packages Nitro traced into
+`.output/server/node_modules`, plus the ones it inlined into the server chunks,
+read from their sourcemaps. It fails on a high or critical advisory that applies
+to one of them. Plain `npm audit` reports the whole lockfile, so it also counts
+the build's file globbing and the dev server's certificate helper, and it can
+stay red on advisories nobody can patch.
 
 External links are followed weekly instead, by `.github/workflows/links.yml`,
 which keeps a single issue in sync with what it finds. They are a report rather

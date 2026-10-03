@@ -64,6 +64,11 @@ jobs:
         run: npm run sizes:check
       - name: Build
         run: npm run build
+      # `npm audit` reports the whole lockfile, build tools and dev server
+      # included, and stays red on advisories nothing can patch and no visitor
+      # can reach. This asks only about what the build put in `.output/server`.
+      - name: No high advisory in what the server ships
+        run: npm run audit:runtime
       # The build is only half the claim — prove the server actually starts and
       # renders, which a successful bundle does not guarantee. `npm run check`
       # crawls every page, follows every internal link and asset, walks the
