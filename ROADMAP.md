@@ -65,6 +65,18 @@ record. There is no run log.
       bad token: `/projects/skidbladnir/about` from the snapshot has the v1.1.0
       download section and its `SoftwareApplication`, and `npm run check` is
       clean.
+- [x] The Skidbladnir wordmark is drawn the way it was designed. Its lettering
+      was a live `<text>` naming `'RobotoSlab-Bold'`, left over from an
+      Illustrator export. An SVG served as an `<img>` cannot load a web font, and
+      no visitor had that one installed, so from 2026-09-24 every page and the
+      social card set "SKIDBLADNIR" in the machine's default serif, light where
+      the mark is bold. The letters are now outlines, cut with fontTools from
+      Roboto Slab Bold (Apache-2.0, via `@fontsource/roboto-slab`, used only to
+      cut them and not shipped). Against Chromium's own rendering of the old
+      `<text>` with the real font loaded, 420 of 1.2M pixels differ, which is
+      antialiasing; the fallback differed by 34k. The card is re-rendered, and
+      its `?v=` fingerprint moved with it. `test/wordmarks.test.ts` fails any SVG
+      under `public/` that has live text or names a font.
 - [x] A card and its data can no longer drift apart. Rendering still needs a local
       Chromium, so it stays manual — but every render records what it was rendered
       from in `public/projects/og/cards.json`, and `npm run og:check` recomputes
