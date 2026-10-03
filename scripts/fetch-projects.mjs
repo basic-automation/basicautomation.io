@@ -23,7 +23,11 @@ import { projects } from '../data/projects.ts'
 // page when it takes over. The copied renderer had no highlighter, so it did.
 import { absolutize, stripLeadingLogo } from '../shared/markdown/readme.ts'
 import { renderMarkdown } from '../shared/markdown/render.ts'
+import { paced } from '../shared/net/pace.ts'
 import { normaliseReleases, pickDownload, pickLatest } from '../shared/github/releases.ts'
+
+/** crates.io asks for at most one API request a second: https://crates.io/data-access */
+const cratesIo = paced(1000)
 
 const HERE = dirname(fileURLToPath(import.meta.url))
 const OUT = resolve(HERE, '../data/projects.generated.json')
@@ -115,10 +119,10 @@ async function fetchRepo(project) {
   // crates.io, for the published Rust crates.
   if (project.crate) {
     try {
-      const c = await getJSON(`https://crates.io/api/v1/crates/${project.crate}`, {
+      const c = await cratesIo(() => getJSON(`https://crates.io/api/v1/crates/${project.crate}`, {
         accept: 'application/json',
         auth: false,
-      })
+      }))
       out.crateVersion = c.crate.max_stable_version || c.crate.max_version
       out.crateDownloads = c.crate.downloads ?? 0
       out.crateUrl = `https://crates.io/crates/${project.crate}`

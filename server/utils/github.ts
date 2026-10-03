@@ -23,6 +23,7 @@ import type { DownloadRelease, EnrichedProject, Release, RepoMeta } from '~~/sha
 import { absolutize, stripLeadingLogo } from '~~/shared/markdown/readme'
 import { normaliseReleases, pickDownload, pickLatest } from '~~/shared/github/releases'
 import { refreshPolicy } from '~~/shared/github/budget'
+import { paced } from '~~/shared/net/pace'
 import snapshot from '~~/data/projects.generated.json'
 
 const ORG = 'basic-automation'
@@ -35,6 +36,9 @@ const ORG = 'basic-automation'
  * https://github.com/rust-lang/crates.io/blob/main/src/middleware/no_user_agent_message.txt
  */
 const UA = 'basicautomation.io (+https://basicautomation.io)'
+
+/** The other of crates.io's two limits: at most one request a second. */
+const cratesIo = paced(1000)
 
 /**
  * GitHub's REST API is versioned by header, and a request without one silently
@@ -189,10 +193,10 @@ async function fetchRepo(project: Project): Promise<RepoMeta> {
     // it carries its assets — so neither costs an extra request.
     gh<any[]>(`/repos/${ORG}/${repo}/releases?per_page=${MAX_RELEASES}`),
     project.crate
-      ? ofetch<any>(`https://crates.io/api/v1/crates/${project.crate}`, {
+      ? cratesIo(() => ofetch<any>(`https://crates.io/api/v1/crates/${project.crate}`, {
           headers: { 'user-agent': UA },
           timeout: 8000,
-        })
+        }))
       : Promise.reject(new Error('not a crate')),
   ])
 

@@ -212,6 +212,18 @@ record. There is no run log.
       `data.incomplete`, the status becomes `degraded`, an `upstream.incomplete`
       line goes to the request log, and the status page says which repo is
       missing what.
+- [x] Keep to crates.io's own limit. Its data-access policy allows the API
+      "provided you abide by" a maximum of one request a second and an
+      identifying user agent (the site already sent one). Each repo refreshes
+      in its own cached function, and they resolve together and expire
+      together, so every refresh window opened with one simultaneous
+      crates.io request per published crate. `paced` (`shared/net/pace.ts`,
+      `test/pace.test.ts`) now starts them at least a second apart, in the
+      server and in `npm run sync`. The wait falls on a background
+      revalidation; only a cold start's first render pays it (`/api/projects`
+      cold: 1.57 s). The policy lists the sparse index first, but download
+      counts are only in the API.
+      <https://crates.io/data-access>
 - [x] Stop the site out-running GitHub's own rate limit. Six repos × three calls
       is 18 per refresh, and a 15-minute TTL is four refresh windows an hour — 72
       calls against an anonymous limit of 60, so the site spent part of every hour
