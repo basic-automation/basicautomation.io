@@ -120,16 +120,19 @@ and sends `If-None-Match`, and a repo that has not changed comes back
 `304 Not Modified` — which, with a token, costs none of the quota
 (`shared/github/conditional.ts`). `/status` shows how many of its calls were.
 
-If GitHub or crates.io is unreachable, the render falls back to
-`data/projects.generated.json` — a committed snapshot refreshed by `npm run sync`.
-An upstream outage degrades the numbers, not the site.
+If GitHub or crates.io is unreachable, the render keeps the last answer it had
+for that repo, marked `stale`. A process that has not reached upstream since
+it started falls back to `data/projects.generated.json` instead, a committed
+snapshot refreshed by `npm run sync`. Either way an upstream outage degrades the
+numbers, not the site. A failed refresh never swaps live numbers for older
+snapshot ones.
 
 Set `NUXT_GITHUB_TOKEN` in the server's environment to lift the anonymous rate
 limit (the compose file fills it from `BASICAUTOMATION_GITHUB_TOKEN`; a bare
 `GITHUB_TOKEN` is read by `npm run sync` but not by the server). It is optional;
 nothing needs it to work.
 
-`/status` shows which of the two is happening right now, per project, along with
+`/status` shows which of the three is happening right now (live, stale or snapshot), per project, along with
 GitHub's own count of the rate limit — how many calls are left this hour and when
 it resets, read from the headers of its last response — and when the onion
 service was last reached over Tor, from the gateway's own ten-minute self-fetch.
@@ -149,9 +152,13 @@ quota runs out (`event: "upstream.rate_limited"`).
    a `metaDescription` of 160 characters or fewer (a test fails otherwise), and
    an app with `downloads` an `applicationCategory`.
 2. If it has a wordmark, drop it in `public/projects/<slug>.svg` and set `logo`.
+   Its lettering must be outlines, not live `<text>`: an SVG shown as an image
+   cannot load a font (a test fails otherwise).
    Same for a screenshot in `public/projects/shots/`. A card shows the
    wordmark; set `cardImage` (16:10) only when the card should lead with art
-   instead, as Skidbladnir's does for its 1.0 campaign. Then run `npm run sizes`,
+   instead, as Skidbladnir's does for its 1.0 campaign, and run `npm run cuts`
+   (ImageMagick) to cut it down to the 560 and 800 px widths the card's
+   `srcset` offers. A test fails if they are missing. Then run `npm run sizes`,
    which records each image's intrinsic size in
    `data/asset-sizes.generated.json` so the page can reserve its space before
    the file arrives. CI fails if that file and the images disagree.
@@ -180,9 +187,11 @@ npm run og           # re-render the per-project social cards (needs Chromium)
 npm run og:check     # are the committed cards still current? (no Chromium)
 npm run shot         # re-cut the screenshots from their READMEs' own (needs ImageMagick)
 npm run shot:check   # has an upstream screenshot changed since its cut? (network)
+npm run cuts         # cut card art down to its srcset widths (needs ImageMagick)
 npm run bases        # runtime Alpine still matches the node base (needs docker)
 npm run contrast     # WCAG contrast for every palette colour, against the ground
 npm run sizes        # re-read every image's intrinsic size
+npm run audit:runtime # advisories for what .output/server ships (after a build)
 ```
 
 `npm test` is Vitest over the pure functions in `shared/` — README rewriting,
@@ -190,7 +199,8 @@ release shaping, heading slugs — and nothing else. It boots no Nitro and rende
 no component: what a running server does is what `npm run check` asserts.
 
 `npm run check` walks a running build: every page, every internal link and
-asset, every URL the sitemap promises, and every social card (which must state
+asset (each static file must carry a `Cache-Control`, and no rendered page may
+be cacheable), every URL the sitemap promises, and every social card (which must state
 its size and alt text), plus three paths that must answer 404 and every
 project's `/projects/<slug>`, which must redirect with its query string intact. It also asserts the structural accessibility of each page
 — one `h1`, one `main`, a language, a named `nav` when there is more than one,
@@ -234,6 +244,17 @@ punctuation, arrows, maths and box drawing, which is everything the pages and
 READMEs set — that every page preloads, and the full 113 KB font behind it by
 `unicode-range`, which a browser fetches only for a character the core lacks.
 `npm run font:check` (in CI) fails if either cut or its declared range drifts.
+
+`npm run audit:runtime` (in CI, after the build) is `npm audit` narrowed to the
+code a visitor's request can reach: the packages Nitro traced into
+`.output/server/node_modules`, plus the ones it inlined into the server chunks,
+read from their sourcemaps. It fails on a high or critical advisory that applies
+to one of them. Plain `npm audit` reports the whole lockfile, so it also counts
+the build's file globbing and the dev server's certificate helper, and it can
+stay red on advisories nobody can patch. The onion gateway, the image's other
+binary, gets `cargo audit --deny yanked --deny unsound` in CI's onion job.
+Each advisory it ignores is listed in `onion/.cargo/audit.toml` with the reason
+it cannot reach the gateway.
 
 External links are followed weekly instead, by `.github/workflows/links.yml`,
 which keeps a single issue in sync with what it finds. They are a report rather

@@ -22,4 +22,14 @@ describe('data/projects.generated.json', () => {
 			expect(meta.readmeHtml ?? '', repo).not.toMatch(/<h1[\s>]/i)
 		}
 	})
+
+	// It went stale a second way: `npm run sync` had its own `marked` set-up with
+	// no highlighter, so a page served from the fallback lost every README's
+	// syntax colours. It renders with the site's own renderer now.
+	it('highlights README code fences, as the live path does', () => {
+		for (const [repo, meta] of Object.entries(repos)) {
+			expect(meta.readmeHtml ?? '', repo).not.toMatch(/<pre>/)
+		}
+		expect(Object.values(repos).some((m) => m.readmeHtml?.includes('class="shiki'))).toBe(true)
+	})
 })

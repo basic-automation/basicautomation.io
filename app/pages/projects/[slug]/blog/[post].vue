@@ -12,7 +12,7 @@ const route = useRoute()
 const slug = computed(() => String(route.params.slug))
 const postSlug = computed(() => String(route.params.post))
 
-const { project } = await useProject(slug)
+const { project } = await useProjectSummary(slug)
 
 const { data: post, error } = await useFetch<PostSummary & { html: string }>(
   () => `/api/posts/${slug.value}/${postSlug.value}`,
@@ -20,7 +20,9 @@ const { data: post, error } = await useFetch<PostSummary & { html: string }>(
 )
 
 if (error.value || !post.value) {
-  throw createError({ statusCode: 404, statusMessage: 'No such post', fatal: true })
+  // Client-only `fatal`, as in `app/pages/[...slug].vue`: on the server it buys
+  // a Nitro stack trace in the request log and nothing else.
+  throw createError({ statusCode: 404, statusMessage: 'No such post', fatal: import.meta.client })
 }
 
 const siteUrl = useSiteOrigin()

@@ -3,8 +3,9 @@ import type { OnionState } from '~~/shared/onion/state'
 /** What `/healthz` answers, and what the status page renders. */
 export interface Health {
   /**
-   * `degraded` means the pages are being rendered from the committed snapshot
-   * because upstream is unreachable, that a page rendered live with part of
+   * `degraded` means the pages are being rendered from fallback data — the
+   * last live answer, or the committed snapshot — because upstream is
+   * unreachable, that a page rendered live with part of
    * it missing, or that the onion service has not been reachable over Tor for
    * half an hour — still serving, just not all of it. It is
    * deliberately not an unhealthy HTTP status; see server/routes/healthz.
@@ -13,9 +14,15 @@ export interface Health {
   uptimeSeconds: number
   startedAt: string
   data: {
-    /** 'live' until a fetch falls back; 'snapshot' until one succeeds again. */
-    source: 'live' | 'snapshot' | 'unknown'
+    /**
+     * 'live' until a fetch falls back. Then, until one succeeds again,
+     * 'snapshot' if any page has been served from the committed snapshot, or
+     * 'stale' if every fallback was to the last live answer the process had.
+     */
+    source: 'live' | 'stale' | 'snapshot' | 'unknown'
     liveResolutions: number
+    /** Failed refreshes answered with the last live data this process had. */
+    staleResolutions: number
     snapshotResolutions: number
     degradedSince: string | null
     degradedForSeconds: number | null

@@ -64,6 +64,11 @@ jobs:
         run: npm run sizes:check
       - name: Build
         run: npm run build
+      # `npm audit` reports the whole lockfile, build tools and dev server
+      # included, and stays red on advisories nothing can patch and no visitor
+      # can reach. This asks only about what the build put in `.output/server`.
+      - name: No high advisory in what the server ships
+        run: npm run audit:runtime
       # The build is only half the claim — prove the server actually starts and
       # renders, which a successful bundle does not guarantee. `npm run check`
       # crawls every page, follows every internal link and asset, walks the
@@ -117,6 +122,15 @@ jobs:
       - run: cargo +nightly fmt --check
       - run: cargo clippy --all-targets -- -D warnings
       - run: cargo test
+      # The gateway ships in the same image as the site, and `npm run
+      # audit:runtime` only sees the Node half. A known vulnerability, a yanked
+      # crate or an unsound one fails; "unmaintained" is reported, not fatal —
+      # those are arti's dependencies to replace. Reviewed exceptions, each with
+      # the reason it cannot reach this binary, are in `.cargo/audit.toml`.
+      - uses: taiki-e/install-action@v2
+        with:
+          tool: cargo-audit
+      - run: cargo audit --deny yanked --deny unsound
 
   image:
     name: image builds

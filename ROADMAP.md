@@ -65,6 +65,18 @@ record. There is no run log.
       bad token: `/projects/skidbladnir/about` from the snapshot has the v1.1.0
       download section and its `SoftwareApplication`, and `npm run check` is
       clean.
+- [x] The Skidbladnir wordmark is drawn the way it was designed. Its lettering
+      was a live `<text>` naming `'RobotoSlab-Bold'`, left over from an
+      Illustrator export. An SVG served as an `<img>` cannot load a web font, and
+      no visitor had that one installed, so from 2026-09-24 every page and the
+      social card set "SKIDBLADNIR" in the machine's default serif, light where
+      the mark is bold. The letters are now outlines, cut with fontTools from
+      Roboto Slab Bold (Apache-2.0, via `@fontsource/roboto-slab`, used only to
+      cut them and not shipped). Against Chromium's own rendering of the old
+      `<text>` with the real font loaded, 420 of 1.2M pixels differ, which is
+      antialiasing; the fallback differed by 34k. The card is re-rendered, and
+      its `?v=` fingerprint moved with it. `test/wordmarks.test.ts` fails any SVG
+      under `public/` that has live text or names a font.
 - [x] A card and its data can no longer drift apart. Rendering still needs a local
       Chromium, so it stays manual — but every render records what it was rendered
       from in `public/projects/og/cards.json`, and `npm run og:check` recomputes
@@ -179,6 +191,23 @@ record. There is no run log.
       `h1` in it or a project missing from it. Proved end to end by forcing all
       seven repos onto the fallback with a bad token: `npm run check` and
       `npm run a11y` both clean.
+- [x] A failed refresh no longer rolls a page back to the snapshot. Nitro caches
+      whatever the repo function returns, and on an upstream failure that was the
+      committed snapshot, so one timed-out refresh replaced a live entry with
+      data from the last `npm run sync` for a whole refresh window. Proved
+      2026-10-02 behind a proxy switched off after the cache was warm: once the
+      TTL ran out, the old build's Skidbladnir page went from v1.3.0 to the
+      snapshot's v1.1.0, with download links to match. `server/utils/github.ts`
+      now keeps each repo's last live answer and serves it, marked `stale`, with
+      its own `fetchedAt`. The new build kept v1.3.0. The snapshot is still the
+      fallback for a repo the process has never reached. It still counts as
+      degraded (and still triggers the hourly `upstream.stale` alert, which now
+      says which kind). `/healthz` adds `staleResolutions` and
+      `data.source: 'stale'`, and `/status` shows both. Nitro's cache docs
+      describe errors thrown by a cached function as logged, not stored;
+      what a function *returns* is cached, which is why the fallback must
+      not be the snapshot whenever a newer answer exists.
+      <https://nitro.build/docs/cache>
 - [x] …and notice the failure that alert could not see. `source: 'live'` only
       ever meant the repo call succeeded; its README and its release history are
       separate calls that are each allowed to fail without sinking the repo. So a
@@ -187,6 +216,18 @@ record. There is no run log.
       `data.incomplete`, the status becomes `degraded`, an `upstream.incomplete`
       line goes to the request log, and the status page says which repo is
       missing what.
+- [x] Keep to crates.io's own limit. Its data-access policy allows the API
+      "provided you abide by" a maximum of one request a second and an
+      identifying user agent (the site already sent one). Each repo refreshes
+      in its own cached function, and they resolve together and expire
+      together, so every refresh window opened with one simultaneous
+      crates.io request per published crate. `paced` (`shared/net/pace.ts`,
+      `test/pace.test.ts`) now starts them at least a second apart, in the
+      server and in `npm run sync`. The wait falls on a background
+      revalidation; only a cold start's first render pays it (`/api/projects`
+      cold: 1.57 s). The policy lists the sparse index first, but download
+      counts are only in the API.
+      <https://crates.io/data-access>
 - [x] Stop the site out-running GitHub's own rate limit. Six repos × three calls
       is 18 per refresh, and a 15-minute TTL is four refresh windows an hour — 72
       calls against an anonymous limit of 60, so the site spent part of every hour
@@ -291,6 +332,11 @@ record. There is no run log.
       Re-checked 2026-09-28 and 2026-10-01 (twice): unchanged (vue-tsc 3.3.11 is
       still the latest release, of 2026-08-21; golar 0.1.10, still only
       `./unstable` and `./unstable-tsgo`; TypeScript 7.0.2).
+      Re-checked 2026-10-02 against vue-tsc **3.3.12**, released that day: its
+      notes do not mention TypeScript 7, and in a scratch install with
+      TypeScript 7.0.2 it still dies with `ERR_PACKAGE_PATH_NOT_EXPORTED` for
+      `./lib/tsc`. Golar is still 0.1.10.
+      <https://github.com/vuejs/language-tools/releases/tag/v3.3.12>
       <https://github.com/vuejs/language-tools/issues/6124>
       <https://github.com/vuejs/language-tools/issues/5381>
 - [x] Silenced Nitro's own `[request error]` stack-trace block on a 404, without
@@ -300,6 +346,13 @@ record. There is no run log.
       404s now throw with `fatal: import.meta.client`, which the bundler resolves
       to `false` server-side and `true` client-side. A 404 is one structured JSON
       line again; `app/error.vue` still renders it and the status is still 404.
+- [x] …and the three pages that arrived after it. The blog tab and both post
+      pages (`/projects/<slug>/blog/<post>`, `/news/<post>`) threw `fatal: true`,
+      so every unknown post logged a dozen-line `H3Error` stack beside its
+      structured line (seen 2026-10-02). Now `import.meta.client` like the rest:
+      one line each, the 404 page still rendered server-side and after an in-app
+      navigation (checked in a browser through the router).
+      `test/page-errors.test.ts` fails any page with `fatal: true`.
 
 ## Phase 4 — Reach
 
@@ -447,6 +500,72 @@ record. There is no run log.
       field data; this site is too small to appear in CrUX.
       <https://web.dev/articles/vitals#core-web-vitals>
       <https://web.dev/articles/optimize-cls>
+- [x] `/projects` back to a good phone LCP after the campaign art arrived. With
+      Skidbladnir's longship leading the grid, the page's LCP became a 200 KB,
+      1224 px, `loading="lazy"` image: 2880 ms on the shaped phone profile
+      (`npm run vitals --shaped`, median of 7), where the text before it had
+      measured ~1.2 s. Making the first card eager with `fetchpriority="high"`
+      alone moved it to 2860 ms, so the size was the cost, not the lazy load.
+      The art is now also cut to 560 and 800 px (`npm run cuts`,
+      `shared/assets/cuts.ts`; 27 KB and 77 KB). The card is a `<picture>`
+      whose phone source offers only the cuts (800 px is still 2.3× a 350 px
+      slot), while from `sm` up a 2× screen still gets the original. Result:
+      2256 ms, "good"; desktop unchanged (84 ms). The home page keeps every card
+      lazy, because there the hero is the LCP. `test/card-cuts.test.ts` and
+      `sizes:check` hold the cuts to the art. web.dev's LCP guidance agrees on
+      both counts: never lazy-load the LCP image, and serve it at the size it
+      is drawn. <https://web.dev/articles/optimize-lcp>
+- [x] Every static file gets a `Cache-Control`. Eleven did not: the home
+      page's LCP wallpaper (`/bg/hero.webp`) and the bevel map, all seven
+      wordmarks, both shots and `/logo.svg` had none, so browsers fell back to
+      heuristic freshness (a tenth of the time since `Last-Modified`, which is
+      the image's build time). For a while after every nightly deploy, a repeat
+      visit re-validated them. They now get `public, max-age=86400`, the same as
+      the social cards. The wordmarks sit beside the pages
+      (`/projects/<slug>.svg`) and the router has no in-segment `*.svg`
+      pattern, so each one gets its own rule, generated from `data/projects.ts`.
+      A dead `/logo.png` rule (no such file) is gone. `npm run check` now
+      fails a referenced image, font, script or stylesheet with no
+      `Cache-Control`, and fails a rendered page with a positive `max-age`. Both
+      proved: the previous build fails on exactly the eleven files, and a
+      deliberate `/projects/**` rule fails 16 pages.
+- [x] Blog pages stop carrying the README they do not show. The blog tab and
+      each post named their project through `useProject`, the about tab's
+      fetch, and `useFetch` serializes its whole result into the page for
+      hydration. So every blog page shipped the project's rendered README as
+      a JSON string: Nanna's blog tab was 92.7 KB of HTML, 70 KB of it payload.
+      `useProjectSummary` (`app/composables/useProjects.ts`) asks the same
+      endpoint with `pick: ['slug', 'name', 'hero']`, under its own key. Blog
+      tabs are now 22–23 KB, with payloads of 484–741 bytes. An unknown slug
+      still 404s identically, and client navigation blog ↔ about still
+      renders the README (checked in a browser, no console errors).
+- [x] The about page ships its README once. It went twice: as rendered HTML,
+      and again as a string in the hydration payload, which is serialized from
+      whatever `useFetch` returns. `useProject` now takes the README out of the
+      result on the server before it is serialized, keeps it in a closure for
+      the render, and marks the payload `readmeOnServer`. Hydrating, the client
+      binds no `innerHTML`, and Vue leaves the server's markup alone because it
+      does not patch `innerHTML` during hydration. A client-side navigation
+      fetches in the client and gets the string as before. About pages,
+      2026-10-02: onyums 440 → 217 KB (gzipped 75 → 42 KB; payload 235 → 12.6
+      KB), Skidbladnir 162 → 106 KB, WeftDB → 186 KB with a 146 KB README.
+      Checked in a browser: README intact after hydration and when opened;
+      client navigation onyums → Skidbladnir → back → blog → about renders
+      each README; console empty. Also checked in snapshot-fallback mode
+      (forced with a bad token). Phone LCP unchanged (~1350 ms, text that
+      paints before the HTML ends); the win is bytes and JSON to parse.
+- [x] Listing pages serialize card fields, not every project's whole copy.
+      `useProjects` (home, `/projects`, `/status`) put every project's features,
+      worked example, problem statement and download copy into the hydration
+      payload, about 29 KB on each page; `/news` did the same to map slugs to
+      names. They now keep `ProjectSummary` (`shared/types/project.ts`: the
+      project less `PAGE_ONLY`), and `ProjectCard` is typed against it, so a
+      card that starts reading a dropped field fails the typecheck rather than
+      rendering empty. `/api/projects` itself is unchanged. Home 64.9 → 46.4 KB
+      (gzipped 18.6 → 11.0), `/projects` 60.5 → 39.4, `/status` 57.0 → 35.8,
+      `/news` 50.3 → 23.7. Visible text and JSON-LD are identical to main's on
+      all four. Shaped-phone LCP: home 2208 → 2000 ms, `/projects` 2252 →
+      2080 ms (median of 5).
 - [x] Preload the wallpaper on the home page (phone LCP 2580 → 2484 ms, median
       of 9, twice) and preload a 61 KB core cut of Fira Code instead of the
       113 KB full font (`npm run font`, `font:check` in CI). The full font stays
@@ -464,6 +583,16 @@ record. There is no run log.
       instead (a Node proxy: one shared 200 KB/s pipe, 150 ms per response,
       DevTools throttling off), `/projects` FCP is 1168 ms with either font,
       median of 7, twice — and the home page's LCP gain grows to 2448 → 2120 ms.
+- [x] …and the README renderer itself. `npm run sync` kept its own `marked`
+      set-up with no highlighter, so every README in the snapshot had bare
+      `<pre>` fences, and a page served from the fallback lost all its syntax
+      colours. `renderMarkdown` and `highlight` moved from `server/utils/` to
+      `shared/markdown/` (`server/utils/` re-exports them for Nitro's
+      auto-imports), and the sync script renders with them. On 2026-10-02 all
+      seven snapshot READMEs came out byte-identical to the live server's.
+      `test/snapshot.test.ts` fails on a bare `<pre>`; it fails on main's
+      snapshot. In forced-snapshot mode Nanna's about page has 16 Shiki blocks,
+      and `check` and `a11y` are clean.
 - [x] A test framework, and unit tests over the pure helpers — Vitest,
       `test/*.test.ts`, run by CI. Scoped deliberately: only the functions in
       `shared/` that a running server cannot exercise, because `npm run check`
@@ -581,6 +710,34 @@ record. There is no run log.
       This also retires the rule that every Caddy restriction be repeated in
       the app: the app no longer depends on Caddy for this one.
 
+- [x] Audit what ships, not what builds — `npm run audit:runtime`
+      (`scripts/audit-runtime.mjs`, `shared/security/advisories.ts`), in CI after
+      the build. On 2026-10-02 `npm audit` reported 11 high findings, and none of
+      them could reach a visitor: `braces` (GHSA-vfj7-8cjw-p6xm) under
+      nitropack's build-time globbing, and `node-forge` (GHSA-86w9-cpqp-85rv)
+      under the dev server's certificate helper. Neither has a patched release,
+      so that report stays red, and a report that is always red stops being
+      read. The new check asks the registry only about the 57 packages traced
+      into `.output/server/node_modules` and the 25 inlined into the server
+      chunks, which their sourcemaps name. The registry filters by version
+      itself; the script re-checks each range as a cross-check on what comes
+      back. Proved by planting `braces@3.0.3` and
+      `marked@4.0.9`: it fails on exactly the three advisories that apply. The
+      client bundle has no sourcemaps, so it is not covered.
+- [x] …and the image's other binary. The onion gateway's 594 crates were
+      audited by nothing. CI's onion job now runs `cargo audit --deny yanked
+      --deny unsound`. First run, 2026-10-02: `yoke-derive` 0.8.3 was yanked,
+      now bumped to 0.8.4 (a patch release, lockfile only). RUSTSEC-2023-0071
+      (`rsa`, Marvin) has no patched release and comes in through arti. It is
+      ignored in `onion/.cargo/audit.toml` with the evidence: it needs an RSA
+      *private* key, and the live keystore holds only ed25519 and x25519 ones.
+      Proved the check bites: exit 1 without the ignore, and exit 1 on the old
+      lockfile. `bincode` (RUSTSEC-2025-0141) and `paste` (RUSTSEC-2024-0436)
+      are unmaintained, reported but not failing; both are arti's to replace.
+      <https://rustsec.org/advisories/RUSTSEC-2023-0071.html>
+      <https://github.com/advisories/GHSA-vfj7-8cjw-p6xm>
+      <https://github.com/advisories/GHSA-86w9-cpqp-85rv>
+
 - [x] A real 404 check: every internal link, every render, on every route — `npm run check`
 - [x] …and the two XML documents nobody looks at, checked the same way. A feed
       breaks silently for every subscriber at once, and both documents carry
@@ -604,5 +761,11 @@ record. There is no run log.
       upstream: the repo has a LICENSE now (GitHub reads it as ISC), the link
       answers 200, and `npm run check -- --external` against production found
       no dead link on 2026-10-01.
+- [ ] Upstream: the Skidbladnir README links `https://bitbucket.org/multicoreware/x265_git`,
+      which Bitbucket redirects to the repo's wiki home, and that answers 404
+      (`npm run check -- --external` against production, 2026-10-02). The
+      repo itself is there: `…/x265_git/src` answers 200, so pointing the link
+      at that path fixes it. The fix belongs in Skidbladnir's README; this
+      page folds it in as-is.
 - [ ] Upstream: the onyums README's table of contents links
       `#multiple-services-on-one-tor-client`, an anchor no heading in it produces.

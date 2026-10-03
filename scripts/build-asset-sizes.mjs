@@ -20,6 +20,7 @@ import { fileURLToPath } from 'node:url'
 import { dirname, resolve } from 'node:path'
 import { projects } from '../data/projects.ts'
 import { imageDimensions } from '../shared/assets/dimensions.ts'
+import { CARD_CUTS, cutPath } from '../shared/assets/cuts.ts'
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..')
 const OUT = resolve(ROOT, 'data/asset-sizes.generated.json')
@@ -30,7 +31,10 @@ function sources() {
 	for (const p of projects) {
 		if (p.logo) paths.add(p.logo)
 		if (p.screenshot) paths.add(p.screenshot)
-		if (p.cardImage) paths.add(p.cardImage)
+		if (p.cardImage) {
+			paths.add(p.cardImage)
+			for (const w of CARD_CUTS) paths.add(cutPath(p.cardImage, w))
+		}
 	}
 	return [...paths].sort()
 }

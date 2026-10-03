@@ -16,15 +16,18 @@
 import { writeFile, readFile } from 'node:fs/promises'
 import { fileURLToPath } from 'node:url'
 import { dirname, resolve } from 'node:path'
-import { Marked } from 'marked'
 import { projects } from '../data/projects.ts'
-import { createSlugger } from '../shared/markdown/slug.ts'
-import { readmeHeading } from '../shared/markdown/heading.ts'
-// The same two helpers the site itself renders READMEs and releases with. They
-// used to be copied here; a snapshot shaped differently from the live path is a
-// fallback that changes the page when it takes over.
-import { absolutize, lazyImages, stripLeadingLogo } from '../shared/markdown/readme.ts'
+// The same helpers — and the same renderer, highlighter included — the site
+// itself renders READMEs and releases with. They used to be copied here; a
+// snapshot shaped differently from the live path is a fallback that changes the
+// page when it takes over. The copied renderer had no highlighter, so it did.
+import { absolutize, stripLeadingLogo } from '../shared/markdown/readme.ts'
+import { renderMarkdown } from '../shared/markdown/render.ts'
+import { paced } from '../shared/net/pace.ts'
 import { normaliseReleases, pickDownload, pickLatest } from '../shared/github/releases.ts'
+
+/** crates.io asks for at most one API request a second: https://crates.io/data-access */
+const cratesIo = paced(1000)
 
 const HERE = dirname(fileURLToPath(import.meta.url))
 const OUT = resolve(HERE, '../data/projects.generated.json')
@@ -57,29 +60,6 @@ async function getText(url, accept) {
   return res.text()
 }
 
-/**
- * These repos are first-party, so the README's own HTML is rendered as-is.
- *
- * One renderer per README, because the slugger has to number duplicate heading
- * text from 1 within a document rather than across the whole run. Headings get
- * GitHub's own anchor so a README's table of contents still works here, and are
- * demoted a level — the same treatment the live renderer in
- * server/utils/github.ts gives them, from the same module.
- */
-function markdownRenderer() {
-  const slug = createSlugger()
-  return new Marked({
-    gfm: true,
-    breaks: false,
-    async: false,
-    renderer: {
-      // Demoted a level so the README nests under the page's own h1, with the
-      // ids left where GitHub minted them. See shared/markdown/heading.ts.
-      heading: readmeHeading(slug),
-    },
-  })
-}
-
 async function fetchRepo(project) {
   const { repo } = project
   const out = { repo, fetchedAt: new Date().toISOString() }
@@ -110,7 +90,7 @@ async function fetchRepo(project) {
       'application/vnd.github.raw',
     )
     const prepared = absolutize(stripLeadingLogo(md), ORG, repo, out.defaultBranch)
-    out.readmeHtml = lazyImages(markdownRenderer().parse(prepared))
+    out.readmeHtml = await renderMarkdown(prepared)
   }
   catch {
     out.readmeHtml = null
@@ -139,10 +119,10 @@ async function fetchRepo(project) {
   // crates.io, for the published Rust crates.
   if (project.crate) {
     try {
-      const c = await getJSON(`https://crates.io/api/v1/crates/${project.crate}`, {
+      const c = await cratesIo(() => getJSON(`https://crates.io/api/v1/crates/${project.crate}`, {
         accept: 'application/json',
         auth: false,
-      })
+      }))
       out.crateVersion = c.crate.max_stable_version || c.crate.max_version
       out.crateDownloads = c.crate.downloads ?? 0
       out.crateUrl = `https://crates.io/crates/${project.crate}`

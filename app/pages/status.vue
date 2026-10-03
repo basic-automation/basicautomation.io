@@ -68,6 +68,7 @@ const rows = computed(() => {
     { label: 'uptime', value: duration(h.uptimeSeconds) },
     { label: 'started', value: h.startedAt },
     { label: 'live fetches', value: String(h.data.liveResolutions) },
+    { label: 'stale fetches', value: String(h.data.staleResolutions) },
     { label: 'snapshot fetches', value: String(h.data.snapshotResolutions) },
     // GitHub's figures, not ours: the headers on its last response.
     {
@@ -121,9 +122,9 @@ useSeoMeta({
 
       <p class="mt-4 max-w-2xl text-sm leading-relaxed text-pn-dim">
         Every number on this site is fetched when the page is rendered. When GitHub or
-        crates.io cannot be reached, the render falls back to a snapshot committed to the
-        repository — the site stays up and the numbers go stale. This page says which is
-        happening.
+        crates.io cannot be reached, the render keeps the last answer it had, or falls
+        back to a snapshot committed to the repository if it has none — the site stays
+        up and the numbers go stale. This page says which is happening.
       </p>
     </section>
 
@@ -139,6 +140,7 @@ useSeoMeta({
         <p class="mt-8 text-2xl text-pn-fg-bright sm:text-3xl">
           <span aria-hidden="true" :class="health.status === 'ok' ? 'text-pn-bright-green' : 'text-pn-yellow'">● </span>
           <span v-if="health.status === 'ok'">Serving live data.</span>
+          <span v-else-if="health.data.degradedSince && health.data.source === 'stale'">Serving the last live data.</span>
           <span v-else-if="health.data.degradedSince">Serving the fallback snapshot.</span>
           <span v-else-if="health.data.incomplete.length">Serving live data, with pieces missing.</span>
           <span v-else>Serving live data. The onion service is not answering.</span>
@@ -150,7 +152,8 @@ useSeoMeta({
         >
           Upstream has been unreachable for {{ duration(health.data.degradedForSeconds) }},
           since {{ health.data.degradedSince }}. The pages are correct; the stars, versions
-          and download counts on them are as old as the snapshot.
+          and download counts on them are as old as
+          {{ health.data.source === 'stale' ? 'the last fetch that worked' : 'the snapshot' }}.
         </p>
 
         <!-- `source: live` only ever meant the repo call succeeded. Its README

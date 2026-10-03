@@ -19,9 +19,17 @@ const { data } = await useFetch<{ posts: PostSummary[] }>('/api/posts', {
 
 const posts = computed(() => data.value?.posts ?? [])
 
-const { data: projectData } = await useFetch<{ projects: { slug: string, name: string }[] }>(
+// Only the names are kept: whatever `useFetch` returns is serialized into the
+// page, and the whole list was ~29 KB of copy this page never shows.
+const { data: projectData } = await useFetch(
   '/api/projects',
-  { key: 'projects-for-news', default: () => ({ projects: [] }) },
+  {
+    key: 'projects-for-news',
+    default: () => ({ projects: [] }),
+    transform: (d: { projects: { slug: string, name: string }[] }) => ({
+      projects: d.projects.map(({ slug, name }) => ({ slug, name })),
+    }),
+  },
 )
 
 /** A post carries its project's slug; the card wants the display name. */

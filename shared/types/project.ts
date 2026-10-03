@@ -39,8 +39,13 @@ export interface RepoMeta {
   repo: string
   /** When the upstream call behind this data was made. */
   fetchedAt: string
-  /** 'snapshot' means upstream was unreachable and the committed fallback was used. */
-  source: 'live' | 'snapshot'
+  /**
+   * 'live' is this refresh's own answer. When a refresh fails, 'stale' is the
+   * last live answer this process had — `fetchedAt` says how old — and
+   * 'snapshot' is the committed fallback, used only when there is no live
+   * answer to keep (the process has not reached upstream since it started).
+   */
+  source: 'live' | 'stale' | 'snapshot'
   /**
    * Which of the optional upstream calls failed for this repo, if any.
    *
@@ -94,3 +99,13 @@ export type EnrichedProject = Project & {
   /** `project.example.code`, syntax-highlighted on the server. */
   exampleHtml?: string | null
 }
+
+/**
+ * The editorial fields only a project's own page renders. Every page that lists
+ * projects — the home page, /projects, /status — serialized all of them for
+ * every project into its hydration payload: ~29 KB, a third of it `features`.
+ * `useProjects` drops them; `ProjectCard` is typed against what is left, so a
+ * card that starts reading one fails the typecheck instead of rendering empty.
+ */
+export const PAGE_ONLY = ['features', 'example', 'problem', 'install', 'downloads', 'links', 'metaDescription', 'summary'] as const
+export type ProjectSummary = Omit<EnrichedProject, typeof PAGE_ONLY[number]>
