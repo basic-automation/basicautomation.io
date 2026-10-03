@@ -41,6 +41,17 @@ const HEADERS = {
   'accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
 }
 
+/**
+ * A static file this site serves. Each one needs a `Cache-Control` of its own:
+ * without one a browser falls back to heuristic freshness, a tenth of the time
+ * since `Last-Modified`, and that is the image's build time, so a repeat
+ * visitor re-validates everything for a while after each deploy.
+ */
+const STATIC_FILE = /\.(?:webp|avif|png|jpe?g|svg|ico|woff2?|js|css)$/i
+
+/** A positive `max-age`: a shared or browser cache may reuse the response. */
+const cachesFor = (header) => Number(header?.match(/max-age=(\d+)/)?.[1] ?? 0) > 0
+
 const failures = []
 const warnings = []
 const notes = []
@@ -63,7 +74,13 @@ async function fetchOnce(url) {
       const body = type.includes('html') || type.includes('xml') || type.includes('text')
         ? await res.text()
         : null
-      return { status: res.status, type, body, csp: res.headers.get('content-security-policy') }
+      return {
+        status: res.status,
+        type,
+        body,
+        csp: res.headers.get('content-security-policy'),
+        cacheControl: res.headers.get('cache-control'),
+      }
     }
     catch (err) {
       return { status: 0, type: '', body: null, error: err.message }
@@ -526,6 +543,11 @@ while (queue.length) {
   }
   console.log(`  200  ${path}`)
 
+  // A page renders live data on every request. A cache rule written for the
+  // files beside it — `/projects/<slug>.svg` sits next to `/projects/<slug>/about`
+  // — must not reach it.
+  if (cachesFor(res.cacheControl)) fail(path, `a rendered page is cacheable (${res.cacheControl})`)
+
   // A social card lives only in a `<meta>` tag, so nothing above would ever
   // fetch it — and an `og:image` pointing at a 404 fails silently, in someone
   // else's preview, where nobody sees it. These carry the public origin, so
@@ -608,6 +630,9 @@ while (queue.length) {
       const asset = await fetchOnce(url.origin + url.pathname + url.search)
       if (asset.status !== 200) {
         fail(path, `references ${url.pathname} which answered ${asset.status || 'nothing'}`)
+      }
+      else if (STATIC_FILE.test(url.pathname) && !asset.cacheControl) {
+        fail(path, `${url.pathname} is served with no Cache-Control`)
       }
     }
   }

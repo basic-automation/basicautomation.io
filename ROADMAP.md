@@ -490,6 +490,20 @@ record. There is no run log.
       2256 ms, "good"; desktop unchanged (84 ms). The home page keeps every card
       lazy, because there the hero is the LCP. `test/card-cuts.test.ts` and
       `sizes:check` hold the cuts to the art.
+- [x] Every static file gets a `Cache-Control`. Eleven did not: the home
+      page's LCP wallpaper (`/bg/hero.webp`) and the bevel map, all seven
+      wordmarks, both shots and `/logo.svg` had none, so browsers fell back to
+      heuristic freshness (a tenth of the time since `Last-Modified`, which is
+      the image's build time). For a while after every nightly deploy, a repeat
+      visit re-validated them. They now get `public, max-age=86400`, the same as
+      the social cards. The wordmarks sit beside the pages
+      (`/projects/<slug>.svg`) and the router has no in-segment `*.svg`
+      pattern, so each one gets its own rule, generated from `data/projects.ts`.
+      A dead `/logo.png` rule (no such file) is gone. `npm run check` now
+      fails a referenced image, font, script or stylesheet with no
+      `Cache-Control`, and fails a rendered page with a positive `max-age`. Both
+      proved: the previous build fails on exactly the eleven files, and a
+      deliberate `/projects/**` rule fails 16 pages.
 - [x] Preload the wallpaper on the home page (phone LCP 2580 → 2484 ms, median
       of 9, twice) and preload a 61 KB core cut of Fira Code instead of the
       113 KB full font (`npm run font`, `font:check` in CI). The full font stays
