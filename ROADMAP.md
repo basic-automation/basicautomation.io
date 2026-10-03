@@ -628,9 +628,9 @@ record. There is no run log.
       so that report stays red, and a report that is always red stops being
       read. The new check asks the registry only about the 57 packages traced
       into `.output/server/node_modules` and the 25 inlined into the server
-      chunks, which their sourcemaps name. It does its own range matching,
-      because the bulk endpoint returns every advisory for a name whatever
-      version was asked about. Proved by planting `braces@3.0.3` and
+      chunks, which their sourcemaps name. The registry filters by version
+      itself; the script re-checks each range as a cross-check on what comes
+      back. Proved by planting `braces@3.0.3` and
       `marked@4.0.9`: it fails on exactly the three advisories that apply. The
       client bundle has no sourcemaps and the gateway's crates are cargo's, so
       neither is covered.

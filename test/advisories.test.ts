@@ -69,7 +69,7 @@ describe('applicable', () => {
 		...over,
 	})
 
-	it('drops advisories for versions not installed — the registry returns them all', () => {
+	it('drops advisories for versions not installed, should the registry send them', () => {
 		const found = applicable(
 			{ braces: ['3.0.3'] },
 			{ braces: [advisory({ vulnerable_versions: '<3.0.3' }), advisory({ id: 2, vulnerable_versions: '<=3.0.3' })] },

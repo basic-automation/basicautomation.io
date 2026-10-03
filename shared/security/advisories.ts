@@ -8,10 +8,13 @@
  * eleven reasons to stop reading the report — and the twelfth, the one that
  * can, arrives in that same pile.
  *
- * The registry's bulk endpoint returns every advisory for a package NAME,
- * whatever versions were asked about, so the version test happens here. It
- * understands the range syntax advisories are written in — comparators joined
- * by spaces, alternatives joined by `||` — and treats anything else as
+ * The registry's bulk endpoint already answers with the advisories that apply
+ * to the versions it was sent (checked 2026-10-02: braces@3.0.3 alone brings
+ * back only its `<=3.0.3` advisory, not the older `<3.0.3` one). The range is
+ * still tested here, the way `npm audit` re-reads what it is sent, so a
+ * registry answering more broadly than asked would not raise a false alarm.
+ * It understands the range syntax advisories are written in — comparators
+ * joined by spaces, alternatives joined by `||` — and treats anything else as
  * matching, so a range it cannot read is shown rather than dropped.
  */
 
