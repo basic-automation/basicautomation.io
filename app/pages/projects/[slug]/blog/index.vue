@@ -12,10 +12,12 @@ const slug = computed(() => String(route.params.slug))
 const { project, error } = await useProjectSummary(slug)
 
 if (error.value || !project.value) {
+  // Client-only `fatal`, for the reason spelled out in `app/pages/[...slug].vue`:
+  // on the server it buys a Nitro stack trace and nothing else.
   throw createError({
     statusCode: error.value?.statusCode ?? 404,
     statusMessage: 'No such project',
-    fatal: true,
+    fatal: import.meta.client,
   })
 }
 

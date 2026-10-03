@@ -16,7 +16,9 @@ const { data: post, error } = await useFetch<PostSummary & { html: string }>(
 )
 
 if (error.value || !post.value) {
-  throw createError({ statusCode: 404, statusMessage: 'No such post', fatal: true })
+  // Client-only `fatal`, as in `app/pages/[...slug].vue`: on the server it buys
+  // a Nitro stack trace in the request log and nothing else.
+  throw createError({ statusCode: 404, statusMessage: 'No such post', fatal: import.meta.client })
 }
 
 const siteUrl = useSiteOrigin()

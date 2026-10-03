@@ -342,6 +342,13 @@ record. There is no run log.
       404s now throw with `fatal: import.meta.client`, which the bundler resolves
       to `false` server-side and `true` client-side. A 404 is one structured JSON
       line again; `app/error.vue` still renders it and the status is still 404.
+- [x] …and the three pages that arrived after it. The blog tab and both post
+      pages (`/projects/<slug>/blog/<post>`, `/news/<post>`) threw `fatal: true`,
+      so every unknown post logged a dozen-line `H3Error` stack beside its
+      structured line (seen 2026-10-02). Now `import.meta.client` like the rest:
+      one line each, the 404 page still rendered server-side and after an in-app
+      navigation (checked in a browser through the router).
+      `test/page-errors.test.ts` fails any page with `fatal: true`.
 
 ## Phase 4 — Reach
 
