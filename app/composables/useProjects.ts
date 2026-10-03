@@ -37,7 +37,10 @@ export async function useProjects() {
  * in its about page's payload, beside the same README as HTML.
  *
  * So on the server the README is taken out of the result before it is
- * serialized and kept in this closure for the render, and the payload carries
+ * serialized and kept on the request's own context for the render — never
+ * serialized, and shared by every caller in the request, so a second
+ * `useProject` for the same key (whose fetch Nuxt dedupes, so whose transform
+ * never runs) still finds it — and the payload carries
  * `readmeOnServer` instead. Hydrating, the client binds no `innerHTML` and Vue
  * leaves the server's markup in place — it does not patch `innerHTML` while
  * hydrating. A client-side navigation fetches the project afresh, in the
@@ -45,20 +48,24 @@ export async function useProjects() {
  */
 export async function useProject(slug: MaybeRefOrGetter<string>) {
   const key = computed(() => `project:${toValue(slug)}`)
-  let serverReadme: string | null = null
+  const readmes: Record<string, string> | null = import.meta.server
+    ? (useRequestEvent()!.context.readmes ??= {})
+    : null
   const { data, error } = await useFetch(
     () => `/api/projects/${toValue(slug)}`,
     {
       key: () => key.value,
       transform: (p: EnrichedProject): EnrichedProject & { readmeOnServer?: true } => {
         if (!import.meta.server || !p.meta?.readmeHtml) return p
-        serverReadme = p.meta.readmeHtml
+        readmes![p.slug] = p.meta.readmeHtml
         return { ...p, meta: { ...p.meta, readmeHtml: null }, readmeOnServer: true }
       },
     },
   )
   /** The README to bind, or null where the server's markup is to be kept. */
-  const readmeHtml = computed(() => (import.meta.server ? serverReadme : data.value?.meta?.readmeHtml ?? null))
+  const readmeHtml = computed(() => (readmes
+    ? readmes[data.value?.slug ?? toValue(slug)] ?? null
+    : data.value?.meta?.readmeHtml ?? null))
   const hasReadme = computed(() => !!readmeHtml.value || data.value?.readmeOnServer === true)
   return { project: data, error, readmeHtml, hasReadme }
 }
