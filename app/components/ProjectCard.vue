@@ -1,7 +1,36 @@
 <script setup lang="ts">
 import type { EnrichedProject } from '~~/shared/types/project'
+import { CARD_CUTS, cutPath } from '~~/shared/assets/cuts'
 
-const { project } = defineProps<{ project: EnrichedProject }>()
+/**
+ * `eager` for a card that is in the first screen the page shows. Its media is
+ * then that page's Largest Contentful Paint, and `loading="lazy"` holds an
+ * image back until layout has proved it visible — on /projects, with campaign
+ * art leading the grid, that cost a phone ~1.2 s of LCP. Every other card
+ * stays lazy: most of a grid is below the fold.
+ */
+const { project, eager = false } = defineProps<{ project: EnrichedProject, eager?: boolean }>()
+const loading = computed(() => (eager ? 'eager' : 'lazy'))
+const fetchpriority = computed(() => (eager ? 'high' : undefined))
+
+/**
+ * The card art's `srcset`s (see `shared/assets/cuts.ts`). A phone gets the cuts
+ * only: the widest, 800 px, is still 2.3× its ~350 px slot, and offering the
+ * 1224 px original as well meant a 3× phone always took it — 200 KB for a
+ * difference no one can see at that size. From `sm` the grid has two columns
+ * of at most 568 px, and a 2× screen there does get the original.
+ */
+const art = computed(() => {
+  const src = project.cardImage
+  if (!src) return null
+  const cuts = CARD_CUTS.map((w) => `${cutPath(src, w)} ${w}w`)
+  const { width } = assetSize(src)
+  return {
+    phone: cuts.join(', '),
+    wide: (width ? [...cuts, `${src} ${width}w`] : cuts).join(', '),
+    fallback: cutPath(src, CARD_CUTS[CARD_CUTS.length - 1]!),
+  }
+})
 
 const ago = useRelativeTime()
 </script>
@@ -21,18 +50,28 @@ const ago = useRelativeTime()
          A project's `cardImage` overrides all three: campaign art, chosen
          deliberately for one card, not a default. -->
     <div class="relative aspect-16/10 overflow-hidden">
-      <img
-        v-if="project.cardImage"
-        :src="project.cardImage"
-        :alt="project.cardImageAlt ?? project.name"
-        loading="lazy"
-        class="absolute inset-0 h-full w-full object-cover transition-opacity duration-300 group-hover:opacity-90"
-      >
+      <picture v-if="art">
+        <source
+          media="(min-width: 640px)"
+          :srcset="art.wide"
+          sizes="(min-width: 1280px) 568px, calc(50vw - 72px)"
+        >
+        <img
+          :src="art.fallback"
+          :srcset="art.phone"
+          sizes="calc(100vw - 40px)"
+          :alt="project.cardImageAlt ?? project.name"
+          :loading="loading"
+          :fetchpriority="fetchpriority"
+          class="absolute inset-0 h-full w-full object-cover transition-opacity duration-300 group-hover:opacity-90"
+        >
+      </picture>
       <img
         v-else-if="project.logo"
         :src="project.logo"
         :alt="project.name"
-        loading="lazy"
+        :loading="loading"
+        :fetchpriority="fetchpriority"
         class="absolute inset-0 h-full w-full object-contain p-10 transition-transform duration-300 group-hover:scale-[1.03] sm:p-14"
       >
       <!-- Bordered for the same reason as the one on the project page: a
@@ -43,7 +82,8 @@ const ago = useRelativeTime()
         v-else-if="project.screenshot"
         :src="project.screenshot"
         :alt="project.screenshotAlt ?? `${project.name} screenshot`"
-        loading="lazy"
+        :loading="loading"
+        :fetchpriority="fetchpriority"
         class="absolute inset-0 h-full w-full border border-pn-rule object-cover object-top transition-opacity duration-300 group-hover:opacity-90"
       >
       <span

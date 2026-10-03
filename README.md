@@ -152,9 +152,13 @@ quota runs out (`event: "upstream.rate_limited"`).
    a `metaDescription` of 160 characters or fewer (a test fails otherwise), and
    an app with `downloads` an `applicationCategory`.
 2. If it has a wordmark, drop it in `public/projects/<slug>.svg` and set `logo`.
+   Its lettering must be outlines, not live `<text>`: an SVG shown as an image
+   cannot load a font (a test fails otherwise).
    Same for a screenshot in `public/projects/shots/`. A card shows the
    wordmark; set `cardImage` (16:10) only when the card should lead with art
-   instead, as Skidbladnir's does for its 1.0 campaign. Then run `npm run sizes`,
+   instead, as Skidbladnir's does for its 1.0 campaign, and run `npm run cuts`
+   (ImageMagick) to cut it down to the 560 and 800 px widths the card's
+   `srcset` offers. A test fails if they are missing. Then run `npm run sizes`,
    which records each image's intrinsic size in
    `data/asset-sizes.generated.json` so the page can reserve its space before
    the file arrives. CI fails if that file and the images disagree.
@@ -183,6 +187,7 @@ npm run og           # re-render the per-project social cards (needs Chromium)
 npm run og:check     # are the committed cards still current? (no Chromium)
 npm run shot         # re-cut the screenshots from their READMEs' own (needs ImageMagick)
 npm run shot:check   # has an upstream screenshot changed since its cut? (network)
+npm run cuts         # cut card art down to its srcset widths (needs ImageMagick)
 npm run bases        # runtime Alpine still matches the node base (needs docker)
 npm run contrast     # WCAG contrast for every palette colour, against the ground
 npm run sizes        # re-read every image's intrinsic size

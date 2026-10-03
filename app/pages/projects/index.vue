@@ -68,8 +68,10 @@ useSeoMeta({
     </section>
 
     <TermRule />
+    <!-- The first card is in the first screen at every width, so it is the
+         page's LCP; on the home page the hero is, and every card stays lazy. -->
     <div class="mt-10 grid gap-x-24 gap-y-20 sm:grid-cols-2">
-      <ProjectCard v-for="p in projects" :key="p.slug" :project="p" />
+      <ProjectCard v-for="(p, i) in projects" :key="p.slug" :project="p" :eager="i === 0" />
     </div>
   </div>
 </template>

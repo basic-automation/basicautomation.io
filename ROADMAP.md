@@ -472,6 +472,19 @@ record. There is no run log.
       field data; this site is too small to appear in CrUX.
       <https://web.dev/articles/vitals#core-web-vitals>
       <https://web.dev/articles/optimize-cls>
+- [x] `/projects` back to a good phone LCP after the campaign art arrived. With
+      Skidbladnir's longship leading the grid, the page's LCP became a 200 KB,
+      1224 px, `loading="lazy"` image: 2880 ms on the shaped phone profile
+      (`npm run vitals --shaped`, median of 7), where the text before it had
+      measured ~1.2 s. Making the first card eager with `fetchpriority="high"`
+      alone moved it to 2860 ms, so the size was the cost, not the lazy load.
+      The art is now also cut to 560 and 800 px (`npm run cuts`,
+      `shared/assets/cuts.ts`; 27 KB and 77 KB). The card is a `<picture>`
+      whose phone source offers only the cuts (800 px is still 2.3× a 350 px
+      slot), while from `sm` up a 2× screen still gets the original. Result:
+      2256 ms, "good"; desktop unchanged (84 ms). The home page keeps every card
+      lazy, because there the hero is the LCP. `test/card-cuts.test.ts` and
+      `sizes:check` hold the cuts to the art.
 - [x] Preload the wallpaper on the home page (phone LCP 2580 → 2484 ms, median
       of 9, twice) and preload a 61 KB core cut of Fira Code instead of the
       113 KB full font (`npm run font`, `font:check` in CI). The full font stays
