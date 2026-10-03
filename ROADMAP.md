@@ -316,6 +316,11 @@ record. There is no run log.
       Re-checked 2026-09-28 and 2026-10-01 (twice): unchanged (vue-tsc 3.3.11 is
       still the latest release, of 2026-08-21; golar 0.1.10, still only
       `./unstable` and `./unstable-tsgo`; TypeScript 7.0.2).
+      Re-checked 2026-10-02 against vue-tsc **3.3.12**, released that day: its
+      notes do not mention TypeScript 7, and in a scratch install with
+      TypeScript 7.0.2 it still dies with `ERR_PACKAGE_PATH_NOT_EXPORTED` for
+      `./lib/tsc`. Golar is still 0.1.10.
+      <https://github.com/vuejs/language-tools/releases/tag/v3.3.12>
       <https://github.com/vuejs/language-tools/issues/6124>
       <https://github.com/vuejs/language-tools/issues/5381>
 - [x] Silenced Nitro's own `[request error]` stack-trace block on a 404, without
@@ -632,8 +637,18 @@ record. There is no run log.
       itself; the script re-checks each range as a cross-check on what comes
       back. Proved by planting `braces@3.0.3` and
       `marked@4.0.9`: it fails on exactly the three advisories that apply. The
-      client bundle has no sourcemaps and the gateway's crates are cargo's, so
-      neither is covered.
+      client bundle has no sourcemaps, so it is not covered.
+- [x] …and the image's other binary. The onion gateway's 594 crates were
+      audited by nothing. CI's onion job now runs `cargo audit --deny yanked
+      --deny unsound`. First run, 2026-10-02: `yoke-derive` 0.8.3 was yanked,
+      now bumped to 0.8.4 (a patch release, lockfile only). RUSTSEC-2023-0071
+      (`rsa`, Marvin) has no patched release and comes in through arti. It is
+      ignored in `onion/.cargo/audit.toml` with the evidence: it needs an RSA
+      *private* key, and the live keystore holds only ed25519 and x25519 ones.
+      Proved the check bites: exit 1 without the ignore, and exit 1 on the old
+      lockfile. `bincode` (RUSTSEC-2025-0141) and `paste` (RUSTSEC-2024-0436)
+      are unmaintained, reported but not failing; both are arti's to replace.
+      <https://rustsec.org/advisories/RUSTSEC-2023-0071.html>
       <https://github.com/advisories/GHSA-vfj7-8cjw-p6xm>
       <https://github.com/advisories/GHSA-86w9-cpqp-85rv>
 
@@ -660,5 +675,11 @@ record. There is no run log.
       upstream: the repo has a LICENSE now (GitHub reads it as ISC), the link
       answers 200, and `npm run check -- --external` against production found
       no dead link on 2026-10-01.
+- [ ] Upstream: the Skidbladnir README links `https://bitbucket.org/multicoreware/x265_git`,
+      which Bitbucket redirects to the repo's wiki home, and that answers 404
+      (`npm run check -- --external` against production, 2026-10-02). The
+      repo itself is there: `…/x265_git/src` answers 200, so pointing the link
+      at that path fixes it. The fix belongs in Skidbladnir's README; this
+      page folds it in as-is.
 - [ ] Upstream: the onyums README's table of contents links
       `#multiple-services-on-one-tor-client`, an anchor no heading in it produces.

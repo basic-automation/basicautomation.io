@@ -1,0 +1,16 @@
+# `cargo audit` for the onion gateway — run by CI's onion job with
+# `--deny yanked --deny unsound`. Every ignore below needs the reason it cannot
+# reach this binary, checked against the binary rather than assumed.
+
+[advisories]
+ignore = [
+    # RUSTSEC-2023-0071, `rsa` (Marvin): timing leaks from operations with an
+    # RSA PRIVATE key. No patched release exists. It is here through arti
+    # (tor-llcrypto, tor-key-forge, ssh-key-fork-arti), which keeps RSA for
+    # relays' legacy identities. An onion service has none: checked
+    # 2026-10-02, the live keystore under /app/tor holds only ed25519 and
+    # x25519 private keys (identity, blinded ids, descriptor signing, intro
+    # points). Revisit if the gateway ever runs a relay or a patched `rsa`
+    # ships. https://rustsec.org/advisories/RUSTSEC-2023-0071.html
+    "RUSTSEC-2023-0071",
+]

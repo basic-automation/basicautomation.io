@@ -250,7 +250,10 @@ code a visitor's request can reach: the packages Nitro traced into
 read from their sourcemaps. It fails on a high or critical advisory that applies
 to one of them. Plain `npm audit` reports the whole lockfile, so it also counts
 the build's file globbing and the dev server's certificate helper, and it can
-stay red on advisories nobody can patch.
+stay red on advisories nobody can patch. The onion gateway, the image's other
+binary, gets `cargo audit --deny yanked --deny unsound` in CI's onion job.
+Each advisory it ignores is listed in `onion/.cargo/audit.toml` with the reason
+it cannot reach the gateway.
 
 External links are followed weekly instead, by `.github/workflows/links.yml`,
 which keeps a single issue in sync with what it finds. They are a report rather
