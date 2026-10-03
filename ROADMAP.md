@@ -529,6 +529,18 @@ record. There is no run log.
       each README; console empty. Also checked in snapshot-fallback mode
       (forced with a bad token). Phone LCP unchanged (~1350 ms, text that
       paints before the HTML ends); the win is bytes and JSON to parse.
+- [x] Listing pages serialize card fields, not every project's whole copy.
+      `useProjects` (home, `/projects`, `/status`) put every project's features,
+      worked example, problem statement and download copy into the hydration
+      payload, about 29 KB on each page; `/news` did the same to map slugs to
+      names. They now keep `ProjectSummary` (`shared/types/project.ts`: the
+      project less `PAGE_ONLY`), and `ProjectCard` is typed against it, so a
+      card that starts reading a dropped field fails the typecheck rather than
+      rendering empty. `/api/projects` itself is unchanged. Home 64.9 → 46.4 KB
+      (gzipped 18.6 → 11.0), `/projects` 60.5 → 39.4, `/status` 57.0 → 35.8,
+      `/news` 50.3 → 23.7. Visible text and JSON-LD are identical to main's on
+      all four. Shaped-phone LCP: home 2208 → 2000 ms, `/projects` 2252 →
+      2080 ms (median of 5).
 - [x] Preload the wallpaper on the home page (phone LCP 2580 → 2484 ms, median
       of 9, twice) and preload a 61 KB core cut of Fira Code instead of the
       113 KB full font (`npm run font`, `font:check` in CI). The full font stays

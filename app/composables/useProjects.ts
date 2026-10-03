@@ -1,16 +1,29 @@
-import type { EnrichedProject } from '~~/shared/types/project'
+import { PAGE_ONLY, type EnrichedProject, type ProjectSummary } from '~~/shared/types/project'
+
 
 /**
  * Card-level data for every project. Rendered on the server on first paint, so
- * the numbers in the HTML are as fresh as the server's cache.
+ * the numbers in the HTML are as fresh as the server's cache. `/api/projects`
+ * itself keeps every field — it is a public endpoint; only what is serialized
+ * into the page is trimmed.
  */
 export async function useProjects() {
-  const { data, error } = await useFetch<{ count: number, projects: EnrichedProject[] }>(
+  const { data, error } = await useFetch(
     '/api/projects',
-    { key: 'projects' },
+    {
+      key: 'projects',
+      transform: (d: { count: number, projects: EnrichedProject[] }) => ({
+        count: d.count,
+        projects: d.projects.map((p): ProjectSummary => {
+          const out: Partial<EnrichedProject> = { ...p }
+          for (const field of PAGE_ONLY) delete out[field]
+          return out as ProjectSummary
+        }),
+      }),
+    },
   )
   return {
-    projects: computed<EnrichedProject[]>(() => data.value?.projects ?? []),
+    projects: computed<ProjectSummary[]>(() => data.value?.projects ?? []),
     error,
   }
 }

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import type { EnrichedProject } from '~~/shared/types/project'
+import type { ProjectSummary } from '~~/shared/types/project'
 import { CARD_CUTS, cutPath } from '~~/shared/assets/cuts'
 
 /**
@@ -9,7 +9,7 @@ import { CARD_CUTS, cutPath } from '~~/shared/assets/cuts'
  * art leading the grid, that cost a phone ~1.2 s of LCP. Every other card
  * stays lazy: most of a grid is below the fold.
  */
-const { project, eager = false } = defineProps<{ project: EnrichedProject, eager?: boolean }>()
+const { project, eager = false } = defineProps<{ project: ProjectSummary, eager?: boolean }>()
 const loading = computed(() => (eager ? 'eager' : 'lazy'))
 const fetchpriority = computed(() => (eager ? 'high' : undefined))
 
