@@ -558,6 +558,16 @@ record. There is no run log.
       instead (a Node proxy: one shared 200 KB/s pipe, 150 ms per response,
       DevTools throttling off), `/projects` FCP is 1168 ms with either font,
       median of 7, twice — and the home page's LCP gain grows to 2448 → 2120 ms.
+- [x] …and the README renderer itself. `npm run sync` kept its own `marked`
+      set-up with no highlighter, so every README in the snapshot had bare
+      `<pre>` fences, and a page served from the fallback lost all its syntax
+      colours. `renderMarkdown` and `highlight` moved from `server/utils/` to
+      `shared/markdown/` (`server/utils/` re-exports them for Nitro's
+      auto-imports), and the sync script renders with them. On 2026-10-02 all
+      seven snapshot READMEs came out byte-identical to the live server's.
+      `test/snapshot.test.ts` fails on a bare `<pre>`; it fails on main's
+      snapshot. In forced-snapshot mode Nanna's about page has 16 Shiki blocks,
+      and `check` and `a11y` are clean.
 - [x] A test framework, and unit tests over the pure helpers — Vitest,
       `test/*.test.ts`, run by CI. Scoped deliberately: only the functions in
       `shared/` that a running server cannot exercise, because `npm run check`
