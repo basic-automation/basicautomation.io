@@ -12,12 +12,15 @@
  * finished build:
  *
  *   - the packages Nitro traced into `.output/server/node_modules`, with the
- *     exact versions it lists in `.output/server/package.json`;
+ *     exact versions it lists in `.output/server/package.json` — plus, for a
+ *     package traced at more than one version, the other copies under
+ *     `node_modules/.nitro/<name>@<version>`, which that file does not list;
  *   - the packages it inlined into the server chunks instead (h3, nitropack,
  *     nuxt itself…), named by the sourcemaps beside them and versioned by the
  *     `package.json` those sources were read from.
  *
  *   npm run build && npm run audit:runtime
+ *   npm run audit:runtime -- <server dir>   # another build's `.output/server`
  *
  * Fails on a high or critical advisory that applies, unless it is in ACCEPTED
  * below with a reason; anything milder is printed and passes. Fails, too, when
@@ -25,8 +28,8 @@
  *
  * What this does NOT cover: the client bundle (built without sourcemaps, so
  * there is nothing to read its packages from — though nearly everything it
- * ships is a package the server bundle carries too), and the onion gateway's
- * Rust dependencies, which are `cargo`'s to audit.
+ * ships is a package the server bundle carries too). The onion gateway's
+ * Rust dependencies are `cargo audit`'s, in CI's onion job.
  */
 
 import { readFile, readdir } from 'node:fs/promises'
@@ -35,7 +38,7 @@ import { dirname, join, relative, resolve } from 'node:path'
 import { SEVERITY, applicable, packageFromPath } from '../shared/security/advisories.ts'
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..')
-const SERVER = resolve(ROOT, '.output/server')
+const SERVER = resolve(process.argv[2] ?? resolve(ROOT, '.output/server'))
 const BULK = 'https://registry.npmjs.org/-/npm/v1/security/advisories/bulk'
 
 /**
@@ -59,7 +62,41 @@ async function traced() {
 		console.error('No .output/server/package.json — run `npm run build` first.')
 		process.exit(1)
 	}
-	return Object.entries(manifest.dependencies ?? {})
+	return [...Object.entries(manifest.dependencies ?? {}), ...await otherVersions()]
+}
+
+/**
+ * Nitro writes one version of each package into `package.json`. When the trace
+ * found several, the rest are copied to `node_modules/.nitro/<name>@<version>`
+ * (scoped names one level deeper) and linked where their parents expect them.
+ * Each copy carries its own `package.json`, which is read rather than the
+ * directory name parsed.
+ */
+async function otherVersions() {
+	const base = join(SERVER, 'node_modules/.nitro')
+	const dirs = []
+	try {
+		for (const entry of await readdir(base, { withFileTypes: true })) {
+			if (!entry.isDirectory()) continue
+			if (!entry.name.startsWith('@') || entry.name.includes('@', 1)) dirs.push(join(base, entry.name))
+			else for (const inner of await readdir(join(base, entry.name))) dirs.push(join(base, entry.name, inner))
+		}
+	}
+	catch {
+		return [] // no `.nitro`: every package was traced at one version
+	}
+	const found = []
+	for (const dir of dirs) {
+		try {
+			const { name, version } = JSON.parse(await readFile(join(dir, 'package.json'), 'utf8'))
+			if (name && version) found.push([name, version])
+		}
+		catch {
+			console.error(`  ! ${relative(ROOT, dir)} has no readable package.json`)
+			process.exitCode = 1
+		}
+	}
+	return found
 }
 
 async function* maps(dir) {
