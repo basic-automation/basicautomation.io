@@ -2,6 +2,7 @@
 import { formatSize, groupInstallers, type OsFamily } from '~~/shared/github/installers'
 import { outboundRel } from '~~/shared/html/rel'
 import { socialCardPath } from '~~/shared/posts/section'
+import { screenshotPath } from '~~/shared/assets/shots'
 import { applicationId, softwareApplicationLd } from '~~/shared/seo/application'
 
 const route = useRoute()
@@ -152,7 +153,7 @@ const applicationLd = computed(() => {
     category: p.applicationCategory,
     release: d.release,
     installers: d.primary.installers,
-    screenshot: p.screenshot ? `${siteUrl}${p.screenshot}` : undefined,
+    screenshot: p.screenshot ? `${siteUrl}${screenshotPath(p.screenshot)}` : undefined,
     image: `${siteUrl}${socialCardPath(p.slug)}`,
     publisher: organizationRef(siteUrl),
   })
@@ -391,7 +392,7 @@ useSeoMeta({
            the layout. Same `border-pn-rule` the Tor frame uses, for the same
            reason: it is a window onto something else, and should look like one. -->
       <img
-        :src="project.screenshot"
+        :src="screenshotPath(project.screenshot)"
         :alt="project.screenshotAlt ?? `${project.name} screenshot`"
         v-bind="assetSize(project.screenshot)"
         class="mt-8 w-full max-w-5xl border border-pn-rule"

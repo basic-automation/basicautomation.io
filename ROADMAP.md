@@ -41,6 +41,12 @@ record. There is no run log.
             while a screenshot is behind upstream, closed once it is re-cut.
             A report, not a gate, like the link check beside it. Still eyeball
             each re-cut: a release that adds a row moves the gap the crop sits in.
+      - [x] A re-cut is a new URL. The screenshot was served at a fixed address
+            with `max-age=86400`, so a re-cut reached a repeat visitor up to a
+            day late. Its `<img>` and its JSON-LD `screenshot` now carry
+            `?v=<blob>` from `sources.json` (`shared/assets/shots.ts`), the way
+            the social cards carry theirs. Re-cut 2026-10-05 (upstream
+            `e6c3ee28`); the crop still sits in the gap above "Metadata".
 - [x] Skidbladnir's page, ready for its first public campaign: the parity claim
       scoped the way its README scopes it (still images, the four named tools,
       the exceptions in the readme below, no typed case count), the full input

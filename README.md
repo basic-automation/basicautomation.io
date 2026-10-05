@@ -48,6 +48,9 @@ Every page that names a card also gives its size and a text alternative
 carries the fingerprint it was rendered from (`?v=…`, from
 `public/projects/og/cards.json`), so a re-rendered card is a new URL rather than
 one a network has already cached the old picture under.
+A screenshot cut from upstream does the same with the upstream blob it was cut
+from (`public/projects/shots/sources.json`), so a re-cut reaches repeat
+visitors at once rather than after its day-long cache.
 Each post carries `BlogPosting` JSON-LD naming the blog it belongs to. Every
 page names its one address with `<link rel="canonical">`, the same string as its
 `og:url` and its sitemap entry, so `/PROJECTS` or `/news/` or a tracking query
