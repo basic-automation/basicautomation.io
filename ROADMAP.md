@@ -232,6 +232,21 @@ record. There is no run log.
       `data.incomplete`, the status becomes `degraded`, an `upstream.incomplete`
       line goes to the request log, and the status page says which repo is
       missing what.
+- [x] …and a piece that failed keeps its last answer, not a hole. A refresh
+      whose repo call succeeds is live even when its README, release list or
+      crate call fails, and the page rendered without that section for the
+      whole refresh window, though the process still held the last answer to
+      it. Live logs, 2026-10-03/04: Enlil twice without its README and
+      releases, onyums and Artiqwest without their crate numbers.
+      `carryMissing` (`shared/github/carry.ts`, `test/carry.test.ts`) fills
+      each failed piece from the previous live answer, never from the
+      snapshot, whose releases can be versions old. `incomplete` still names
+      every failed piece, so health stays `degraded`; `carried` names the
+      ones filled, in `/healthz`, the `upstream.incomplete` log line and on
+      `/status`. Proved behind a proxy refusing only crates.io once the cache
+      was warm: past the TTL, onyums refreshed live and kept 0.5.0 and its
+      19,736 downloads; a cold start under the same block still shows the
+      hole.
 - [x] Keep to crates.io's own limit. Its data-access policy allows the API
       "provided you abide by" a maximum of one request a second and an
       identifying user agent (the site already sent one). Each repo refreshes

@@ -31,7 +31,8 @@ export interface Health {
      * a README or a release history that GitHub refused. Usually the anonymous
      * rate limit. Empty is the healthy state.
      */
-    incomplete: { repo: string, missing: string[] }[]
+    /** `carried`: the subset of `missing` shown from the previous live answer. */
+    incomplete: { repo: string, missing: string[], carried: string[] }[]
   }
   /**
    * GitHub's own account of the rate limit, from the `x-ratelimit-*` headers on

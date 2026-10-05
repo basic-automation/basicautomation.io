@@ -33,10 +33,11 @@ let degradedToSnapshot = false
 let lastAlertAt = 0
 /**
  * Per repo, which optional upstream calls came back empty on its last live
- * resolution. A repo that resolved completely is deleted rather than kept with
- * an empty list, so "is anything missing" is `incomplete.size`.
+ * resolution, and which of those were filled from the previous live answer
+ * (`carried`). A repo that resolved completely is deleted rather than kept
+ * with empty lists, so "is anything missing" is `incomplete.size`.
  */
-const incomplete = new Map<string, string[]>()
+const incomplete = new Map<string, { missing: string[], carried: string[] }>()
 
 /** The last `x-ratelimit-*` GitHub sent, and when. */
 let rateLimit: { limit: number, remaining: number, reset: number, at: number } | null = null
@@ -120,20 +121,21 @@ export function recordSource(source: 'live' | 'stale' | 'snapshot'): void {
  * Usually it is the anonymous rate limit, which is exactly the thing an
  * operator wants told rather than left to notice.
  */
-export function recordIncomplete(repo: string, missing: string[]): void {
-  const had = incomplete.has(repo)
+export function recordIncomplete(repo: string, missing: string[], carried: string[] = []): void {
+  const had = incomplete.get(repo)
   if (missing.length) {
-    if (!had || incomplete.get(repo)!.join() !== missing.join()) {
+    if (!had || had.missing.join() !== missing.join() || had.carried.join() !== carried.join()) {
       console.warn(JSON.stringify({
         t: new Date().toISOString(),
         level: 'warn',
         event: 'upstream.incomplete',
         repo,
         missing,
-        message: `${repo} resolved live without ${missing.join(' or ')}`,
+        carried,
+        message: `${repo} resolved live without ${missing.join(' or ')}${carried.length ? `; kept the last ${carried.join(' and ')}` : ''}`,
       }))
     }
-    incomplete.set(repo, missing)
+    incomplete.set(repo, { missing, carried })
   }
   else if (had) {
     incomplete.delete(repo)
@@ -198,7 +200,7 @@ export async function health(): Promise<Health> {
       degradedForSeconds: degradedSince === null ? null : Math.round((now - degradedSince) / 1000),
       incomplete: [...incomplete]
         .sort(([a], [b]) => a.localeCompare(b))
-        .map(([repo, missing]) => ({ repo, missing })),
+        .map(([repo, { missing, carried }]) => ({ repo, missing, carried })),
     },
     github: rateLimit && {
       limit: rateLimit.limit,

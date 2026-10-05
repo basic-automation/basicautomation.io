@@ -129,6 +129,9 @@ it started falls back to `data/projects.generated.json` instead, a committed
 snapshot refreshed by `npm run sync`. Either way an upstream outage degrades the
 numbers, not the site. A failed refresh never swaps live numbers for older
 snapshot ones.
+The same holds piece by piece: a refresh whose repo call succeeded but whose
+README, release list or crate numbers did not keeps that piece from the last
+live answer, and `/status` says which pieces it is showing that way.
 
 Set `NUXT_GITHUB_TOKEN` in the server's environment to lift the anonymous rate
 limit (the compose file fills it from `BASICAUTOMATION_GITHUB_TOKEN`; a bare

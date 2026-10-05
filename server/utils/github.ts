@@ -24,6 +24,7 @@ import { absolutize, stripLeadingLogo } from '~~/shared/markdown/readme'
 import { normaliseReleases, pickDownload, pickLatest } from '~~/shared/github/releases'
 import { refreshPolicy } from '~~/shared/github/budget'
 import { paced } from '~~/shared/net/pace'
+import { carryMissing } from '~~/shared/github/carry'
 import snapshot from '~~/data/projects.generated.json'
 import { logEvent } from '~~/shared/log/event'
 
@@ -269,10 +270,12 @@ const lastLive = new Map<string, RepoMeta>()
 const cachedRepo = defineCachedFunction(
   async (project: Project): Promise<RepoMeta | null> => {
     try {
-      const meta = await fetchRepo(project)
+      // A piece this refresh could not fetch keeps the last live answer's
+      // copy rather than leaving a hole in the page; see carry.ts.
+      const meta = carryMissing(await fetchRepo(project), lastLive.get(project.repo))
       lastLive.set(project.repo, meta)
       recordSource('live')
-      recordIncomplete(project.repo, meta.incomplete ?? [])
+      recordIncomplete(project.repo, meta.incomplete ?? [], meta.carried ?? [])
       return meta
     }
     catch (err) {
