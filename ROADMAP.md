@@ -348,28 +348,23 @@ record. There is no run log.
       `has_downloads` and `use_squash_pr_title_as_default` under
       `x-github-api-version-selected: 2026-03-10`. On 2026-09-26 both are gone,
       authenticated and not. Nothing here read either, so nothing changed.
-- [ ] Revisit the type checker: `vue-tsc` does not support TypeScript 7 (it still
-      reaches for `typescript/lib/tsc`, which TS 7 no longer exports), so the
-      project uses Golar via its `golar/unstable` entrypoint — move off `unstable`
-      once a stable one exists, or back to `vue-tsc` once it supports TS 7.
-      Re-checked 2026-09-26: `vue-tsc` 3.3.11 against TypeScript 7.0.2 still
-      dies with `ERR_PACKAGE_PATH_NOT_EXPORTED` for `./lib/tsc`, and `golar`
-      0.1.10 still exports only `./unstable` and `./unstable-tsgo`.
-      Re-checked 2026-09-27: both still the latest published (vue-tsc 3.3.11,
-      golar 0.1.10, TypeScript 7.0.2). Upstream, the exact failure was filed as
-      vuejs/language-tools#6124 and closed as a duplicate of #5381, the
-      TypeScript 7 / `tsgo` support request, which is closed too — so there is
-      no open issue to watch. Check the release notes instead.
-      Re-checked 2026-09-28 and 2026-10-01 (twice): unchanged (vue-tsc 3.3.11 is
-      still the latest release, of 2026-08-21; golar 0.1.10, still only
-      `./unstable` and `./unstable-tsgo`; TypeScript 7.0.2).
-      Re-checked 2026-10-02 against vue-tsc **3.3.12**, released that day: its
-      notes do not mention TypeScript 7, and in a scratch install with
-      TypeScript 7.0.2 it still dies with `ERR_PACKAGE_PATH_NOT_EXPORTED` for
-      `./lib/tsc`. Golar is still 0.1.10.
-      <https://github.com/vuejs/language-tools/releases/tag/v3.3.12>
-      <https://github.com/vuejs/language-tools/issues/6124>
-      <https://github.com/vuejs/language-tools/issues/5381>
+- [x] Back on `vue-tsc`, off Golar's `golar/unstable`. Plain TypeScript 7 still
+      has no `lib/tsc` for vue-tsc to patch (checked through 3.3.12), which is
+      why the project had moved to Golar. But TypeScript 7.0 ships no
+      programmatic API at all, and its announcement says tools that embed
+      TypeScript, Volar named, "can only currently rely on TypeScript 6.0" —
+      Vue projects keep the 6.0 API until 7.1 ships a new one. vue-tsc 3.3.8
+      supports exactly that install (vuejs/language-tools#6123), which earlier
+      re-checks never tried: `typescript` is `npm:@typescript/typescript6`
+      (6.0.3), and `golar`, `@golar/vue` and `golar.config.ts` are gone.
+      `nuxt typecheck` is clean, and it still catches a planted error in a
+      `.vue` template and in a `.ts` file. It costs time: ~11.6 s against
+      Golar's ~2.7 s.
+      <https://devblogs.microsoft.com/typescript/announcing-typescript-7-0/>
+      <https://github.com/vuejs/language-tools/pull/6123>
+- [ ] Move the type checker to TypeScript 7 once 7.1 ships its API and vue-tsc
+      adopts it — the 6.0 API is a bridge, not a destination.
+      <https://devblogs.microsoft.com/typescript/announcing-typescript-7-0/>
 - [x] Silenced Nitro's own `[request error]` stack-trace block on a 404, without
       replacing the error handler. Nitro logs it when the error is `fatal`, and
       `fatal` is only load-bearing on the client, where it is what makes a 404
