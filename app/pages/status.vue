@@ -142,7 +142,8 @@ useSeoMeta({
           <span v-if="health.status === 'ok'">Serving live data.</span>
           <span v-else-if="health.data.degradedSince && health.data.source === 'stale'">Serving the last live data.</span>
           <span v-else-if="health.data.degradedSince">Serving the fallback snapshot.</span>
-          <span v-else-if="health.data.incomplete.length">Serving live data, with pieces missing.</span>
+          <span v-else-if="health.data.incomplete.some((row) => row.missing.length > row.carried.length)">Serving live data, with pieces missing.</span>
+          <span v-else-if="health.data.incomplete.length">Serving live data, part of it from the last answer.</span>
           <span v-else>Serving live data. The onion service is not answering.</span>
         </p>
 
@@ -163,13 +164,14 @@ useSeoMeta({
         <div v-if="health.data.incomplete.length" class="mt-4 max-w-2xl text-sm leading-relaxed text-pn-dim">
           <p>
             Upstream answered for the repositories below but refused part of what
-            those pages show, so the page is rendering without it. The usual cause
-            is GitHub's anonymous rate limit, which is 60 requests an hour.
+            those pages show. Where the last answer that worked had that part, the
+            page shows it from there; otherwise it renders without it. The usual
+            cause is GitHub's anonymous rate limit, which is 60 requests an hour.
           </p>
           <ul class="mt-3 space-y-1 text-xs">
             <li v-for="row in health.data.incomplete" :key="row.repo">
               <span class="text-pn-yellow">{{ row.repo }}</span>
-              <span class="text-pn-muted"> — no {{ row.missing.join(', no ') }}</span>
+              <span class="text-pn-muted"> — {{ row.missing.map((piece) => row.carried.includes(piece) ? `${piece} from the last answer` : `no ${piece}`).join(', ') }}</span>
             </li>
           </ul>
         </div>

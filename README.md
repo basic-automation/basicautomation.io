@@ -48,6 +48,9 @@ Every page that names a card also gives its size and a text alternative
 carries the fingerprint it was rendered from (`?v=…`, from
 `public/projects/og/cards.json`), so a re-rendered card is a new URL rather than
 one a network has already cached the old picture under.
+A screenshot cut from upstream does the same with the upstream blob it was cut
+from (`public/projects/shots/sources.json`), so a re-cut reaches repeat
+visitors at once rather than after its day-long cache.
 Each post carries `BlogPosting` JSON-LD naming the blog it belongs to. Every
 page names its one address with `<link rel="canonical">`, the same string as its
 `og:url` and its sitemap entry, so `/PROJECTS` or `/news/` or a tracking query
@@ -126,6 +129,9 @@ it started falls back to `data/projects.generated.json` instead, a committed
 snapshot refreshed by `npm run sync`. Either way an upstream outage degrades the
 numbers, not the site. A failed refresh never swaps live numbers for older
 snapshot ones.
+The same holds piece by piece: a refresh whose repo call succeeded but whose
+README, release list or crate numbers did not keeps that piece from the last
+live answer, and `/status` says which pieces it is showing that way.
 
 Set `NUXT_GITHUB_TOKEN` in the server's environment to lift the anonymous rate
 limit (the compose file fills it from `BASICAUTOMATION_GITHUB_TOKEN`; a bare
@@ -142,7 +148,10 @@ also logs one JSON object per request on stdout — `docker logs
 basicautomation-site | jq 'select(.status >= 400)'`, or `select(.via == "onion")`
 for the visits that came over Tor — and warns once an hour for
 as long as it has been answering from the snapshot, and once when the GitHub
-quota runs out (`event: "upstream.rate_limited"`).
+quota runs out (`event: "upstream.rate_limited"`). Every other line the app
+writes is JSON too, with an `event` to select on — a GitHub call that failed and
+fell back is `upstream.fetch_failed`, saying which fallback (`stale` or
+`snapshot`) it got.
 
 ## Adding a project
 
@@ -180,7 +189,7 @@ npm install
 npm run dev          # http://localhost:3000
 npm run build        # .output/ — a self-contained Nitro node server
 npm run start        # serve the build
-npm run typecheck
+npm run typecheck    # vue-tsc on the TypeScript 6.0 API, as TS 7.0 advises for Vue
 npm test             # unit tests over the pure helpers in shared/
 npm run sync         # refresh data/projects.generated.json
 npm run og           # re-render the per-project social cards (needs Chromium)

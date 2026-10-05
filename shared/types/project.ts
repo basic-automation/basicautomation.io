@@ -56,6 +56,12 @@ export interface RepoMeta {
    * health signal on the site said everything was fine.
    */
   incomplete?: ('readme' | 'releases' | 'crate')[]
+  /**
+   * Which of `incomplete` were filled from this repo's previous live answer
+   * instead of left empty (`shared/github/carry.ts`). The piece is as old as
+   * that answer; the rest of the repo is this refresh's.
+   */
+  carried?: ('readme' | 'releases' | 'crate')[]
   description: string | null
   htmlUrl: string
   homepage: string | null

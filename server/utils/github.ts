@@ -24,7 +24,9 @@ import { absolutize, stripLeadingLogo } from '~~/shared/markdown/readme'
 import { normaliseReleases, pickDownload, pickLatest } from '~~/shared/github/releases'
 import { refreshPolicy } from '~~/shared/github/budget'
 import { paced } from '~~/shared/net/pace'
+import { carryMissing } from '~~/shared/github/carry'
 import snapshot from '~~/data/projects.generated.json'
+import { logEvent } from '~~/shared/log/event'
 
 const ORG = 'basic-automation'
 
@@ -268,15 +270,22 @@ const lastLive = new Map<string, RepoMeta>()
 const cachedRepo = defineCachedFunction(
   async (project: Project): Promise<RepoMeta | null> => {
     try {
-      const meta = await fetchRepo(project)
+      // A piece this refresh could not fetch keeps the last live answer's
+      // copy rather than leaving a hole in the page; see carry.ts.
+      const meta = carryMissing(await fetchRepo(project), lastLive.get(project.repo))
       lastLive.set(project.repo, meta)
       recordSource('live')
-      recordIncomplete(project.repo, meta.incomplete ?? [])
+      recordIncomplete(project.repo, meta.incomplete ?? [], meta.carried ?? [])
       return meta
     }
     catch (err) {
       const kept = lastLive.get(project.repo)
-      console.warn(`[github] ${project.repo} fetch failed, using ${kept ? `the last live answer, from ${kept.fetchedAt}` : 'snapshot'}:`, (err as Error).message)
+      logEvent('warn', 'upstream.fetch_failed', `${project.repo} fetch failed, using ${kept ? `the last live answer, from ${kept.fetchedAt}` : 'the snapshot'}`, {
+        repo: project.repo,
+        fallback: kept ? 'stale' : 'snapshot',
+        ...(kept ? { staleFrom: kept.fetchedAt } : {}),
+        error: (err as Error).message,
+      })
       if (kept) {
         recordSource('stale')
         return { ...kept, source: 'stale' }

@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import type { ProjectSummary } from '~~/shared/types/project'
 import { CARD_CUTS, cutPath } from '~~/shared/assets/cuts'
+import { screenshotPath } from '~~/shared/assets/shots'
 
 /**
  * `eager` for a card that is in the first screen the page shows. Its media is
@@ -80,7 +81,7 @@ const ago = useRelativeTime()
            needs no border — it is a mark on the page's ground, not a window. -->
       <img
         v-else-if="project.screenshot"
-        :src="project.screenshot"
+        :src="screenshotPath(project.screenshot)"
         :alt="project.screenshotAlt ?? `${project.name} screenshot`"
         :loading="loading"
         :fetchpriority="fetchpriority"

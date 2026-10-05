@@ -42,18 +42,17 @@
     "vue-router": "^5.3.1"
   },
   "devDependencies": {
-    "@golar/vue": "^0.1.10",
     "@tailwindcss/vite": "^4.3.3",
-    "@types/node": "^26.6.2",
+    "@types/node": "^26.6.4",
     "axe-core": "^4.13.0",
     "fontverter": "^2.0.0",
-    "golar": "^0.1.10",
     "harfbuzzjs": "^1.6.2",
-    "jsdom": "^30.1.1",
+    "jsdom": "^30.1.2",
     "subset-font": "^2.9.0",
     "tailwindcss": "^4.3.3",
-    "typescript": "^7.0.2",
-    "vitest": "^5.0.2"
+    "typescript": "npm:@typescript/typescript6@^6.0.2",
+    "vitest": "^5.0.2",
+    "vue-tsc": "^3.3.12"
   },
   "allowScripts": {
     "esbuild@0.27.7": true,

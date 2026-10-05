@@ -1,5 +1,6 @@
 import { createHighlighter, type Highlighter } from 'shiki'
 import { paleday } from '../theme/paleday-shiki.ts'
+import { logEvent } from '../log/event.ts'
 
 /**
  * Server-side syntax highlighting, in the site's own palette.
@@ -72,7 +73,7 @@ export async function highlight(code: string, lang?: string): Promise<string> {
     })
   }
   catch (err) {
-    console.warn(`[highlight] falling back to plain text (${lang}):`, (err as Error).message)
+    logEvent('warn', 'highlight.fallback', `falling back to plain text (${lang})`, { lang, error: (err as Error).message })
     return `<pre class="shiki"><code>${escapeHtml(source)}</code></pre>`
   }
 }
