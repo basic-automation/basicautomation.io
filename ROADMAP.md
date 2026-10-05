@@ -180,6 +180,16 @@ record. There is no run log.
       every page view through Caddy logged its API calls as visits too — each
       uptime check of `/` was three lines. And each line now carries `via`
       (`onion` or `web`), unforgeable from either side.
+- [x] …and every other line is JSON too. Seven warnings still printed plain
+      text, the most useful of them a failed GitHub fetch falling back to stale
+      or snapshot data (seen live 2026-10-03, Skidbladnir timing out), so
+      `docker logs … | jq` choked on exactly the lines worth finding. They go
+      through `logEvent` (`shared/log/event.ts`) now — `upstream.fetch_failed`
+      with `repo`, `fallback` and `error`, `posts.ignored`, `posts.unreadable`,
+      `onion.address_invalid`, `onion.snapshot_invalid`, `highlight.fallback` —
+      and `test/log-lines.test.ts` fails a `console` call in `server/` or
+      `shared/` that does not write JSON. Nitro's own "Listening on" line is
+      the one left, and is not this app's to change.
 - [x] `/api/posts?project=<unknown>` is a 404, like `/api/projects/<unknown>`,
       not an empty list.
 - [x] Answer HEAD wherever GET is answered. Nitro routes by filename suffix, so

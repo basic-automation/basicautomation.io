@@ -145,7 +145,10 @@ also logs one JSON object per request on stdout — `docker logs
 basicautomation-site | jq 'select(.status >= 400)'`, or `select(.via == "onion")`
 for the visits that came over Tor — and warns once an hour for
 as long as it has been answering from the snapshot, and once when the GitHub
-quota runs out (`event: "upstream.rate_limited"`).
+quota runs out (`event: "upstream.rate_limited"`). Every other line the app
+writes is JSON too, with an `event` to select on — a GitHub call that failed and
+fell back is `upstream.fetch_failed`, saying which fallback (`stale` or
+`snapshot`) it got.
 
 ## Adding a project
 

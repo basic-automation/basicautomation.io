@@ -11,6 +11,7 @@
  * fixed. The file appears when it appears.
  */
 import { readFile } from 'node:fs/promises'
+import { logEvent } from '~~/shared/log/event'
 
 const ADDRESS_FILE = process.env.ONION_ADDRESS_FILE || '/run/onion/address'
 
@@ -33,7 +34,7 @@ export async function onionAddress(): Promise<string | null> {
     // address to visit, and a half-written or stale file must not become one.
     value = V3_ONION.test(raw) ? raw : null
     if (raw && !value) {
-      console.warn(`[onion] ${ADDRESS_FILE} does not hold a v3 onion address; ignoring`)
+      logEvent('warn', 'onion.address_invalid', `${ADDRESS_FILE} does not hold a v3 onion address; ignoring`, { file: ADDRESS_FILE })
     }
   }
   catch {

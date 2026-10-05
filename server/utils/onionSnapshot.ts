@@ -13,6 +13,7 @@
  */
 import type { H3Event } from 'h3'
 import { readFile } from 'node:fs/promises'
+import { logEvent } from '~~/shared/log/event'
 
 const SNAPSHOT_FILE = process.env.ONION_SNAPSHOT_FILE || '/run/onion/snapshot.json'
 
@@ -106,7 +107,7 @@ export async function onionSnapshot(): Promise<OnionSnapshot | null> {
   let value: OnionSnapshot | null = null
   try {
     value = parse(await readFile(SNAPSHOT_FILE, 'utf8'))
-    if (!value) console.warn(`[onion] ${SNAPSHOT_FILE} is not a usable snapshot; ignoring`)
+    if (!value) logEvent('warn', 'onion.snapshot_invalid', `${SNAPSHOT_FILE} is not a usable snapshot; ignoring`, { file: SNAPSHOT_FILE })
   }
   catch {
     // Absent is the normal state for the first few minutes after a cold start,

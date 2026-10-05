@@ -25,6 +25,7 @@ import { join, resolve, sep } from 'node:path'
 import { projects } from '~~/data/projects'
 import { SITE_SECTION } from '~~/shared/posts/section'
 import type { Post, PostSummary } from '~~/shared/types/post'
+import { logEvent } from '~~/shared/log/event'
 
 const CONTENT_DIR = process.env.CONTENT_DIR || '/app/content'
 
@@ -152,7 +153,7 @@ export async function allPosts(): Promise<Post[]> {
       if (!name.endsWith('.md')) continue
       const slug = name.slice(0, -3)
       if (!SLUG.test(slug)) {
-        console.warn(`[posts] ${project}/${name} is not a usable file name; ignoring`)
+        logEvent('warn', 'posts.ignored', `${project}/${name} is not a usable file name; ignoring`, { project, file: name })
         continue
       }
       const path = postPath(project, slug)
@@ -163,10 +164,10 @@ export async function allPosts(): Promise<Post[]> {
         if (!info.isFile()) continue
         const post = toPost(project, slug, await readFile(path, 'utf8'))
         if (post) out.push(post)
-        else console.warn(`[posts] ${project}/${name} has no title or no valid date; ignoring`)
+        else logEvent('warn', 'posts.ignored', `${project}/${name} has no title or no valid date; ignoring`, { project, file: name })
       }
       catch (error) {
-        console.warn(`[posts] could not read ${project}/${name}: ${error}`)
+        logEvent('warn', 'posts.unreadable', `could not read ${project}/${name}`, { project, file: name, error: String(error) })
       }
     }
   }

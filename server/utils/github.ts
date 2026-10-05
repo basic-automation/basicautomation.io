@@ -25,6 +25,7 @@ import { normaliseReleases, pickDownload, pickLatest } from '~~/shared/github/re
 import { refreshPolicy } from '~~/shared/github/budget'
 import { paced } from '~~/shared/net/pace'
 import snapshot from '~~/data/projects.generated.json'
+import { logEvent } from '~~/shared/log/event'
 
 const ORG = 'basic-automation'
 
@@ -276,7 +277,12 @@ const cachedRepo = defineCachedFunction(
     }
     catch (err) {
       const kept = lastLive.get(project.repo)
-      console.warn(`[github] ${project.repo} fetch failed, using ${kept ? `the last live answer, from ${kept.fetchedAt}` : 'snapshot'}:`, (err as Error).message)
+      logEvent('warn', 'upstream.fetch_failed', `${project.repo} fetch failed, using ${kept ? `the last live answer, from ${kept.fetchedAt}` : 'the snapshot'}`, {
+        repo: project.repo,
+        fallback: kept ? 'stale' : 'snapshot',
+        ...(kept ? { staleFrom: kept.fetchedAt } : {}),
+        error: (err as Error).message,
+      })
       if (kept) {
         recordSource('stale')
         return { ...kept, source: 'stale' }
