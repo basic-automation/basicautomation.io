@@ -12,7 +12,21 @@ const route = useRoute()
 const slug = computed(() => String(route.params.slug))
 const postSlug = computed(() => String(route.params.post))
 
-const { project } = await useProjectSummary(slug)
+// Guarded like the blog index and the about tab beside it, and for a reason
+// this page alone could hit: `site` is a real posts directory but not a
+// project, so its posts resolve here and the page would render a second copy
+// of every one of them under /projects/site/blog/<slug> — canonical pointing
+// at itself, breadcrumbs linking to /projects/site/{about,blog}, both 404.
+// Named `projectError` so it does not shadow the post fetch's own `error`.
+const { project, error: projectError } = await useProjectSummary(slug)
+
+if (projectError.value || !project.value) {
+  throw createError({
+    statusCode: projectError.value?.statusCode ?? 404,
+    statusMessage: 'No such project',
+    fatal: import.meta.client,
+  })
+}
 
 const { data: post, error } = await useFetch<PostSummary & { html: string }>(
   () => `/api/posts/${slug.value}/${postSlug.value}`,
@@ -28,7 +42,15 @@ if (error.value || !post.value) {
 const siteUrl = useSiteOrigin()
 
 const exact = computed(() =>
-  post.value ? new Date(post.value.date).toLocaleDateString('en-GB', { year: 'numeric', month: 'long', day: 'numeric' }) : '')
+  post.value
+    ? new Date(post.value.date).toLocaleDateString('en-GB', {
+        // Fixed zone, so the server and the browser agree. Without it a post
+        // published late in the day renders one date on the server and the
+        // next one in a reader east of it — a hydration mismatch, and a date
+        // that disagrees with the ISO string in the `datetime` beside it.
+        year: 'numeric', month: 'long', day: 'numeric', timeZone: 'UTC',
+      })
+    : '')
 
 useHead({
   script: [{
@@ -59,7 +81,7 @@ useSeoMeta({
 </script>
 
 <template>
-  <article v-if="post" class="mx-auto max-w-7xl px-5 sm:px-6">
+  <article v-if="post" :style="project ? accentVar(project.accent) : undefined" class="mx-auto max-w-7xl px-5 sm:px-6">
     <nav aria-label="Breadcrumb" class="pt-14 font-mono text-xs text-pn-muted">
       <NuxtLink :to="`/projects/${slug}/about`" class="hover:text-pn-fg-bright">
         {{ project?.name ?? slug }}

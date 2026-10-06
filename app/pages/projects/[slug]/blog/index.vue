@@ -54,7 +54,7 @@ useSeoMeta({
 </script>
 
 <template>
-  <article v-if="project" class="mx-auto max-w-7xl px-5 sm:px-6">
+  <article v-if="project" :style="accentVar(project.accent)" class="mx-auto max-w-7xl px-5 sm:px-6">
     <nav aria-label="Breadcrumb" class="pt-14 font-mono text-xs text-pn-muted">
       <NuxtLink to="/projects" class="hover:text-pn-fg-bright">
         ../projects

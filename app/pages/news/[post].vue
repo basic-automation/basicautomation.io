@@ -24,7 +24,15 @@ if (error.value || !post.value) {
 const siteUrl = useSiteOrigin()
 
 const exact = computed(() =>
-  post.value ? new Date(post.value.date).toLocaleDateString('en-GB', { year: 'numeric', month: 'long', day: 'numeric' }) : '')
+  post.value
+    ? new Date(post.value.date).toLocaleDateString('en-GB', {
+        // Fixed zone, so the server and the browser agree. Without it a post
+        // published late in the day renders one date on the server and the
+        // next one in a reader east of it — a hydration mismatch, and a date
+        // that disagrees with the ISO string in the `datetime` beside it.
+        year: 'numeric', month: 'long', day: 'numeric', timeZone: 'UTC',
+      })
+    : '')
 
 useHead({
   script: [{

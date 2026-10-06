@@ -71,21 +71,26 @@ export async function useProject(slug: MaybeRefOrGetter<string>) {
 }
 
 /**
- * One project's name and hero line, for pages that name a project without
- * rendering it — the blog tab and its posts.
+ * One project's name, hero line and accent, for pages that name a project
+ * without rendering it — the blog tab and its posts.
  *
  * Those pages used `useProject`, and everything `useFetch` returns is
  * serialized into the page for hydration, so each one carried the project's
  * whole rendered README without showing it: 43 KB of Nanna's on its blog tab.
  * `pick` trims the result before it is serialized. Its own key, so it never
  * stands in for the full entry the about tab reads.
+ *
+ * `accent` is in the pick because `ProjectTabs` colours the current tab with
+ * `var(--accent)`, and only the about tab was setting it — so the active tab
+ * changed colour depending on which tab you were on. One short string is what
+ * that costs, which is the kind of field this pick exists to allow.
  */
 export async function useProjectSummary(slug: MaybeRefOrGetter<string>) {
   const { data, error } = await useFetch(
     () => `/api/projects/${toValue(slug)}`,
     {
       key: () => `project-summary:${toValue(slug)}`,
-      pick: ['slug', 'name', 'hero'] as const,
+      pick: ['slug', 'name', 'hero', 'accent'] as const,
     },
   )
   return { project: data, error }

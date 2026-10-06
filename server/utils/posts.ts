@@ -53,7 +53,7 @@ export const SLUG = /^[a-z0-9][a-z0-9-]{0,78}[a-z0-9]$/
  * coercion to a problem that does not have them, and every one of those is a
  * way for a file on disk to surprise the renderer.
  */
-function parseFrontMatter(raw: string): { data: Record<string, string>, body: string } {
+export function parseFrontMatter(raw: string): { data: Record<string, string>, body: string } {
   const match = raw.match(/^---\r?\n([\s\S]*?)\r?\n---\r?\n?([\s\S]*)$/)
   if (!match) return { data: {}, body: raw }
 
@@ -64,8 +64,18 @@ function parseFrontMatter(raw: string): { data: Record<string, string>, body: st
     const key = line.slice(0, at).trim()
     let value = line.slice(at + 1).trim()
     // Strip one layer of matching quotes, which is how a title containing a
-    // colon has to be written.
-    if (value.length > 1 && ((value.startsWith('"') && value.endsWith('"')) || (value.startsWith('\'') && value.endsWith('\'')))) {
+    // colon has to be written — and then undo the escaping the writer applied
+    // inside them. `serialise` escapes `\` and then `"` (adminPosts.ts), and
+    // the editor's own reader already reverses both; this one did not, so a
+    // title saved as `The "basic" way` came back, and rendered, with literal
+    // backslashes in the h1, the <title>, the card, the feed and the JSON-LD.
+    // Decoding reverses the writer's order: quotes first, then backslashes.
+    if (value.length > 1 && value.startsWith('"') && value.endsWith('"')) {
+      value = value.slice(1, -1).replace(/\\"/g, '"').replace(/\\\\/g, '\\')
+    }
+    // Single quotes get a bare dequote: nothing writes them, so a file using
+    // them is hand-made and has no escaping to undo.
+    else if (value.length > 1 && value.startsWith('\'') && value.endsWith('\'')) {
       value = value.slice(1, -1)
     }
     data[key] = value

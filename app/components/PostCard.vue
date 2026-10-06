@@ -15,10 +15,21 @@ const { post, projectName, showProject = false } = defineProps<{
   showProject?: boolean
 }>()
 
-const when = computed(() => relativeTime(post.date))
+// `useRelativeTime()`, not `relativeTime()` — which its own docblock forbids
+// calling from a component. It measures against each side's own clock, so the
+// server could render "59 minutes ago" and the browser hydrate "1 hour ago".
+// This card is on every blog index, /news and the home page, so it was the
+// widest surface for that mismatch.
+const ago = useRelativeTime()
+const when = computed(() => ago(post.date))
 
+// `timeZone` fixed for the same reason the clock is: without it the server
+// formats in the container's zone and the browser in the reader's, so a post
+// published late in the day renders a different date on each side.
 const exact = computed(() =>
-  new Date(post.date).toLocaleDateString('en-GB', { year: 'numeric', month: 'long', day: 'numeric' }))
+  new Date(post.date).toLocaleDateString('en-GB', {
+    year: 'numeric', month: 'long', day: 'numeric', timeZone: 'UTC',
+  }))
 </script>
 
 <template>

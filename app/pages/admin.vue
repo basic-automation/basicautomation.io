@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { EDITOR_CHALLENGE } from '~~/shared/admin/basicAuth'
 import { VIA_ONION, cameOverOnion } from '~~/shared/onion/via'
+import { postPath } from '~~/shared/posts/section'
 
 /**
  * The post editor.
@@ -199,8 +200,12 @@ async function remove() {
 
 const canSave = computed(() => Boolean(form.project && form.slug && form.title.trim()) && !busy.value)
 
+// `postPath`, not a hand-built path: a post in the reserved `site` section
+// lives at /news/<slug>, not under /projects/site/. Building it here meant the
+// editor's own "view it" link was the one thing pointing at a URL that should
+// not exist, and now does not.
 const previewUrl = computed(() =>
-  editing.value ? `/projects/${editing.value.project}/blog/${editing.value.slug}` : null)
+  editing.value ? postPath(editing.value.project, editing.value.slug) : null)
 
 onMounted(startNew)
 </script>
