@@ -692,6 +692,16 @@ record. There is no run log.
       clipboard's contents, and the reset; `CodeBlock`'s region sits outside
       its `figcaption`, so it never becomes part of the figure's name.
       <https://www.w3.org/WAI/WCAG22/Understanding/status-messages.html>
+- [x] …and says when it could not. A refused clipboard write (denied
+      permission, insecure context, a frame that forbids it) did nothing at
+      all — the button stayed `[copy]` and whoever pressed it pasted what
+      their clipboard already held. Found when the built-in browser's own
+      clipboard refused it. `useCopy` (`app/composables/useCopy.ts`, now the
+      one copy of the logic both components carried) selects the text
+      instead, shows `[selected]` and announces "Could not copy. The text is
+      selected; copy it with your keyboard." Checked over CDP with the
+      permission denied: the selection is exactly the command, without the
+      `$` sigil, and both buttons reset after 4 s.
 - [ ] Run axe's `color-contrast` in the browser pass too, once the contrast item
       below is decided. Left out deliberately: it would be red today on the
       shortfalls already waiting on that decision.
