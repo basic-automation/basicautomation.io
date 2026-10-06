@@ -201,7 +201,7 @@ npm run cuts         # cut card art down to its srcset widths (needs ImageMagick
 npm run bases        # runtime Alpine still matches the node base (needs docker)
 npm run contrast     # WCAG contrast for every palette colour, against the ground
 npm run sizes        # re-read every image's intrinsic size
-npm run audit:runtime # advisories for what .output/server ships (after a build)
+npm run audit:runtime # advisories for what the build ships, server and client
 ```
 
 `npm test` is Vitest over the pure functions in `shared/` — README rewriting,
@@ -259,7 +259,9 @@ READMEs set — that every page preloads, and the full 113 KB font behind it by
 `npm run audit:runtime` (in CI, after the build) is `npm audit` narrowed to the
 code a visitor's request can reach: the packages Nitro traced into
 `.output/server/node_modules`, plus the ones it inlined into the server chunks,
-read from their sourcemaps. It fails on a high or critical advisory that applies
+read from their sourcemaps, plus every package in the client bundle, which the
+build records as it writes the chunks (`.output/server/client-packages.json`;
+the client has no sourcemaps to read). It fails on a high or critical advisory that applies
 to one of them. Plain `npm audit` reports the whole lockfile, so it also counts
 the build's file globbing and the dev server's certificate helper, and it can
 stay red on advisories nobody can patch. The onion gateway, the image's other
