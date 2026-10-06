@@ -275,6 +275,87 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     crate: 'onyums',
   },
   {
+    slug: 'splimes',
+    repo: 'splimes',
+    name: 'splimes',
+    logo: '/projects/splimes.svg',
+    tagline: 'Readings that arrived whenever, resampled onto a regular grid',
+    hero: 'Irregular in. Regular out.',
+    summary:
+      'Take readings that arrived at uneven moments and get a value at every tick — '
+      + 'every second, minute or day you ask for. Each point comes back marked as one you '
+      + 'measured, one filled in between two of them, or one projected past the end. It runs '
+      + 'on one core, all of them, or the GPU.',
+    metaDescription:
+      'Resample irregularly sampled time series onto a regular grid, with every point '
+      + 'marked as measured, interpolated or extrapolated.',
+    problem:
+      'Readings arrive when they arrive — a sensor drops out, a market trades in bursts, a '
+      + 'device uploads a day late. Nearly everything you want to do next assumes a value at '
+      + 'every tick, so the gap-filling gets written again, a little differently, in every '
+      + 'project that needs it. And once the gaps are filled, nothing records which of the '
+      + 'numbers were ever real.',
+    kind: 'Rust library',
+    status: 'stable',
+    // Red, like WeftDB: this is the engine inside it, and the pairing is the
+    // point. The palette has seven accents and eight projects, so one is shared
+    // either way — better it be the two that belong together.
+    accent: 'red',
+    order: 4,
+    features: [
+      {
+        title: 'Four ways to draw the curve',
+        body: 'Linear, quadratic, cubic, or a polynomial up to degree eight. Each is defined precisely, inside your readings and beyond them, and every backend computes the same thing.',
+      },
+      {
+        title: 'Every point says what it is',
+        body: 'Each value comes back marked as one you measured, one filled between two of yours, or one projected past the end. Drop the invented ones, or count them — but you are never guessing which is which.',
+      },
+      {
+        title: 'One core, all of them, or the GPU',
+        body: 'Choose the backend, or let it choose by the size of the job. If the GPU is missing or fails, the work simply reruns on the processor and the result tells you why.',
+      },
+      {
+        title: 'An accuracy you can hold it to',
+        body: 'The error bound is written down, tested against a sixty-digit reference, and covered by the version promise — so an upgrade cannot quietly make your numbers worse. A point that lands on a reading returns that reading, every digit intact.',
+      },
+      {
+        title: 'It tells you what it actually did',
+        body: 'Which method ran, and on which backend. Too few readings for a cubic and it steps down to a quadratic and says so — or refuses outright, if you would rather be told than handed an answer.',
+      },
+      {
+        title: 'Fast on the sizes that hurt',
+        body: 'Four thousand readings onto a sixteen-million-point grid takes about a tenth of a second across a desktop\'s cores, against two thirds of a second on one. The benchmarks, and how to run them yourself, are in the repository.',
+      },
+      {
+        title: 'Free, and yours to audit',
+        body: 'MIT licensed and published on crates.io, with the numerical contract stated in the documentation rather than implied. Read it before you trust it.',
+      },
+    ],
+    install: { label: 'add it to your project', lang: 'shellscript', code: 'cargo add splimes' },
+    example: {
+      label: 'four readings, a value every second',
+      lang: 'rust',
+      code: `use splimes::{PointKind, Resolution, Spline};
+
+// Four readings, unevenly spaced, and a value every second across them —
+// carried a little past the last one.
+let series = splimes::interpolate(&readings, start, end, Resolution::Seconds, Spline::Cubic)?;
+
+// The seventh second is a reading you took; the thirty-third is past the end.
+assert_eq!(series.kinds()[7], PointKind::Raw);
+assert_eq!(series.kinds()[32], PointKind::Extrapolated);`,
+    },
+    crate: 'splimes',
+    // External only. Every link in this row is rendered `target="_blank"` with
+    // an outbound `rel`, because until now every one of them left the site — so
+    // an internal href here would open one of our own pages in a new tab. The
+    // tie to WeftDB is stated in the README, which the page renders below.
+    links: [
+      { label: 'Benchmarks', href: 'https://github.com/basic-automation/splimes/blob/main/BENCHMARKS.md' },
+    ],
+  },
+  {
     slug: 'weftdb',
     repo: 'weftdb',
     name: 'WeftDB',
@@ -298,7 +379,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     kind: 'Database',
     status: 'alpha',
     accent: 'red',
-    order: 4,
+    order: 5,
     features: [
       {
         title: 'Ask for any resolution',
@@ -360,7 +441,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     kind: 'Operating software',
     status: 'alpha',
     accent: 'yellow',
-    order: 5,
+    order: 6,
     features: [
       {
         title: 'Try it, lose nothing',
@@ -411,7 +492,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     kind: 'Desktop app',
     status: 'active',
     accent: 'blue',
-    order: 6,
+    order: 7,
     features: [
       {
         title: 'Sell in four places, maintain one list',
@@ -633,7 +714,7 @@ default_low_stock_threshold = 5    # overridable per product in the app
     kind: 'Personal AI',
     status: 'active',
     accent: 'orange',
-    order: 7,
+    order: 8,
     features: [
       {
         title: 'It is already running',

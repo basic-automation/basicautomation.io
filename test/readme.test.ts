@@ -23,6 +23,25 @@ describe('absolutize', () => {
 		expect(rewrite("<IMG ALT='a' SRC='shot.png'>")).toBe(`<IMG ALT='a' SRC='${RAW}shot.png'>`)
 	})
 
+	it('rewrites href on an HTML anchor, which a centred badge block uses', () => {
+		expect(rewrite('<a href="LICENSE">MIT</a>')).toBe(`<a href="${BLOB}LICENSE">MIT</a>`)
+		expect(rewrite("<A CLASS='b' HREF='./CHANGELOG.md'>log</A>")).toBe(`<A CLASS='b' HREF='${BLOB}CHANGELOG.md'>log</A>`)
+	})
+
+	it('rewrites both halves of a raw-HTML badge: the image and the link round it', () => {
+		// splimes' README, which is what found the gap: the `<img>` was being
+		// rewritten while the `<a>` round it was left pointing at the page.
+		expect(rewrite('<a href="LICENSE"><img src="badge.svg" alt="License: MIT"></a>'))
+			.toBe(`<a href="${BLOB}LICENSE"><img src="${RAW}badge.svg" alt="License: MIT"></a>`)
+	})
+
+	it('leaves an anchor that already stands on its own alone', () => {
+		const absolute = '<a href="https://crates.io/crates/splimes">crates.io</a>'
+		expect(rewrite(absolute)).toBe(absolute)
+		const anchor = '<a href="#install">install</a>'
+		expect(rewrite(anchor)).toBe(anchor)
+	})
+
 	it('leaves alone anything that already stands on its own', () => {
 		for (const url of [
 			'https://example.com/x.png',
