@@ -837,11 +837,13 @@ record. There is no run log.
       over one stalls every page the process serves. Two sources, both closed
       2026-10-05: marked 18.0.14's link-destination rule, cubic on a run of
       unicode whitespace (4 KB of U+00A0 after `[](`: 10.3 s here; 0.1 ms on
-      18.1.0), and seven of this site's own patterns in
+      18.1.0), and eight of this site's own patterns in
       `shared/markdown/readme.ts` and `slug.ts`, quadratic on input that opens
       and never closes (100 KB of `[`: 5.2 s; a 100 KB heading of `<a`: 2.5 s;
-      about a millisecond each now). All 7 READMEs and the 76 live posts render
-      byte-identical before and after. `test/markdown-backtracking.test.ts`
+      about a millisecond each now). The eighth is the `<a href>` rule that
+      arrived with splimes the same night, written in the old shape (100 KB of
+      `<a `: 711 ms) and made linear in the merge. All 8 READMEs and the 76
+      live posts render byte-identical before and after. `test/markdown-backtracking.test.ts`
       times each input; every case fails on the old code.
       <https://github.com/markedjs/marked/pull/4106>
 - [x] A real 404 check: every internal link, every render, on every route — `npm run check`
