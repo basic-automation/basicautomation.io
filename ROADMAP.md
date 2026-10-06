@@ -190,6 +190,13 @@ record. There is no run log.
       and `test/log-lines.test.ts` fails a `console` call in `server/` or
       `shared/` that does not write JSON. Nitro's own "Listening on" line is
       the one left, and is not this app's to change.
+- [x] …and a failed request says who asked. The error-hook line — every 404
+      and 500 — stopped at `via`, though its comment promised the success
+      line's shape, so the 627 404s in fifteen hours of live log (nearly all
+      scanners) were the only lines with no `ip`, `ua` or `ref`. Both lines
+      now take those fields from one `requester()`
+      (`server/plugins/request-log.ts`); still one line per request, HEAD
+      still logged as HEAD, onion requests still `ip: null`.
 - [x] `/api/posts?project=<unknown>` is a 404, like `/api/projects/<unknown>`,
       not an empty list.
 - [x] Answer HEAD wherever GET is answered. Nitro routes by filename suffix, so
