@@ -49,6 +49,10 @@ const RULES = [
 	'scrollable-region-focusable',
 	'meta-viewport',
 	'meta-viewport-large',
+	// On by default from axe 4.14. It compares a control's accessible name with
+	// its *visible* text, and jsdom cannot say what is visible, so there it only
+	// ever came back undecided — on every copy button — and nothing judged it.
+	'label-content-name-mismatch',
 ]
 
 const VIEWPORTS = [

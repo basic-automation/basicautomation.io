@@ -230,7 +230,8 @@ npm run font                       # re-cut the preloaded core of Fira Code
 actually served. The rules that need a layout engine are named and skipped
 rather than silently failing — jsdom has none — so this is "every axe rule that
 can be judged from markup". `npm run a11y:browser` runs those skipped rules —
-touch-target size, keyboard access to scrollable regions, the viewport meta —
+touch-target size, keyboard access to scrollable regions, the viewport meta,
+whether each control's visible label is part of its accessible name —
 in headless Chromium at a desktop and a phone width (set `CHROME_PATH` if
 Chromium is not on `PATH`), reading each page to the bottom so lazy content
 loads, and fails on any console error, uncaught exception or CSP refusal the
