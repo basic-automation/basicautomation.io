@@ -41,5 +41,8 @@ onBeforeUnmount(() => clearTimeout(timer))
     >
       {{ copied ? '[copied]' : '[copy]' }}
     </UButton>
+    <!-- The button's name is pinned by its aria-label, so "[copied]" changes
+         nothing a screen reader reads out. This says it. -->
+    <span role="status" class="sr-only">{{ copied ? 'Copied to clipboard' : '' }}</span>
   </div>
 </template>

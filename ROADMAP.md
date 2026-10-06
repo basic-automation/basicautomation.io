@@ -672,6 +672,16 @@ record. There is no run log.
       starts the server on `test/fixtures/content/` (three test posts, one a
       draft), so `check`, `a11y` and `a11y:browser` see post pages at all, and
       `check` asserts no draft is listed.
+- [x] A copy button says it copied. `[copy]` turns `[copied]` on screen, but the
+      button's name is pinned by its `aria-label`, so a screen reader heard
+      nothing after pressing it (WCAG 4.1.3, status messages). `CodeLine` and
+      `CodeBlock` each render an empty `role="status"` region, server-side so
+      it exists before it changes, which reads "Copied to clipboard" for the
+      same 1.6 s. Checked in headless Chromium over CDP with clipboard access
+      granted: the polite region's text in the accessibility tree, the
+      clipboard's contents, and the reset; `CodeBlock`'s region sits outside
+      its `figcaption`, so it never becomes part of the figure's name.
+      <https://www.w3.org/WAI/WCAG22/Understanding/status-messages.html>
 - [ ] Run axe's `color-contrast` in the browser pass too, once the contrast item
       below is decided. Left out deliberately: it would be red today on the
       shortfalls already waiting on that decision.

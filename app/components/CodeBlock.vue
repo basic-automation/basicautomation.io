@@ -38,6 +38,10 @@ onBeforeUnmount(() => clearTimeout(timer))
         {{ copied ? '[copied]' : '[copy]' }}
       </UButton>
     </figcaption>
+    <!-- The button's name is pinned by its aria-label, so "[copied]" changes
+         nothing a screen reader reads out. This says it, outside the
+         figcaption so it never becomes part of the figure's name. -->
+    <span v-if="label" role="status" class="sr-only">{{ copied ? 'Copied to clipboard' : '' }}</span>
 
     <!-- Highlighted on the server by Shiki, in the site's own palette. -->
     <!-- eslint-disable-next-line vue/no-v-html -->
