@@ -44,8 +44,32 @@ services:
       autoheal: "true"
     networks:
       caddy-shared-network: null
+    volumes:
+      # The onion service's identity key. This volume IS the .onion address:
+      # delete it and the site comes back under a name nothing links to. Named
+      # rather than a bind because the image seeds it 0700 owned by the
+      # container's unprivileged user and arti refuses to launch if that is
+      # loosened — a bind would arrive root-owned 0755 and fail that check.
+      - type: volume
+        source: basicautomation-onion
+        target: /app/tor
+      # The blog. Posts are written here by the site's own editor and read back
+      # on every request, so they have to outlive an image that is rebuilt on
+      # every deploy. Not secret, but it IS the only copy: nothing in git holds
+      # these files.
+      - type: volume
+        source: basicautomation-content
+        target: /app/content
 
 networks:
   caddy-shared-network:
     external: true
     name: caddy-shared-network
+
+# Named, so both survive `docker compose up -d` recreating the container. Without
+# them the service still starts and still passes its healthcheck — which is what
+# makes leaving them out dangerous rather than obviously broken: it would come up
+# on a new .onion address with an empty blog.
+volumes:
+  basicautomation-onion:
+  basicautomation-content:
