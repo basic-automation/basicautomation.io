@@ -1,5 +1,5 @@
 /**
- * Audit what the server ships, not what the build uses.
+ * Audit what the site ships — server and client — not what the build uses.
  *
  * `npm audit` walks the whole lockfile. On 2026-10-02 it reported eleven
  * "high" findings and not one of them could reach a visitor: `braces` sits
@@ -26,10 +26,13 @@
  * below with a reason; anything milder is printed and passes. Fails, too, when
  * the registry cannot be asked — no answer is not a clean answer.
  *
- * What this does NOT cover: the client bundle (built without sourcemaps, so
- * there is nothing to read its packages from — though nearly everything it
- * ships is a package the server bundle carries too). The onion gateway's
- * Rust dependencies are `cargo audit`'s, in CI's onion job.
+ * …and a third, since 2026-10-05: the packages in the client bundle, which
+ * has no sourcemaps to read. The build writes them down as it generates the
+ * chunks (`scripts/lib/client-packages.ts`) into
+ * `.output/server/client-packages.json`; a build without that file fails
+ * this, rather than passing with the browser half unasked.
+ *
+ * The onion gateway's Rust dependencies are `cargo audit`'s, in CI's onion job.
  */
 
 import { readFile, readdir } from 'node:fs/promises'
@@ -131,6 +134,23 @@ async function inlined() {
 	return found
 }
 
+async function shippedToBrowsers() {
+	let inventory
+	try {
+		inventory = JSON.parse(await readFile(join(SERVER, 'client-packages.json'), 'utf8'))
+	}
+	catch {
+		console.error('No .output/server/client-packages.json — the build did not record the client bundle. Rebuild with this repo\'s nuxt.config.ts.')
+		process.exit(1)
+	}
+	const found = Object.entries(inventory.packages ?? {}).flatMap(([name, versions]) => versions.map((v) => [name, v]))
+	if (!found.length) {
+		console.error('✗ client-packages.json lists no packages; the client bundle always has some, so the recording failed.')
+		process.exit(1)
+	}
+	return found
+}
+
 const installed = {}
 const add = ([name, version]) => {
 	installed[name] ??= []
@@ -138,11 +158,13 @@ const add = ([name, version]) => {
 }
 const fromTrace = await traced()
 const fromChunks = await inlined()
+const fromClient = await shippedToBrowsers()
 fromTrace.forEach(add)
 fromChunks.forEach(add)
+fromClient.forEach(add)
 
 const names = Object.keys(installed).length
-console.log(`Asking the npm registry about ${names} packages: ${fromTrace.length} traced into node_modules, ${fromChunks.length} inlined into the chunks.`)
+console.log(`Asking the npm registry about ${names} packages: ${fromTrace.length} traced into node_modules, ${fromChunks.length} inlined into the server chunks, ${fromClient.length} in the client bundle.`)
 
 let advisories
 try {
@@ -177,9 +199,9 @@ for (const f of findings) {
 }
 
 if (failing) {
-	console.error(`\n✗ ${failing} high or critical advisor${failing === 1 ? 'y applies' : 'ies apply'} to code the server ships.`)
+	console.error(`\n✗ ${failing} high or critical advisor${failing === 1 ? 'y applies' : 'ies apply'} to code the site ships.`)
 	process.exit(1)
 }
 console.log(findings.length
-	? `\n✓ Nothing high or critical in what the server ships (${findings.length} milder or accepted, above).`
-	: '\n✓ No advisory applies to anything the server ships.')
+	? `\n✓ Nothing high or critical in what the site ships (${findings.length} milder or accepted, above).`
+	: '\n✓ No advisory applies to anything the site ships, server or client.')

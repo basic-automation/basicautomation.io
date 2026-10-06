@@ -800,8 +800,24 @@ record. There is no run log.
       chunks, which their sourcemaps name. The registry filters by version
       itself; the script re-checks each range as a cross-check on what comes
       back. Proved by planting `braces@3.0.3` and
-      `marked@4.0.9`: it fails on exactly the three advisories that apply. The
-      client bundle has no sourcemaps, so it is not covered.
+      `marked@4.0.9`: it fails on exactly the three advisories that apply.
+- [x] …and the client bundle too. It has no sourcemaps (they would be served),
+      so there was nothing to read its packages from. A client-only Vite plugin
+      (`scripts/lib/client-packages.ts`) records every package with code
+      rendered into a client chunk, with the version from its own
+      `package.json`, and writes `.output/server/client-packages.json` once
+      Nitro has compiled — inside the image, never under `public/` (a 404 from
+      the server). `audit:runtime` asks the registry about those as well: 32
+      today, 14 of them never seen by the server audit (`reka-ui`, `@nuxt/ui`,
+      `@nuxt/icon`, `@nuxtjs/color-mode`…). It fails on a planted
+      `marked@4.0.9`, on a missing inventory and on an empty one. Also learned:
+      `@tiptap/markdown`'s `marked@17` never reaches a browser.
+- [ ] Upstream: `@nuxt/devtools` 3.4.2 pins `simple-git ^3.36.0`, and
+      `npm audit` reports four advisories against it (two critical, command
+      execution through git options), patched only in `simple-git` 4. Not
+      reachable here — `devtools: { enabled: false }`, and nothing of it
+      ships — and Nuxt 4.6 still resolves the same versions. Moves when
+      devtools does. <https://github.com/advisories/GHSA-858h-whjf-mvg5>
 - [x] …and the image's other binary. The onion gateway's 594 crates were
       audited by nothing. CI's onion job now runs `cargo audit --deny yanked
       --deny unsound`. First run, 2026-10-02: `yoke-derive` 0.8.3 was yanked,

@@ -1,5 +1,9 @@
 import { contentSecurityPolicy } from './shared/security/csp'
 import { projects } from './data/projects'
+import { clientPackages } from './scripts/lib/client-packages'
+
+// Which packages the client bundle is made of, for `npm run audit:runtime`.
+const shippedToBrowsers = clientPackages()
 
 export default defineNuxtConfig({
   // Nuxt UI carries its own Tailwind v4 pipeline, so the standalone
@@ -136,5 +140,15 @@ export default defineNuxtConfig({
     },
 
     compressPublicAssets: { brotli: true, gzip: true },
+  },
+
+  vite: {
+    plugins: [shippedToBrowsers.plugin],
+  },
+
+  hooks: {
+    'nitro:init'(nitro) {
+      nitro.hooks.hook('compiled', () => shippedToBrowsers.write(nitro.options.output.serverDir))
+    },
   },
 })
