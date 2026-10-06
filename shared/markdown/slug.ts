@@ -19,7 +19,7 @@ const PUNCTUATION = /[ -⁯⸀-⹿\\'!"#$%&()*+,.\/:;<=>?@\[\]^`{|}~]/g
 
 export function slugify(text: string): string {
   return text
-    .replace(/<[^>]*>/g, '')
+    .replace(/<[^<>]*>/g, '') // not `[^>]*`: quadratic on a run of `<`
     .trim()
     .toLowerCase()
     .replace(PUNCTUATION, '')

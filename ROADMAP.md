@@ -764,6 +764,18 @@ record. There is no run log.
       <https://github.com/advisories/GHSA-vfj7-8cjw-p6xm>
       <https://github.com/advisories/GHSA-86w9-cpqp-85rv>
 
+- [x] A README cannot stall the server. READMEs are fetched and rendered at
+      request time, on the server's one thread, so a pattern that backtracks
+      over one stalls every page the process serves. Two sources, both closed
+      2026-10-05: marked 18.0.14's link-destination rule, cubic on a run of
+      unicode whitespace (4 KB of U+00A0 after `[](`: 10.3 s here; 0.1 ms on
+      18.1.0), and seven of this site's own patterns in
+      `shared/markdown/readme.ts` and `slug.ts`, quadratic on input that opens
+      and never closes (100 KB of `[`: 5.2 s; a 100 KB heading of `<a`: 2.5 s;
+      about a millisecond each now). All 7 READMEs and the 76 live posts render
+      byte-identical before and after. `test/markdown-backtracking.test.ts`
+      times each input; every case fails on the old code.
+      <https://github.com/markedjs/marked/pull/4106>
 - [x] A real 404 check: every internal link, every render, on every route — `npm run check`
 - [x] …and the two XML documents nobody looks at, checked the same way. A feed
       breaks silently for every subscriber at once, and both documents carry
