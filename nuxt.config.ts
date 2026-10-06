@@ -92,6 +92,11 @@ export default defineNuxtConfig({
           'Referrer-Policy': 'strict-origin-when-cross-origin',
           'X-Frame-Options': 'DENY',
           'Permissions-Policy': 'geolocation=(), camera=(), microphone=()',
+          // No page here is opened by, or opens, a window it should keep a
+          // handle on, so none shares a browsing-context group with a
+          // cross-origin one: a page that `window.open`s this site gets no
+          // reference back into it.
+          'Cross-Origin-Opener-Policy': 'same-origin',
           // What a page may load — see `shared/security/csp.ts`. This is the
           // nonce-less form every response gets; rendered pages have it
           // replaced with one carrying a per-request nonce by

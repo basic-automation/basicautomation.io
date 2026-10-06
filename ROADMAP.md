@@ -489,6 +489,16 @@ record. There is no run log.
       Proved in a browser: an injected `<style>` rule is refused, an injected
       `style=` attribute and every Shiki colour still apply.
       <https://www.w3.org/TR/CSP3/#directive-style-src-elem>
+- [x] No `x-powered-by`, and a `Cross-Origin-Opener-Policy`. Nuxt's renderer,
+      payload and island handlers set `x-powered-by: Nuxt` on every page
+      themselves, after route rules apply, so it was on every response
+      (live, 2026-10-05); `server/plugins/powered-by.ts` removes it in
+      Nitro's `beforeResponse`. `Cross-Origin-Opener-Policy: same-origin`
+      joins the `/**` headers: no page here keeps a handle on a window it
+      opens, or is opened by one that should keep a handle on it. `npm run
+      check` fails a response carrying `x-powered-by` and a page without the
+      policy; against the previous build it failed on all 94 pages for each.
+      <https://developer.mozilla.org/en-US/docs/Web/HTTP/Reference/Headers/Cross-Origin-Opener-Policy>
 - [x] Reserve space for the images the pages render. Every `<img>` this repo
       controls now carries its intrinsic `width`/`height`, read out of the file
       itself by `npm run sizes` into `data/asset-sizes.generated.json`, with a
