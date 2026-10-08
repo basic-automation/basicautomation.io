@@ -140,10 +140,23 @@ function toPost(project: string, slug: string, raw: string): Post | null {
 }
 
 let cached: { value: Post[], at: number } | null = null
+/**
+ * Bumped by every invalidation, so a read that overlapped a write cannot
+ * install its own stale result.
+ *
+ * `allPosts` walks the directory with `await` in it, so a request that started
+ * before the editor renamed a file can finish after `invalidatePosts` has run
+ * and write the pre-write listing back into the cache — undoing the
+ * invalidation, and hiding a just-saved post for the rest of the TTL. Comparing
+ * the generation it started with is enough: if it changed, the walk it just did
+ * is already known to be out of date.
+ */
+let generation = 0
 
 /** Every post on disk, newest first. Drafts included — callers filter. */
 export async function allPosts(): Promise<Post[]> {
   const now = Date.now()
+  const startedAt = generation
   if (cached && now - cached.at < TTL_MS) return cached.value
 
   const root = resolve(CONTENT_DIR, POSTS_DIR)
@@ -183,7 +196,7 @@ export async function allPosts(): Promise<Post[]> {
   }
 
   out.sort((a, b) => b.date.localeCompare(a.date))
-  cached = { value: out, at: now }
+  if (generation === startedAt) cached = { value: out, at: now }
   return out
 }
 
@@ -222,4 +235,5 @@ export async function onePost(project: string, slug: string): Promise<Post | nul
 /** Drop the cache so a write is visible on the next request rather than in 10s. */
 export function invalidatePosts(): void {
   cached = null
+  generation += 1
 }

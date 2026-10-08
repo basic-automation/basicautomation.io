@@ -25,6 +25,7 @@ import { absolutize, stripLeadingLogo } from '../shared/markdown/readme.ts'
 import { renderMarkdown } from '../shared/markdown/render.ts'
 import { paced } from '../shared/net/pace.ts'
 import { normaliseReleases, pickDownload, pickLatest } from '../shared/github/releases.ts'
+import { carryMissing } from '../shared/github/carry.ts'
 
 /** crates.io asks for at most one API request a second: https://crates.io/data-access */
 const cratesIo = paced(1000)
@@ -63,6 +64,11 @@ async function getText(url, accept) {
 async function fetchRepo(project) {
   const { repo } = project
   const out = { repo, fetchedAt: new Date().toISOString() }
+  // Which optional pieces failed. The repo call throws and is caught by the
+  // caller; these three are each allowed to fail without sinking the repo, so
+  // without naming them a hollowed entry is indistinguishable from a full one.
+  // Same three names the live path uses (`server/utils/github.ts`).
+  const incomplete = []
 
   const meta = await getJSON(`https://api.github.com/repos/${ORG}/${repo}`)
   Object.assign(out, {
@@ -94,6 +100,7 @@ async function fetchRepo(project) {
   }
   catch {
     out.readmeHtml = null
+    incomplete.push('readme')
     console.warn(`  · ${repo}: no README`)
   }
 
@@ -114,6 +121,7 @@ async function fetchRepo(project) {
     out.releases = []
     out.latestRelease = null
     out.download = null
+    incomplete.push('releases')
   }
 
   // crates.io, for the published Rust crates.
@@ -129,10 +137,12 @@ async function fetchRepo(project) {
       out.docsUrl = `https://docs.rs/${project.crate}`
     }
     catch (err) {
+      incomplete.push('crate')
       console.warn(`  · ${repo}: crates.io lookup failed — ${err.message}`)
     }
   }
 
+  if (incomplete.length) out.incomplete = incomplete
   return out
 }
 
@@ -148,14 +158,29 @@ async function previous() {
 const snapshot = await previous()
 const repos = { ...snapshot.repos }
 let failures = 0
+// Repos that came back missing a piece no previous snapshot could supply.
+let incompleteRepos = 0
 
 console.log(`Fetching ${projects.length} projects from ${ORG}${token ? ' (authenticated)' : ' (anonymous)'}…`)
 
 for (const project of projects) {
   try {
-    repos[project.repo] = await fetchRepo(project)
-    const r = repos[project.repo]
-    console.log(`  ✓ ${project.repo} — ${r.stars}★${r.crateVersion ? `, v${r.crateVersion}` : ''}`)
+    // Carried from the previous snapshot, exactly as the live path carries from
+    // the last live answer. Without this a transient 403 on one sub-call wrote
+    // a hollowed entry over a good one and still printed a tick: the snapshot
+    // is the fallback the site serves when GitHub is unreachable, so a README
+    // or a release list lost here is lost for as long as that lasts.
+    const fresh = await fetchRepo(project)
+    const r = carryMissing(fresh, snapshot.repos?.[project.repo])
+    repos[project.repo] = r
+    const lost = (r.incomplete ?? []).filter((piece) => !(r.carried ?? []).includes(piece))
+    const mark = lost.length ? '!' : '✓'
+    const note = [
+      r.carried?.length ? `carried ${r.carried.join(', ')}` : '',
+      lost.length ? `LOST ${lost.join(', ')}` : '',
+    ].filter(Boolean).join('; ')
+    if (lost.length) incompleteRepos++
+    console.log(`  ${mark} ${project.repo} — ${r.stars}★${r.crateVersion ? `, v${r.crateVersion}` : ''}${note ? ` (${note})` : ''}`)
   }
   catch (err) {
     failures++
@@ -176,4 +201,10 @@ await writeFile(
 console.log(`\nWrote ${OUT}`)
 if (failures) {
   console.warn(`${failures} of ${projects.length} failed; the previous snapshot was kept for those.`)
+}
+if (incompleteRepos) {
+  // Non-zero exit, so a sync that quietly hollowed the fallback cannot be
+  // mistaken for a clean one — by a person skimming the output or by CI.
+  console.warn(`${incompleteRepos} of ${projects.length} are missing a piece nothing could supply; the snapshot is thinner than the last one.`)
+  process.exitCode = 1
 }

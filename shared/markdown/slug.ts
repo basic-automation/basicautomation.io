@@ -32,10 +32,22 @@ export function slugify(text: string): string {
  */
 export function createSlugger(): (text: string) => string {
   const seen = new Map<string, number>()
+  // Every slug handed out, not just the bases. Counting bases alone let a
+  // generated suffix land on a heading that really is named that: `Usage`,
+  // `Usage`, `Usage-1` gave `usage`, `usage-1`, `usage-1` — the same id twice,
+  // which is invalid HTML and makes a contents link to `#usage-1` ambiguous.
+  // github-slugger keeps bumping until the slug is free; so does this.
+  const taken = new Set<string>()
   return (text: string) => {
     const base = slugify(text)
-    const n = seen.get(base) ?? 0
+    let n = seen.get(base) ?? 0
+    let slug = n === 0 ? base : `${base}-${n}`
+    while (taken.has(slug)) {
+      n += 1
+      slug = `${base}-${n}`
+    }
     seen.set(base, n + 1)
-    return n === 0 ? base : `${base}-${n}`
+    taken.add(slug)
+    return slug
   }
 }

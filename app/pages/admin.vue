@@ -82,11 +82,14 @@ function todayIso(): string {
 
 /** A filename-safe slug suggested from the title, only while creating. */
 function slugify(text: string): string {
+  // Trimmed AFTER the slice, not before: cutting at 80 can land on a hyphen,
+  // and the save endpoint's own SLUG pattern refuses one that ends in it — so
+  // a long title auto-filled a slug the editor would then refuse to save.
   return text
     .toLowerCase()
     .replace(/[^a-z0-9]+/g, '-')
-    .replace(/^-+|-+$/g, '')
     .slice(0, 80)
+    .replace(/^-+|-+$/g, '')
 }
 
 watch(() => form.title, (title) => {
