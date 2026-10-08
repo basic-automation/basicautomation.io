@@ -71,10 +71,37 @@ export function postHeading(slug: (text: string) => string) {
 	return markdownHeading(slug, underTitle)
 }
 
+/**
+ * The five entities marked escapes in text. Decoded before slugging, because
+ * `slugify` strips punctuation: left encoded, the `&` in "First launch &
+ * troubleshooting" reaches it as `&amp;` and the anchor becomes
+ * `first-launch-amp-troubleshooting` instead of GitHub's
+ * `first-launch--troubleshooting`.
+ */
+const ENTITIES: Record<string, string> = {
+	'&amp;': '&', '&lt;': '<', '&gt;': '>', '&quot;': '"', '&#39;': '\'',
+}
+
+/**
+ * A heading's text content, as GitHub mints its anchor from.
+ *
+ * The anchor used to be slugged from the heading's raw markdown, so a heading
+ * that contains a link — `## [Configuration](./docs/config.md)` — baked the URL
+ * into its own id (`configurationhttpsgithubcom…`) and the README's own
+ * contents link to `#configuration` missed it. Slugging the rendered HTML
+ * instead gives the text the reader sees, which is what the link was written
+ * against.
+ */
+function headingText(innerHtml: string): string {
+	return innerHtml
+		.replace(/<[^<>]*>/g, '')
+		.replace(/&(?:amp|lt|gt|quot|#39);/g, (e) => ENTITIES[e] ?? e)
+}
+
 function markdownHeading(slug: (text: string) => string, levelFor: (depth: number) => number) {
-	return function heading(this: RendererThis, { tokens, depth, text }: HeadingToken): string {
+	return function heading(this: RendererThis, { tokens, depth }: HeadingToken): string {
 		const level = levelFor(depth)
 		const inner = this.parser.parseInline(tokens as never[])
-		return `<h${level} id="${slug(text)}">${inner}</h${level}>\n`
+		return `<h${level} id="${slug(headingText(inner))}">${inner}</h${level}>\n`
 	}
 }

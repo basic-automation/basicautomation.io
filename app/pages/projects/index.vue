@@ -26,7 +26,11 @@ const jsonLd = computed(() => ldJson({
       '@type': 'ListItem',
       'position': i + 1,
       'name': p.name,
-      'url': `${siteUrl}/projects/${p.slug}`,
+      // `/about`, not `/projects/<slug>`: the latter is a 301 to it, and the
+      // sitemap already avoids naming redirects for the same reason — a list
+      // whose every item points at a redirect asks a crawler for two requests
+      // to learn one page, and names a URL that is not the canonical one.
+      'url': `${siteUrl}/projects/${p.slug}/about`,
     })),
   },
 }))

@@ -22,10 +22,34 @@ export const CALLS_PER_REPO = 3
 export const ANONYMOUS_LIMIT = 60
 
 /**
- * What the site allows itself of that limit. The rest is headroom for
- * everything else that shares this host's address: `npm run sync`, the
- * routine's checks, anyone on the LAN browsing GitHub's API.
+ * One `npm run sync`: every repo fetched once, the same three calls each.
+ *
+ * Reserved rather than hoped for. The site's anonymous share used to be the
+ * constant 54, leaving six calls of headroom — against a sync that costs
+ * `repos * CALLS_PER_REPO`, which is 24 at eight projects. So a sync run from
+ * this host while the site was also anonymous went over the 60, and the site
+ * got 403s and fell back to the snapshot: fresher-but-throttled is not fresher.
+ *
+ * Deriving it is the same lesson this file already learned about the TTL — a
+ * constant is correct only for the project count it was computed against.
  */
+export function syncCost(repos: number): number {
+	return Math.max(1, repos) * CALLS_PER_REPO
+}
+
+/**
+ * What the site allows itself anonymously: the limit, less one sync run.
+ *
+ * At eight projects that is 36, and a 60-minute TTL rather than 30. Anonymous
+ * is the fallback — production carries a token and refreshes every 5 minutes —
+ * so the cost of being right here is small and lands only when there is no
+ * token at all.
+ */
+export function anonymousBudget(repos: number): number {
+	return Math.max(CALLS_PER_REPO, ANONYMOUS_LIMIT - syncCost(repos))
+}
+
+/** The old flat share, kept for the tests that assert the arithmetic directly. */
 export const SITE_BUDGET = 54
 
 /** Never refresh more often than this, however few repos there are. */
@@ -85,7 +109,7 @@ export interface RefreshPolicy {
  * TTL left where it was bought nothing a visitor could see.
  */
 export function refreshPolicy(repos: number, authenticated: boolean): RefreshPolicy {
-	const budget = authenticated ? AUTHENTICATED_BUDGET : SITE_BUDGET
+	const budget = authenticated ? AUTHENTICATED_BUDGET : anonymousBudget(repos)
 	const ttl = cacheTtl(repos, budget, authenticated ? MIN_TTL_AUTHENTICATED : MIN_TTL)
 	return { authenticated, ttl, callsPerHour: callsPerHour(repos, ttl), budget }
 }

@@ -44,6 +44,27 @@ export async function renderMarkdown(md: string, kind: 'readme' | 'post' = 'read
       // the ids left where GitHub minted them; a post is already written under
       // its title and keeps its levels. See shared/markdown/heading.ts.
       heading: kind === 'post' ? postHeading(slug) : readmeHeading(slug),
+      // Every link out of rendered markdown carries `noreferrer noopener`.
+      //
+      // `shared/html/rel.ts` has a finer rule for the page's own curated links
+      // — `noopener` alone for the organisation's repos on the clearnet, so
+      // GitHub's "Referring sites" can still credit the visit — and that rule
+      // cannot be applied here. It depends on the origin the page is being
+      // served from, and this HTML is rendered once and then cached, snapshotted
+      // and served over BOTH the clearnet site and the onion. A rel baked in at
+      // render time is wrong for one of them.
+      //
+      // So it takes the private form unconditionally. Over the onion the origin
+      // is the `.onion` address and `Referrer-Policy` sends the origin on every
+      // cross-origin request, so without this a README's links told gitlab,
+      // crates.io and everyone else that the reader came from the hidden
+      // service. The cost is the referral credit on an own-repo link inside
+      // README prose on the clearnet, which is the smaller thing to lose.
+      link({ href, title, tokens }) {
+        const text = this.parser.parseInline(tokens)
+        const t = title ? ` title="${title.replace(/"/g, '&quot;')}"` : ''
+        return `<a href="${href}"${t} rel="noreferrer noopener">${text}</a>`
+      },
     },
   })
 

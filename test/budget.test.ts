@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import {
 	ANONYMOUS_LIMIT, AUTHENTICATED_BUDGET, AUTHENTICATED_LIMIT, MIN_TTL, MIN_TTL_AUTHENTICATED, SITE_BUDGET,
+	anonymousBudget, syncCost,
 	cacheTtl, callsPerHour, refreshPolicy,
 } from '~~/shared/github/budget'
 import { projects } from '~~/data/projects'
@@ -42,8 +43,17 @@ describe('cacheTtl', () => {
 })
 
 describe('refreshPolicy', () => {
-	it('is the anonymous arithmetic without a token', () => {
-		expect(refreshPolicy(7, false)).toEqual({ authenticated: false, ttl: 30 * 60, callsPerHour: 42, budget: SITE_BUDGET })
+	it('is the anonymous arithmetic without a token, with one sync reserved', () => {
+		// 7 repos: a sync costs 21 of the 60, so the site's share is 39 — one
+		// refresh an hour, which the floor rounds to the hour.
+		expect(refreshPolicy(7, false)).toEqual({
+			authenticated: false, ttl: 60 * 60, callsPerHour: 21, budget: anonymousBudget(7),
+		})
+	})
+
+	it('leaves room for a whole sync run at the current project count', () => {
+		const { callsPerHour: cost } = refreshPolicy(projects.length, false)
+		expect(cost + syncCost(projects.length)).toBeLessThanOrEqual(ANONYMOUS_LIMIT)
 	})
 
 	it('refreshes every five minutes with a token, and says what that costs', () => {
