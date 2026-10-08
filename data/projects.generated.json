@@ -1,10 +1,10 @@
 {
-  "generatedAt": "2026-10-08T14:31:30.214Z",
+  "generatedAt": "2026-10-08T14:29:48.240Z",
   "org": "basic-automation",
   "repos": {
     "artiqwest": {
       "repo": "artiqwest",
-      "fetchedAt": "2026-10-08T14:31:21.697Z",
+      "fetchedAt": "2026-10-08T14:29:38.187Z",
       "description": "basic http request over tor using arti.",
       "htmlUrl": "https://github.com/basic-automation/artiqwest",
       "homepage": null,
@@ -62,7 +62,7 @@
     },
     "onyums": {
       "repo": "onyums",
-      "fetchedAt": "2026-10-08T14:31:23.382Z",
+      "fetchedAt": "2026-10-08T14:29:40.728Z",
       "description": "Onion-service server using axum.",
       "htmlUrl": "https://github.com/basic-automation/onyums",
       "homepage": null,
@@ -127,7 +127,7 @@
     },
     "nisaba": {
       "repo": "nisaba",
-      "fetchedAt": "2026-10-08T14:31:27.293Z",
+      "fetchedAt": "2026-10-08T14:29:45.164Z",
       "description": "Desktop app for managing one product catalog and syncing it across eBay, Squarespace, XMR Bazaar and Amazon. Rust + Tauri 2 + Nuxt 3, with sandboxed vendor plugins and optional P2P sync over Tor.",
       "htmlUrl": "https://github.com/basic-automation/nisaba",
       "homepage": null,
@@ -163,7 +163,7 @@
     },
     "Skidbladnir": {
       "repo": "Skidbladnir",
-      "fetchedAt": "2026-10-08T14:31:28.155Z",
+      "fetchedAt": "2026-10-08T14:29:46.356Z",
       "description": "Free, open-source desktop app (Windows, Linux, macOS) that converts images to WebP, AVIF, JPEG XL and HEIC, with every still-image option of the official encoders (cwebp, avifenc, cjxl, heif-enc) as labelled controls.",
       "htmlUrl": "https://github.com/basic-automation/Skidbladnir",
       "homepage": "https://basicautomation.io/projects/skidbladnir/about",
@@ -341,7 +341,7 @@
     },
     "enlil": {
       "repo": "enlil",
-      "fetchedAt": "2026-10-08T14:31:26.381Z",
+      "fetchedAt": "2026-10-08T14:29:44.164Z",
       "description": "Bare-Metal Mesh Hypervisor",
       "htmlUrl": "https://github.com/basic-automation/enlil",
       "homepage": null,
@@ -384,7 +384,7 @@
     },
     "weftdb": {
       "repo": "weftdb",
-      "fetchedAt": "2026-10-08T14:31:25.413Z",
+      "fetchedAt": "2026-10-08T14:29:43.084Z",
       "description": null,
       "htmlUrl": "https://github.com/basic-automation/weftdb",
       "homepage": null,
@@ -405,7 +405,7 @@
     },
     "Nanna": {
       "repo": "Nanna",
-      "fetchedAt": "2026-10-08T14:31:29.092Z",
+      "fetchedAt": "2026-10-08T14:29:47.277Z",
       "description": "A high-performance, always-on personal AI presence written in Rust — local-first, runs on your own machine with a small open model on a single consumer GPU",
       "htmlUrl": "https://github.com/basic-automation/Nanna",
       "homepage": null,
@@ -502,7 +502,7 @@
     },
     "splimes": {
       "repo": "splimes",
-      "fetchedAt": "2026-10-08T14:31:24.474Z",
+      "fetchedAt": "2026-10-08T14:29:42.044Z",
       "description": "Spline interpolation over irregularly sampled time series, on SIMD/parallel CPU or GPU (wgpu).",
       "htmlUrl": "https://github.com/basic-automation/splimes",
       "homepage": "https://docs.rs/splimes",
