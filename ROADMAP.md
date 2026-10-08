@@ -407,6 +407,16 @@ record. There is no run log.
       one line each, the 404 page still rendered server-side and after an in-app
       navigation (checked in a browser through the router).
       `test/page-errors.test.ts` fails any page with `fatal: true`.
+- [x] CI's actions off the Node 20 runtime, which GitHub now forces onto Node
+      24 with a deprecation annotation on every run (seen on #17). Each moved
+      to its first Node 24 major: `checkout` v5, `setup-node` v5,
+      `build-push-action` v7, `setup-buildx-action` v4, `login-action` v4,
+      `metadata-action` v6. Their breaking changes are the runtime itself,
+      deprecated inputs this repo never set, and setup-node's automatic cache,
+      which needs a `packageManager` field this repo does not have.
+      <https://github.blog/changelog/2025-09-19-deprecation-of-node-20-on-github-actions-runners/>
+      <https://github.com/actions/setup-node/releases/tag/v5.0.0>
+      <https://github.com/docker/build-push-action/releases/tag/v7.0.0>
 
 ## Phase 4 — Reach
 
