@@ -372,21 +372,27 @@ record. There is no run log.
 - [ ] Move the type checker to TypeScript 7 once 7.1 ships its API and vue-tsc
       adopts it — the 6.0 API is a bridge, not a destination.
       <https://devblogs.microsoft.com/typescript/announcing-typescript-7-0/>
-- [ ] Move to Nuxt 4.6 once it has had a few days, or a 4.6.1, in the wild.
-      Published 2026-10-05 22:11 UTC: 420 commits and a CLI major, and its
-      security section matters here — the internal error route reachable from
-      outside, unhandled error data handed to the error page, error-render
-      recursion tracked by a client-controllable header. Trialled the same
-      night in a scratch worktree (`npm install nuxt@^4.6.0`, `npm dedupe`): typecheck,
-      226 tests, build, `audit:runtime`, `check`, `a11y` and `a11y:browser`
-      all clean; 23 routes, error-route probes included, answer as on 4.5.2;
-      pages byte-identical in size; still one JSON log line per request.
-      The only visible-to-a-machine change: the CSS minifier rounds one line
-      height to 16 px where it was 15.98, so the home page drifts by ≤0.05 px
-      — no difference to the eye. Not landed because the run ends in an
-      unattended deploy of a release an hour old. Needs Node `^24.15.0`; the
-      build image has 24.21.
+- [x] Nuxt 4.6, landed 2026-10-08 after two and a half days in the wild.
+      Its security section is why it matters here: the internal error route
+      reachable from outside, unhandled error data handed to the error page,
+      error-render recursion tracked by a client-controllable header. On the
+      upgraded tree (`npm install nuxt@^4.6.0`, `npm dedupe`): typecheck, 236
+      tests, build, `audit:runtime`, `check`, `a11y` and `a11y:browser` clean;
+      all 42 routes `verify` exercises answer as on 4.5.2, and every page body
+      is the same size. `/__nuxt_error` probes answer 404 on both. No 4.6.1
+      yet; the open 4.6.0 regressions (a `config.cjs` missing from the
+      tarball for `require`, page-transition and scroll-reset edge cases,
+      `nuxt/server` typing) touch nothing this site uses. Needs Node
+      `^24.15.0`; the build image has 24.21.
       <https://github.com/nuxt/nuxt/releases/tag/v4.6.0>
+      <https://github.com/nuxt/nuxt/issues/36514>
+- [ ] vue-router 5.4.0 (a direct dependency, published 2026-10-07), once it
+      has soaked. It changes client navigation defaults this site relies on:
+      the router now restores hashes and the top of the page by default, and
+      history invalidates obsolete scroll positions. Land it with a browser
+      check of in-page README anchors and back/forward between project tabs,
+      not just the server gates, because none of that runs on the server.
+      <https://github.com/vuejs/router/releases/tag/v5.4.0>
 - [x] Silenced Nitro's own `[request error]` stack-trace block on a 404, without
       replacing the error handler. Nitro logs it when the error is `fatal`, and
       `fatal` is only load-bearing on the client, where it is what makes a 404
@@ -401,6 +407,16 @@ record. There is no run log.
       one line each, the 404 page still rendered server-side and after an in-app
       navigation (checked in a browser through the router).
       `test/page-errors.test.ts` fails any page with `fatal: true`.
+- [x] CI's actions off the Node 20 runtime, which GitHub now forces onto Node
+      24 with a deprecation annotation on every run (seen on #17). Each moved
+      to its first Node 24 major: `checkout` v5, `setup-node` v5,
+      `build-push-action` v7, `setup-buildx-action` v4, `login-action` v4,
+      `metadata-action` v6. Their breaking changes are the runtime itself,
+      deprecated inputs this repo never set, and setup-node's automatic cache,
+      which needs a `packageManager` field this repo does not have.
+      <https://github.blog/changelog/2025-09-19-deprecation-of-node-20-on-github-actions-runners/>
+      <https://github.com/actions/setup-node/releases/tag/v5.0.0>
+      <https://github.com/docker/build-push-action/releases/tag/v7.0.0>
 
 ## Phase 4 — Reach
 
@@ -818,6 +834,14 @@ record. There is no run log.
       reachable here — `devtools: { enabled: false }`, and nothing of it
       ships — and Nuxt 4.6 still resolves the same versions. Moves when
       devtools does. <https://github.com/advisories/GHSA-858h-whjf-mvg5>
+      Devtools' `launch-editor` also brought `shell-quote` 1.10.0 (critical,
+      command injection in `quote()`); 1.12.0 is in range and the lockfile
+      takes it since 2026-10-08. <https://github.com/advisories/GHSA-pqg4-j6r4-53mv>
+      Still open, with no patched release at all: `braces` 3.0.3 (build-time,
+      via `micromatch`) and `node-forge` 1.4.0 (via `listhen`, the dev
+      server's TLS) — neither reaches the image; `audit:runtime` is clean.
+      <https://github.com/advisories/GHSA-vfj7-8cjw-p6xm>
+      <https://github.com/advisories/GHSA-86w9-cpqp-85rv>
 - [x] …and the image's other binary. The onion gateway's 594 crates were
       audited by nothing. CI's onion job now runs `cargo audit --deny yanked
       --deny unsound`. First run, 2026-10-02: `yoke-derive` 0.8.3 was yanked,
