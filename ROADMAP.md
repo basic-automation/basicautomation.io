@@ -817,6 +817,14 @@ record. There is no run log.
       reachable here — `devtools: { enabled: false }`, and nothing of it
       ships — and Nuxt 4.6 still resolves the same versions. Moves when
       devtools does. <https://github.com/advisories/GHSA-858h-whjf-mvg5>
+      Devtools' `launch-editor` also brought `shell-quote` 1.10.0 (critical,
+      command injection in `quote()`); 1.12.0 is in range and the lockfile
+      takes it since 2026-10-08. <https://github.com/advisories/GHSA-pqg4-j6r4-53mv>
+      Still open, with no patched release at all: `braces` 3.0.3 (build-time,
+      via `micromatch`) and `node-forge` 1.4.0 (via `listhen`, the dev
+      server's TLS) — neither reaches the image; `audit:runtime` is clean.
+      <https://github.com/advisories/GHSA-vfj7-8cjw-p6xm>
+      <https://github.com/advisories/GHSA-86w9-cpqp-85rv>
 - [x] …and the image's other binary. The onion gateway's 594 crates were
       audited by nothing. CI's onion job now runs `cargo audit --deny yanked
       --deny unsound`. First run, 2026-10-02: `yoke-derive` 0.8.3 was yanked,
