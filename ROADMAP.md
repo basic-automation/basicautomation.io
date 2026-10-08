@@ -190,6 +190,13 @@ record. There is no run log.
       and `test/log-lines.test.ts` fails a `console` call in `server/` or
       `shared/` that does not write JSON. Nitro's own "Listening on" line is
       the one left, and is not this app's to change.
+- [x] …and a failed request says who asked. The error-hook line — every 404
+      and 500 — stopped at `via`, though its comment promised the success
+      line's shape, so the 627 404s in fifteen hours of live log (nearly all
+      scanners) were the only lines with no `ip`, `ua` or `ref`. Both lines
+      now take those fields from one `requester()`
+      (`server/plugins/request-log.ts`); still one line per request, HEAD
+      still logged as HEAD, onion requests still `ip: null`.
 - [x] `/api/posts?project=<unknown>` is a 404, like `/api/projects/<unknown>`,
       not an empty list.
 - [x] Answer HEAD wherever GET is answered. Nitro routes by filename suffix, so
@@ -365,6 +372,21 @@ record. There is no run log.
 - [ ] Move the type checker to TypeScript 7 once 7.1 ships its API and vue-tsc
       adopts it — the 6.0 API is a bridge, not a destination.
       <https://devblogs.microsoft.com/typescript/announcing-typescript-7-0/>
+- [ ] Move to Nuxt 4.6 once it has had a few days, or a 4.6.1, in the wild.
+      Published 2026-10-05 22:11 UTC: 420 commits and a CLI major, and its
+      security section matters here — the internal error route reachable from
+      outside, unhandled error data handed to the error page, error-render
+      recursion tracked by a client-controllable header. Trialled the same
+      night in a scratch worktree (`npm install nuxt@^4.6.0`, `npm dedupe`): typecheck,
+      226 tests, build, `audit:runtime`, `check`, `a11y` and `a11y:browser`
+      all clean; 23 routes, error-route probes included, answer as on 4.5.2;
+      pages byte-identical in size; still one JSON log line per request.
+      The only visible-to-a-machine change: the CSS minifier rounds one line
+      height to 16 px where it was 15.98, so the home page drifts by ≤0.05 px
+      — no difference to the eye. Not landed because the run ends in an
+      unattended deploy of a release an hour old. Needs Node `^24.15.0`; the
+      build image has 24.21.
+      <https://github.com/nuxt/nuxt/releases/tag/v4.6.0>
 - [x] Silenced Nitro's own `[request error]` stack-trace block on a 404, without
       replacing the error handler. Nitro logs it when the error is `fatal`, and
       `fatal` is only load-bearing on the client, where it is what makes a 404
@@ -489,6 +511,16 @@ record. There is no run log.
       Proved in a browser: an injected `<style>` rule is refused, an injected
       `style=` attribute and every Shiki colour still apply.
       <https://www.w3.org/TR/CSP3/#directive-style-src-elem>
+- [x] No `x-powered-by`, and a `Cross-Origin-Opener-Policy`. Nuxt's renderer,
+      payload and island handlers set `x-powered-by: Nuxt` on every page
+      themselves, after route rules apply, so it was on every response
+      (live, 2026-10-05); `server/plugins/powered-by.ts` removes it in
+      Nitro's `beforeResponse`. `Cross-Origin-Opener-Policy: same-origin`
+      joins the `/**` headers: no page here keeps a handle on a window it
+      opens, or is opened by one that should keep a handle on it. `npm run
+      check` fails a response carrying `x-powered-by` and a page without the
+      policy; against the previous build it failed on all 94 pages for each.
+      <https://developer.mozilla.org/en-US/docs/Web/HTTP/Reference/Headers/Cross-Origin-Opener-Policy>
 - [x] Reserve space for the images the pages render. Every `<img>` this repo
       controls now carries its intrinsic `width`/`height`, read out of the file
       itself by `npm run sizes` into `data/asset-sizes.generated.json`, with a
@@ -672,6 +704,26 @@ record. There is no run log.
       starts the server on `test/fixtures/content/` (three test posts, one a
       draft), so `check`, `a11y` and `a11y:browser` see post pages at all, and
       `check` asserts no draft is listed.
+- [x] A copy button says it copied. `[copy]` turns `[copied]` on screen, but the
+      button's name is pinned by its `aria-label`, so a screen reader heard
+      nothing after pressing it (WCAG 4.1.3, status messages). `CodeLine` and
+      `CodeBlock` each render an empty `role="status"` region, server-side so
+      it exists before it changes, which reads "Copied to clipboard" for the
+      same 1.6 s. Checked in headless Chromium over CDP with clipboard access
+      granted: the polite region's text in the accessibility tree, the
+      clipboard's contents, and the reset; `CodeBlock`'s region sits outside
+      its `figcaption`, so it never becomes part of the figure's name.
+      <https://www.w3.org/WAI/WCAG22/Understanding/status-messages.html>
+- [x] …and says when it could not. A refused clipboard write (denied
+      permission, insecure context, a frame that forbids it) did nothing at
+      all — the button stayed `[copy]` and whoever pressed it pasted what
+      their clipboard already held. Found when the built-in browser's own
+      clipboard refused it. `useCopy` (`app/composables/useCopy.ts`, now the
+      one copy of the logic both components carried) selects the text
+      instead, shows `[selected]` and announces "Could not copy. The text is
+      selected; copy it with your keyboard." Checked over CDP with the
+      permission denied: the selection is exactly the command, without the
+      `$` sigil, and both buttons reset after 4 s.
 - [ ] Run axe's `color-contrast` in the browser pass too, once the contrast item
       below is decided. Left out deliberately: it would be red today on the
       shortfalls already waiting on that decision.
@@ -748,8 +800,24 @@ record. There is no run log.
       chunks, which their sourcemaps name. The registry filters by version
       itself; the script re-checks each range as a cross-check on what comes
       back. Proved by planting `braces@3.0.3` and
-      `marked@4.0.9`: it fails on exactly the three advisories that apply. The
-      client bundle has no sourcemaps, so it is not covered.
+      `marked@4.0.9`: it fails on exactly the three advisories that apply.
+- [x] …and the client bundle too. It has no sourcemaps (they would be served),
+      so there was nothing to read its packages from. A client-only Vite plugin
+      (`scripts/lib/client-packages.ts`) records every package with code
+      rendered into a client chunk, with the version from its own
+      `package.json`, and writes `.output/server/client-packages.json` once
+      Nitro has compiled — inside the image, never under `public/` (a 404 from
+      the server). `audit:runtime` asks the registry about those as well: 32
+      today, 14 of them never seen by the server audit (`reka-ui`, `@nuxt/ui`,
+      `@nuxt/icon`, `@nuxtjs/color-mode`…). It fails on a planted
+      `marked@4.0.9`, on a missing inventory and on an empty one. Also learned:
+      `@tiptap/markdown`'s `marked@17` never reaches a browser.
+- [ ] Upstream: `@nuxt/devtools` 3.4.2 pins `simple-git ^3.36.0`, and
+      `npm audit` reports four advisories against it (two critical, command
+      execution through git options), patched only in `simple-git` 4. Not
+      reachable here — `devtools: { enabled: false }`, and nothing of it
+      ships — and Nuxt 4.6 still resolves the same versions. Moves when
+      devtools does. <https://github.com/advisories/GHSA-858h-whjf-mvg5>
 - [x] …and the image's other binary. The onion gateway's 594 crates were
       audited by nothing. CI's onion job now runs `cargo audit --deny yanked
       --deny unsound`. First run, 2026-10-02: `yoke-derive` 0.8.3 was yanked,
@@ -764,6 +832,20 @@ record. There is no run log.
       <https://github.com/advisories/GHSA-vfj7-8cjw-p6xm>
       <https://github.com/advisories/GHSA-86w9-cpqp-85rv>
 
+- [x] A README cannot stall the server. READMEs are fetched and rendered at
+      request time, on the server's one thread, so a pattern that backtracks
+      over one stalls every page the process serves. Two sources, both closed
+      2026-10-05: marked 18.0.14's link-destination rule, cubic on a run of
+      unicode whitespace (4 KB of U+00A0 after `[](`: 10.3 s here; 0.1 ms on
+      18.1.0), and eight of this site's own patterns in
+      `shared/markdown/readme.ts` and `slug.ts`, quadratic on input that opens
+      and never closes (100 KB of `[`: 5.2 s; a 100 KB heading of `<a`: 2.5 s;
+      about a millisecond each now). The eighth is the `<a href>` rule that
+      arrived with splimes the same night, written in the old shape (100 KB of
+      `<a `: 711 ms) and made linear in the merge. All 8 READMEs and the 76
+      live posts render byte-identical before and after. `test/markdown-backtracking.test.ts`
+      times each input; every case fails on the old code.
+      <https://github.com/markedjs/marked/pull/4106>
 - [x] A real 404 check: every internal link, every render, on every route — `npm run check`
 - [x] …and the two XML documents nobody looks at, checked the same way. A feed
       breaks silently for every subscriber at once, and both documents carry

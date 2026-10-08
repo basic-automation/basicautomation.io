@@ -80,6 +80,8 @@ async function fetchOnce(url) {
         body,
         csp: res.headers.get('content-security-policy'),
         cacheControl: res.headers.get('cache-control'),
+        poweredBy: res.headers.get('x-powered-by'),
+        opener: res.headers.get('cross-origin-opener-policy'),
       }
     }
     catch (err) {
@@ -548,6 +550,11 @@ while (queue.length) {
   // — must not reach it.
   if (cachesFor(res.cacheControl)) fail(path, `a rendered page is cacheable (${res.cacheControl})`)
 
+  // Nuxt names itself on every page it renders unless
+  // `server/plugins/powered-by.ts` takes the header off again.
+  if (res.poweredBy) fail(path, `answers with x-powered-by: ${res.poweredBy}`)
+  if (res.opener !== 'same-origin') fail(path, `Cross-Origin-Opener-Policy is ${res.opener ?? 'missing'}, not same-origin`)
+
   // A social card lives only in a `<meta>` tag, so nothing above would ever
   // fetch it — and an `og:image` pointing at a 404 fails silently, in someone
   // else's preview, where nobody sees it. These carry the public origin, so
@@ -633,6 +640,9 @@ while (queue.length) {
       }
       else if (STATIC_FILE.test(url.pathname) && !asset.cacheControl) {
         fail(path, `${url.pathname} is served with no Cache-Control`)
+      }
+      else if (asset.poweredBy) {
+        fail(path, `${url.pathname} answers with x-powered-by: ${asset.poweredBy}`)
       }
     }
   }

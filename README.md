@@ -144,9 +144,10 @@ it resets, read from the headers of its last response — and when the onion
 service was last reached over Tor, from the gateway's own ten-minute self-fetch.
 Thirty minutes without one turns `/healthz`'s `status` to `degraded` (still a
 200: the clearnet site is serving). The server
-also logs one JSON object per request on stdout — `docker logs
-basicautomation-site | jq 'select(.status >= 400)'`, or `select(.via == "onion")`
-for the visits that came over Tor — and warns once an hour for
+also logs one JSON object per request on stdout, failed ones included, each
+with the client's `ip`, `ua` and `ref` — `docker logs basicautomation-site | jq
+'select(.status >= 400)'`, or `select(.via == "onion")` for the visits that
+came over Tor — and warns once an hour for
 as long as it has been answering from the snapshot, and once when the GitHub
 quota runs out (`event: "upstream.rate_limited"`). Every other line the app
 writes is JSON too, with an `event` to select on — a GitHub call that failed and
@@ -200,7 +201,7 @@ npm run cuts         # cut card art down to its srcset widths (needs ImageMagick
 npm run bases        # runtime Alpine still matches the node base (needs docker)
 npm run contrast     # WCAG contrast for every palette colour, against the ground
 npm run sizes        # re-read every image's intrinsic size
-npm run audit:runtime # advisories for what .output/server ships (after a build)
+npm run audit:runtime # advisories for what the build ships, server and client
 ```
 
 `npm test` is Vitest over the pure functions in `shared/` — README rewriting,
@@ -230,7 +231,8 @@ npm run font                       # re-cut the preloaded core of Fira Code
 actually served. The rules that need a layout engine are named and skipped
 rather than silently failing — jsdom has none — so this is "every axe rule that
 can be judged from markup". `npm run a11y:browser` runs those skipped rules —
-touch-target size, keyboard access to scrollable regions, the viewport meta —
+touch-target size, keyboard access to scrollable regions, the viewport meta,
+whether each control's visible label is part of its accessible name —
 in headless Chromium at a desktop and a phone width (set `CHROME_PATH` if
 Chromium is not on `PATH`), reading each page to the bottom so lazy content
 loads, and fails on any console error, uncaught exception or CSP refusal the
@@ -257,7 +259,9 @@ READMEs set — that every page preloads, and the full 113 KB font behind it by
 `npm run audit:runtime` (in CI, after the build) is `npm audit` narrowed to the
 code a visitor's request can reach: the packages Nitro traced into
 `.output/server/node_modules`, plus the ones it inlined into the server chunks,
-read from their sourcemaps. It fails on a high or critical advisory that applies
+read from their sourcemaps, plus every package in the client bundle, which the
+build records as it writes the chunks (`.output/server/client-packages.json`;
+the client has no sourcemaps to read). It fails on a high or critical advisory that applies
 to one of them. Plain `npm audit` reports the whole lockfile, so it also counts
 the build's file globbing and the dev server's certificate helper, and it can
 stay red on advisories nobody can patch. The onion gateway, the image's other

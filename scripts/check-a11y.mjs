@@ -58,6 +58,7 @@ const NEEDS_LAYOUT = [
 	'scrollable-region-focusable',
 	'meta-viewport', // judged against zoom behaviour a browser applies
 	'meta-viewport-large',
+	'label-content-name-mismatch', // needs to know what text is visible
 ]
 
 const html = new Map()

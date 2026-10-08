@@ -53,6 +53,22 @@ function via(event: InstanceType<typeof H3Event>): 'onion' | 'web' {
     : 'web'
 }
 
+/**
+ * Who asked, and from where — on every line, the failed ones included. The
+ * error line used to stop at `via`, so the 404s, nearly all of them scanners,
+ * were the one kind of line with no address and no user agent.
+ */
+function requester(event: InstanceType<typeof H3Event>) {
+  return {
+    // Caddy terminates TLS and proxies in, so the real client is in the
+    // forwarded header; the socket address is Caddy's every time.
+    ip: getRequestHeader(event, 'x-forwarded-for')?.split(',')[0]?.trim() ?? null,
+    via: via(event),
+    ua: getRequestHeader(event, 'user-agent') ?? null,
+    ref: getRequestHeader(event, 'referer') ?? null,
+  }
+}
+
 export default defineNitroPlugin((nitro) => {
   nitro.hooks.hook('request', (event) => {
     event.context.startedAt = performance.now()
@@ -73,19 +89,14 @@ export default defineNitroPlugin((nitro) => {
       path: event.path,
       status: getResponseStatus(event),
       ms: started === undefined ? null : Math.round(performance.now() - started),
-      // Caddy terminates TLS and proxies in, so the real client is in the
-      // forwarded header; the socket address is Caddy's every time.
-      ip: getRequestHeader(event, 'x-forwarded-for')?.split(',')[0]?.trim() ?? null,
-      via: via(event),
-      ua: getRequestHeader(event, 'user-agent') ?? null,
-      ref: getRequestHeader(event, 'referer') ?? null,
+      ...requester(event),
     }))
   })
 
   // `afterResponse` does not fire for a request that threw, so without this a
   // 404 — the single most useful thing to grep a web log for — would leave no
-  // line carrying a status. Same shape as the line above, so one jq filter
-  // reads both.
+  // line carrying a status. Same fields as the line above, plus `level` and
+  // `message`, so one jq filter reads both.
   nitro.hooks.hook('error', (error, { event }) => {
     if (event && isInternal(event)) return
     const started = event?.context.startedAt as number | undefined
@@ -98,7 +109,7 @@ export default defineNitroPlugin((nitro) => {
       path: event?.path ?? null,
       status,
       ms: started === undefined ? null : Math.round(performance.now() - started),
-      via: event ? via(event) : null,
+      ...(event ? requester(event) : { ip: null, via: null, ua: null, ref: null }),
       message: error.message,
     }))
   })

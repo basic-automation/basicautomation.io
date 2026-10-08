@@ -6,23 +6,8 @@ const { code, label, html } = defineProps<{
   html?: string | null
 }>()
 
-const copied = ref(false)
-let timer: ReturnType<typeof setTimeout> | undefined
-
-async function copy() {
-  try {
-    await navigator.clipboard.writeText(code)
-    copied.value = true
-    clearTimeout(timer)
-    timer = setTimeout(() => (copied.value = false), 1600)
-  }
-  catch {
-    // Clipboard unavailable (insecure context, denied permission) — the code is
-    // on screen to select by hand.
-  }
-}
-
-onBeforeUnmount(() => clearTimeout(timer))
+const { copy, label: buttonText, announcement } = useCopy()
+const target = useTemplateRef<HTMLElement>('target')
 </script>
 
 <template>
@@ -33,15 +18,19 @@ onBeforeUnmount(() => clearTimeout(timer))
         :ui="{ base: 'bg-transparent! p-0! ring-0! font-mono text-xs cursor-pointer hover:bg-transparent!' }"
         class="ml-auto shrink-0 text-pn-muted hover:text-pn-fg-bright"
         :aria-label="`Copy ${label}`"
-        @click="copy"
+        @click="copy(code, target)"
       >
-        {{ copied ? '[copied]' : '[copy]' }}
+        {{ buttonText }}
       </UButton>
     </figcaption>
+    <!-- The button's name is pinned by its aria-label, so its text changes
+         nothing a screen reader reads out. This says it, outside the
+         figcaption so it never becomes part of the figure's name. -->
+    <span v-if="label" role="status" class="sr-only">{{ announcement }}</span>
 
     <!-- Highlighted on the server by Shiki, in the site's own palette. -->
     <!-- eslint-disable-next-line vue/no-v-html -->
-    <div v-if="html" class="code" v-html="html" />
-    <pre v-else class="code"><code>{{ code }}</code></pre>
+    <div v-if="html" ref="target" class="code" v-html="html" />
+    <pre v-else ref="target" class="code"><code>{{ code }}</code></pre>
   </figure>
 </template>
