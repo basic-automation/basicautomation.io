@@ -372,21 +372,20 @@ record. There is no run log.
 - [ ] Move the type checker to TypeScript 7 once 7.1 ships its API and vue-tsc
       adopts it — the 6.0 API is a bridge, not a destination.
       <https://devblogs.microsoft.com/typescript/announcing-typescript-7-0/>
-- [ ] Move to Nuxt 4.6 once it has had a few days, or a 4.6.1, in the wild.
-      Published 2026-10-05 22:11 UTC: 420 commits and a CLI major, and its
-      security section matters here — the internal error route reachable from
-      outside, unhandled error data handed to the error page, error-render
-      recursion tracked by a client-controllable header. Trialled the same
-      night in a scratch worktree (`npm install nuxt@^4.6.0`, `npm dedupe`): typecheck,
-      226 tests, build, `audit:runtime`, `check`, `a11y` and `a11y:browser`
-      all clean; 23 routes, error-route probes included, answer as on 4.5.2;
-      pages byte-identical in size; still one JSON log line per request.
-      The only visible-to-a-machine change: the CSS minifier rounds one line
-      height to 16 px where it was 15.98, so the home page drifts by ≤0.05 px
-      — no difference to the eye. Not landed because the run ends in an
-      unattended deploy of a release an hour old. Needs Node `^24.15.0`; the
-      build image has 24.21.
+- [x] Nuxt 4.6, landed 2026-10-08 after two and a half days in the wild.
+      Its security section is why it matters here: the internal error route
+      reachable from outside, unhandled error data handed to the error page,
+      error-render recursion tracked by a client-controllable header. On the
+      upgraded tree (`npm install nuxt@^4.6.0`, `npm dedupe`): typecheck, 236
+      tests, build, `audit:runtime`, `check`, `a11y` and `a11y:browser` clean;
+      all 42 routes `verify` exercises answer as on 4.5.2, and every page body
+      is the same size. `/__nuxt_error` probes answer 404 on both. No 4.6.1
+      yet; the open 4.6.0 regressions (a `config.cjs` missing from the
+      tarball for `require`, page-transition and scroll-reset edge cases,
+      `nuxt/server` typing) touch nothing this site uses. Needs Node
+      `^24.15.0`; the build image has 24.21.
       <https://github.com/nuxt/nuxt/releases/tag/v4.6.0>
+      <https://github.com/nuxt/nuxt/issues/36514>
 - [x] Silenced Nitro's own `[request error]` stack-trace block on a 404, without
       replacing the error handler. Nitro logs it when the error is `fatal`, and
       `fatal` is only load-bearing on the client, where it is what makes a 404
