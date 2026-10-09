@@ -313,8 +313,20 @@ record. There is no run log.
       container, and a restart takes the clearnet site down with it. Options,
       each needing evidence first: have the gateway rebuild its Tor client
       after a sustained `unreachable`, or let the site restart the gateway
-      child in place instead of exiting with it. One restart did not cure it
-      and the next did, so whether a fresh client is the cure is not yet shown.
+      child in place instead of exiting with it. What is known so far: arti
+      keeps guard reachability in memory only (`reachable`, `retry_at` and
+      `retry_schedule` are `#[serde(skip)]` in tor-guardmgr 0.46's
+      `guard.rs`), so the 19:38 restart began with every guard untried and
+      still failed for 13 minutes. The relays were really unreachable from
+      the container until at least ~19:45, while its HTTPS egress to GitHub
+      worked throughout. A restart only cut short arti's backoff, which the
+      guard spec caps at 6 hours for primary guards
+      (<https://spec.torproject.org/guard-spec/appendices.html>), and its
+      all-guards-down recovery waits on a circuit succeeding
+      (<https://spec.torproject.org/guard-spec/algorithm.html>).
+      `GuardMgr::mark_all_guards_retriable` exists but `TorClient` does not
+      expose it, so the in-process fix is a fresh client after sustained
+      failure. The network cause behind it is still unexplained.
 - [x] Trim the image: the runtime layer is no longer a full `node:24-alpine`
 - [x] The Dockerfile's `alpine:3.24` runtime must stay in step with whatever base
       `node:24-alpine` uses, because the node binary is copied out of that image
