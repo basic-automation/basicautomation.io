@@ -296,6 +296,25 @@ record. There is no run log.
       Tor; 30 minutes without one (three missed self-fetches) makes `status`
       `degraded`, and `/status` prints it ("reached over tor 4 minutes ago, in
       11.2 s"). Thresholds are pure and tested (`shared/onion/state.ts`).
+- [x] …and say it in the log, not only to whoever asks. On 2026-10-08 the
+      gateway sat from 15:20 to 19:51 UTC with arti rejecting all 60 guards as
+      down, its descriptor never published and not one self-fetch landed;
+      `/healthz` said `unreachable` the whole time, and the log, which is what
+      anyone reads afterwards, said nothing. Two `docker restart`s later (the
+      first did not take) it published in six seconds. `watchOnion`
+      (`shared/onion/state.ts`, five cases in `test/onion-state.test.ts`) now
+      writes `onion.unreachable` on the way in and hourly while it lasts, and
+      `onion.recovered` when a fetch over Tor lands — driven by the
+      healthcheck's 30-second polling, the shape of `upstream.stale`. Proved on
+      the built server with a stand-in gateway and a 40-minute-old snapshot:
+      five polls, one line; a fresh snapshot, one `onion.recovered`.
+- [ ] Recover the gateway from a stuck guard set without a container restart.
+      The 2026-10-08 outage above ended only when someone restarted the
+      container, and a restart takes the clearnet site down with it. Options,
+      each needing evidence first: have the gateway rebuild its Tor client
+      after a sustained `unreachable`, or let the site restart the gateway
+      child in place instead of exiting with it. One restart did not cure it
+      and the next did, so whether a fresh client is the cure is not yet shown.
 - [x] Trim the image: the runtime layer is no longer a full `node:24-alpine`
 - [x] The Dockerfile's `alpine:3.24` runtime must stay in step with whatever base
       `node:24-alpine` uses, because the node binary is copied out of that image
