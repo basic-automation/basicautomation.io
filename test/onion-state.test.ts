@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { QUIET, UNREACHABLE_AFTER_S, onionState, watchOnion } from '~~/shared/onion/state'
+import { QUIET, RESTART_AFTER_S, UNREACHABLE_AFTER_S, onionState, shouldRestartGateway, watchOnion } from '~~/shared/onion/state'
 
 const MIN = 60_000
 const started = Date.UTC(2026, 8, 27, 12)
@@ -74,5 +74,32 @@ describe('watchOnion', () => {
 	it('closes the outage quietly when the gateway is switched off', () => {
 		const down = watchOnion(QUIET, 'unreachable', at(31)).watch
 		expect(watchOnion(down, 'off', at(40))).toEqual({ watch: QUIET, alert: null })
+	})
+})
+
+describe('shouldRestartGateway', () => {
+	const hour = RESTART_AFTER_S * 1000
+
+	it('leaves a reachable, starting or launched gateway alone, however old', () => {
+		for (const state of ['reachable', 'starting', 'launched'] as const) {
+			expect(shouldRestartGateway({ state, gatewayStartedAt: started, now: started + 10 * hour })).toBe(false)
+		}
+	})
+
+	it('restarts one that has been up an hour and is unreachable', () => {
+		expect(shouldRestartGateway({ state: 'unreachable', gatewayStartedAt: started, now: started + hour - 1 })).toBe(false)
+		expect(shouldRestartGateway({ state: 'unreachable', gatewayStartedAt: started, now: started + hour })).toBe(true)
+	})
+
+	it('waits another hour after a restart, rather than looping', () => {
+		// The old snapshot on disk keeps the state `unreachable` straight after a
+		// restart; the gateway's own fresh start time is what holds it off.
+		const restarted = started + hour
+		expect(shouldRestartGateway({ state: 'unreachable', gatewayStartedAt: restarted, now: restarted + 1000 })).toBe(false)
+		expect(shouldRestartGateway({ state: 'unreachable', gatewayStartedAt: restarted, now: restarted + hour })).toBe(true)
+	})
+
+	it('never restarts what was never started', () => {
+		expect(shouldRestartGateway({ state: 'off', gatewayStartedAt: null, now: started })).toBe(false)
 	})
 })

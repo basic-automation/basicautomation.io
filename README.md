@@ -313,7 +313,9 @@ and the addon headers exist only to build something.
 `onion/` is a small Rust crate that serves the same site as a Tor onion service
 through the organization's own `onyums`. It is built into this image by a second
 stage and started by the site itself (`server/plugins/onion-gateway.ts`, when
-`ONION_GATEWAY` names the binary); if it exits, the site exits with it. It proxies to the site
+`ONION_GATEWAY` names the binary); if it exits, the site exits with it. If it
+keeps running but has not been reached over Tor for an hour, the site restarts
+it in place (`onion.restarting`), at most hourly, and the clearnet site stays up. It proxies to the site
 over loopback and writes its `.onion` address to `/run/onion/address`, which the
 site reads back through `/api/onion` to advertise the address on the onyums
 project page. The identity key lives in the named volume `basicautomation-onion`

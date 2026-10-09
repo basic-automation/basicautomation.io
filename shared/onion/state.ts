@@ -72,3 +72,28 @@ export function watchOnion(watch: OnionWatch, state: OnionState, now: number): {
   if (state === 'off') return { watch: QUIET, alert: null }
   return { watch, alert: null }
 }
+
+/**
+ * How long the service may stay unreachable before the site restarts the
+ * gateway in place — counted from the gateway's own start, so a restart that
+ * does not help is tried again an hour later rather than in a loop.
+ */
+export const RESTART_AFTER_S = 60 * 60
+
+/**
+ * Whether to restart a running gateway that has not been reached over Tor.
+ *
+ * Arti backs off from guards it could not reach, by decorrelated jitter capped
+ * at six hours for primary guards, and keeps that backoff in memory only. So
+ * after an outage of the network path to the relays, an old process can sit
+ * out its backoff long after the path is back, where a fresh one starts with
+ * every guard untried: on 2026-10-08 a restart published the descriptor in six
+ * seconds after four and a half hours down. The first restart then, while the
+ * path was still down, cured nothing, which is why this repeats hourly
+ * rather than once.
+ */
+export function shouldRestartGateway(input: { state: OnionState, gatewayStartedAt: number | null, now: number }): boolean {
+  const { state, gatewayStartedAt, now } = input
+  if (state !== 'unreachable' || gatewayStartedAt === null) return false
+  return now - gatewayStartedAt >= RESTART_AFTER_S * 1000
+}

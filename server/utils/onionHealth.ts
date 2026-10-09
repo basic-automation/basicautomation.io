@@ -13,7 +13,7 @@
  * service was last proven reachable from the Tor network.
  */
 import type { Health } from '~~/shared/types/health'
-import { QUIET, onionState, watchOnion, type OnionWatch } from '~~/shared/onion/state'
+import { QUIET, onionState, shouldRestartGateway, watchOnion, type OnionWatch } from '~~/shared/onion/state'
 import { logEvent } from '~~/shared/log/event'
 
 let gatewayStartedAt: number | null = null
@@ -22,6 +22,16 @@ let watch: OnionWatch = QUIET
 /** Called by the plugin that starts the gateway. Never called means `off`. */
 export function markGatewayStarted() {
   gatewayStartedAt = Date.now()
+}
+
+/**
+ * Asked once a minute by the plugin that runs the gateway. Goes through
+ * `onionHealth`, so the log lines above are written from this poll too, not
+ * only when something asks `/healthz`.
+ */
+export async function gatewayRestartDue(now = Date.now()): Promise<boolean> {
+  const { state } = await onionHealth(now)
+  return shouldRestartGateway({ state, gatewayStartedAt, now })
 }
 
 export async function onionHealth(now = Date.now()): Promise<Health['onion']> {
