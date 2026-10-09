@@ -296,6 +296,59 @@ record. There is no run log.
       Tor; 30 minutes without one (three missed self-fetches) makes `status`
       `degraded`, and `/status` prints it ("reached over tor 4 minutes ago, in
       11.2 s"). Thresholds are pure and tested (`shared/onion/state.ts`).
+- [x] …and say it in the log, not only to whoever asks. On 2026-10-08 the
+      gateway sat from 15:20 to 19:51 UTC with arti rejecting all 60 guards as
+      down, its descriptor never published and not one self-fetch landed;
+      `/healthz` said `unreachable` the whole time, and the log, which is what
+      anyone reads afterwards, said nothing. Two `docker restart`s later (the
+      first did not take) it published in six seconds. `watchOnion`
+      (`shared/onion/state.ts`, five cases in `test/onion-state.test.ts`) now
+      writes `onion.unreachable` on the way in and hourly while it lasts, and
+      `onion.recovered` when a fetch over Tor lands — driven by the
+      healthcheck's 30-second polling, the shape of `upstream.stale`. Proved on
+      the built server with a stand-in gateway and a 40-minute-old snapshot:
+      five polls, one line; a fresh snapshot, one `onion.recovered`.
+- [ ] Arti 0.47 under the gateway (Arti 2.7.0, 2026-10-01), whose
+      announcement says it fixes "low- to high-severity security issues"; the
+      gateway is the site's Tor-facing binary and is on 0.46. Blocked on
+      onyums: 0.5.0 depends on `arti-client = "0.46.0"`, which for a 0.x
+      crate admits nothing past 0.46, so it needs an onyums release first
+      (the org's own crate, another repo). No GitHub advisory names the fixed
+      issues yet; CI's `cargo audit` will report them if RustSec files them.
+      <https://blog.torproject.org/arti_2_7_0_released/>
+- [x] Recover the gateway without a container restart. The 2026-10-08 outage
+      ended only when someone ran `docker restart`, which took the clearnet
+      site down with it. Arti keeps guard reachability in memory only
+      (`reachable`, `retry_at` and `retry_schedule` are `#[serde(skip)]` in
+      tor-guardmgr 0.46's `guard.rs`), so the 19:38 restart began with every
+      guard untried and still failed for 13 minutes: the relays really were
+      unreachable from the container, while its HTTPS egress to GitHub worked.
+      What the 19:51 restart bought was an end to arti's backoff, which the
+      guard spec caps at 6 hours for primary guards
+      (<https://spec.torproject.org/guard-spec/appendices.html>); its
+      all-guards-down recovery waits on a circuit succeeding
+      (<https://spec.torproject.org/guard-spec/algorithm.html>), and
+      `GuardMgr::mark_all_guards_retriable` is not reachable through
+      `TorClient`. So `server/plugins/onion-gateway.ts` now restarts the
+      gateway child in place once it has been up an hour without being reached
+      over Tor (`shouldRestartGateway`, hourly at most, `onion.restarting` in
+      the log), and the site stays up. A gateway that exits on its own still
+      stops the container, as before. Proved on the built server with a
+      stand-in gateway: restarted at exactly 60 minutes, new gateway pid under
+      the same site pid, `/` answered 200 on all 126 polls across 63 minutes;
+      a stand-in that exits with 3 still stops the site with 3.
+- [x] …and a gateway that ignores SIGTERM cannot stall it. A restart waited on
+      the old gateway's exit with no limit, so one deaf to the signal would
+      have left the site with no gateway at all. `stop()` now kills it after
+      9 s (`onion.killed`), inside Nitro's 30 s shutdown timeout and
+      `docker stop`'s 10 s. Proved with a stand-in that traps SIGTERM: on the
+      in-place restart, killed 9 s after `onion.restarting` and replaced 3 ms
+      later, `/` 200 on all 126 polls; on site shutdown, killed after 9 s.
+      A gateway that honours the signal still stops in milliseconds.
+- [ ] Explain the network cause of the 2026-10-08 onion outage: four and a
+      half hours in which no Tor relay was reachable from the container while
+      HTTPS to GitHub was. Nothing in the host's journal for the window names
+      it.
 - [x] Trim the image: the runtime layer is no longer a full `node:24-alpine`
 - [x] The Dockerfile's `alpine:3.24` runtime must stay in step with whatever base
       `node:24-alpine` uses, because the node binary is copied out of that image
@@ -901,3 +954,10 @@ record. There is no run log.
       page folds it in as-is.
 - [ ] Upstream: the onyums README's table of contents links
       `#multiple-services-on-one-tor-client`, an anchor no heading in it produces.
+- [ ] Upstream: three dead links in the WeftDB README, found by the weekly
+      external-link check on 2026-10-08 (issue #16). A docs.rs badge points at
+      `https://docs.rs/weftdb`, a 404 because the README itself says its library
+      crates are "Not published yet"; and two links to
+      `database/benches/{downsample_range,backup_cost}.rs` 404 because those
+      files now live under `weftdb/benches/`. All three belong in WeftDB's
+      README; this page folds it in as-is.

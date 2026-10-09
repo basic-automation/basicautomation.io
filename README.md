@@ -148,8 +148,9 @@ also logs one JSON object per request on stdout, failed ones included, each
 with the client's `ip`, `ua` and `ref` — `docker logs basicautomation-site | jq
 'select(.status >= 400)'`, or `select(.via == "onion")` for the visits that
 came over Tor — and warns once an hour for
-as long as it has been answering from the snapshot, and once when the GitHub
-quota runs out (`event: "upstream.rate_limited"`). Every other line the app
+as long as it has been answering from the snapshot, once when the GitHub
+quota runs out (`event: "upstream.rate_limited"`), and once an hour while the
+onion service is unreachable (`onion.unreachable`, then `onion.recovered`). Every other line the app
 writes is JSON too, with an `event` to select on — a GitHub call that failed and
 fell back is `upstream.fetch_failed`, saying which fallback (`stale` or
 `snapshot`) it got.
@@ -312,7 +313,9 @@ and the addon headers exist only to build something.
 `onion/` is a small Rust crate that serves the same site as a Tor onion service
 through the organization's own `onyums`. It is built into this image by a second
 stage and started by the site itself (`server/plugins/onion-gateway.ts`, when
-`ONION_GATEWAY` names the binary); if it exits, the site exits with it. It proxies to the site
+`ONION_GATEWAY` names the binary); if it exits, the site exits with it. If it
+keeps running but has not been reached over Tor for an hour, the site restarts
+it in place (`onion.restarting`), at most hourly, and the clearnet site stays up. It proxies to the site
 over loopback and writes its `.onion` address to `/run/onion/address`, which the
 site reads back through `/api/onion` to advertise the address on the onyums
 project page. The identity key lives in the named volume `basicautomation-onion`
