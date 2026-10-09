@@ -308,6 +308,14 @@ record. There is no run log.
       healthcheck's 30-second polling, the shape of `upstream.stale`. Proved on
       the built server with a stand-in gateway and a 40-minute-old snapshot:
       five polls, one line; a fresh snapshot, one `onion.recovered`.
+- [ ] Arti 0.47 under the gateway (Arti 2.7.0, 2026-10-01), whose
+      announcement says it fixes "low- to high-severity security issues"; the
+      gateway is the site's Tor-facing binary and is on 0.46. Blocked on
+      onyums: 0.5.0 depends on `arti-client = "0.46.0"`, which for a 0.x
+      crate admits nothing past 0.46, so it needs an onyums release first
+      (the org's own crate, another repo). No GitHub advisory names the fixed
+      issues yet; CI's `cargo audit` will report them if RustSec files them.
+      <https://blog.torproject.org/arti_2_7_0_released/>
 - [ ] Recover the gateway from a stuck guard set without a container restart.
       The 2026-10-08 outage above ended only when someone restarted the
       container, and a restart takes the clearnet site down with it. Options,
