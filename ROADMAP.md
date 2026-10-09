@@ -932,3 +932,10 @@ record. There is no run log.
       page folds it in as-is.
 - [ ] Upstream: the onyums README's table of contents links
       `#multiple-services-on-one-tor-client`, an anchor no heading in it produces.
+- [ ] Upstream: three dead links in the WeftDB README, found by the weekly
+      external-link check on 2026-10-08 (issue #16). A docs.rs badge points at
+      `https://docs.rs/weftdb`, a 404 because the README itself says its library
+      crates are "Not published yet"; and two links to
+      `database/benches/{downsample_range,backup_cost}.rs` 404 because those
+      files now live under `weftdb/benches/`. All three belong in WeftDB's
+      README; this page folds it in as-is.
