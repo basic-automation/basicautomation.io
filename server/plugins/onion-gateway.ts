@@ -35,6 +35,9 @@
 import { spawn, type ChildProcess } from 'node:child_process'
 import { logEvent } from '~~/shared/log/event'
 
+/** How long a gateway gets to stop on SIGTERM before it is killed. */
+const STOP_GRACE_MS = 9_000
+
 function log(event: string, fields: Record<string, unknown> = {}) {
   console.log(JSON.stringify({ t: new Date().toISOString(), level: 'info', event, ...fields }))
 }
@@ -88,12 +91,29 @@ export default defineNitroPlugin((nitroApp) => {
     })
   }
 
-  /** SIGTERM, then wait: onyums unpublishes its descriptor on the way out. */
+  /**
+   * SIGTERM, then wait: onyums unpublishes its descriptor on the way out, which
+   * takes milliseconds. Not forever, though — a gateway that ignored the signal
+   * would leave an in-place restart waiting with no gateway at all, so after
+   * `STOP_GRACE_MS` it is killed. That is inside both Nitro's own 30 s shutdown
+   * timeout and `docker stop`'s default 10 s.
+   */
   async function stop() {
     const child = gateway
+    const done = exited
     if (child.exitCode !== null || child.signalCode !== null) return
     child.kill('SIGTERM')
-    await exited
+    let timer: ReturnType<typeof setTimeout> | undefined
+    const graceful = await Promise.race([
+      done.then(() => true),
+      new Promise<false>((resolve) => { timer = setTimeout(() => resolve(false), STOP_GRACE_MS) }),
+    ])
+    clearTimeout(timer)
+    if (!graceful) {
+      logEvent('warn', 'onion.killed', `the gateway ignored SIGTERM for ${STOP_GRACE_MS / 1000} s; killing it`, { pid: child.pid })
+      child.kill('SIGKILL')
+      await done
+    }
     log('onion.stopped', { code: child.exitCode, signal: child.signalCode })
   }
 

@@ -337,6 +337,14 @@ record. There is no run log.
       stand-in gateway: restarted at exactly 60 minutes, new gateway pid under
       the same site pid, `/` answered 200 on all 126 polls across 63 minutes;
       a stand-in that exits with 3 still stops the site with 3.
+- [x] …and a gateway that ignores SIGTERM cannot stall it. A restart waited on
+      the old gateway's exit with no limit, so one deaf to the signal would
+      have left the site with no gateway at all. `stop()` now kills it after
+      9 s (`onion.killed`), inside Nitro's 30 s shutdown timeout and
+      `docker stop`'s 10 s. Proved with a stand-in that traps SIGTERM: on the
+      in-place restart, killed 9 s after `onion.restarting` and replaced 3 ms
+      later, `/` 200 on all 126 polls; on site shutdown, killed after 9 s.
+      A gateway that honours the signal still stops in milliseconds.
 - [ ] Explain the network cause of the 2026-10-08 onion outage: four and a
       half hours in which no Tor relay was reachable from the container while
       HTTPS to GitHub was. Nothing in the host's journal for the window names
