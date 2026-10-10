@@ -65,7 +65,11 @@ export function useReadmeFold(readmeHtml: Readonly<Ref<string | null>>) {
     open.value = true
     let top = Number.NaN
     try {
-      top = Number(sessionStorage.getItem(entry()) ?? Number.NaN)
+      // Only for the same entry come back to. vue-router numbers entries from
+      // the length of the history when a document loads, so a fresh load can
+      // reuse an older entry's number — and its saved position would send a
+      // link to `#heading` to wherever that one was left.
+      if (returning()) top = Number(sessionStorage.getItem(entry()) ?? Number.NaN)
     }
     catch {}
     await nextTick()
@@ -97,4 +101,10 @@ function readmeHeading(hash: string): HTMLElement | null {
   catch {}
   const el = document.getElementById(id)
   return el?.closest('.readme') ? el : null
+}
+
+/** Whether this document is a reload, or Back or Forward to it, rather than a new visit. */
+function returning(): boolean {
+  const nav = performance.getEntriesByType('navigation')[0] as PerformanceNavigationTiming | undefined
+  return nav?.type === 'reload' || nav?.type === 'back_forward'
 }
