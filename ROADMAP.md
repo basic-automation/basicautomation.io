@@ -864,6 +864,17 @@ record. There is no run log.
       Same before tonight's changes. Images with known sizes, or an instant
       hash scroll, would each fix it; the first needs the README's image
       sizes at render time.
+- [x] No dead controls without script. Every page is server-rendered and
+      reads fine with script off, which is how Tor Browser's "Safest" level
+      serves the onion service — except the `[copy]` buttons, which were shown
+      and did nothing when pressed. They carry `needs-script` now, and
+      `@media (scripting: none)` in `main.css` hides them: the browser's own
+      answer, so a visitor with script never sees a button arrive late.
+      Checked in Firefox with `javascript.enabled` off (gone) and on (there),
+      and in Chromium over CDP with script execution disabled (`display:
+      none` on both, `flex` with script). `npm run check` fails a `<button>`
+      on a public page without the class; on main's build it failed 12.
+      <https://drafts.csswg.org/mediaqueries-5/#scripting>
 - [ ] Run axe's `color-contrast` in the browser pass too, once the contrast item
       below is decided. Left out deliberately: it would be red today on the
       shortfalls already waiting on that decision.

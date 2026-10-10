@@ -131,6 +131,16 @@ body {
 /* Nothing on this site is rounded. */
 *, *::before, *::after { border-radius: 0 !important; }
 
+/* A control only script can make do anything — the copy buttons. Every page
+   is rendered on the server and reads fine without script, which is how Tor
+   Browser's "Safest" level serves this site's onion visitors; a button that
+   is pressed and does nothing is the one thing that reads worse. Hidden by
+   the browser's own answer, not by script, so a visitor with script never
+   sees it arrive late. <https://drafts.csswg.org/mediaqueries-5/#scripting> */
+@media (scripting: none) {
+  .needs-script { display: none !important; }
+}
+
 @media (prefers-reduced-motion: reduce) {
   html { scroll-behavior: auto; }
   *, *::before, *::after {

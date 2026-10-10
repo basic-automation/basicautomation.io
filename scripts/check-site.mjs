@@ -426,6 +426,18 @@ function checkAccessibility(path, html, isUpstream) {
   for (const m of html.matchAll(/\btabindex=["'](\d+)["']/gi)) {
     if (Number(m[1]) > 0) fail(path, `tabindex="${m[1]}" — positive values reorder the whole page`)
   }
+
+  // Every page reads fine without script, which is how Tor Browser's "Safest"
+  // level serves it; a button only script can make do anything must say so,
+  // so that `@media (scripting: none)` in main.css hides it rather than leave
+  // a control that does nothing when pressed. Links and the README's folds
+  // work without script, and none of them is a <button>.
+  for (const button of tag('button')) {
+    if (isUpstream(button.index)) continue
+    if (!/\bneeds-script\b/.test(attr(button[1], 'class') ?? '')) {
+      fail(path, `a <button> without the needs-script class — it would be shown, and do nothing, without script (${button[0].slice(0, 80)})`)
+    }
+  }
 }
 
 /**

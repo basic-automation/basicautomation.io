@@ -20,7 +20,7 @@ const target = useTemplateRef<HTMLElement>('target')
          app.config.ts strips it back to a bracketed mono label. -->
     <UButton
       :ui="{ base: 'bg-transparent! p-0! ring-0! font-mono text-xs cursor-pointer hover:bg-transparent!' }"
-      class="shrink-0 text-pn-muted hover:text-pn-fg-bright"
+      class="needs-script shrink-0 text-pn-muted hover:text-pn-fg-bright"
       :aria-label="`Copy to clipboard: ${code}`"
       @click="copy(code, target)"
     >
