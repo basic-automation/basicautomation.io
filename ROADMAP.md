@@ -827,6 +827,20 @@ record. There is no run log.
       the heading lands 80 px from the top (its scroll margin), Back and
       reload as in Chromium, no console output; Chromium unchanged, an
       encoded emoji slug included.
+- [x] Run the browser pass in Firefox too — `npm run a11y:firefox`, in CI
+      beside `a11y:browser`. Every browser check here was Chromium, and the
+      onion service is reached in Tor Browser, which is Firefox; the bug
+      above was visible only there. `scripts/lib/bidi.mjs` drives headless
+      Firefox over WebDriver BiDi with Node's own WebSocket, the way
+      `lib/cdp.mjs` drives Chromium, and `scripts/lib/browser.mjs` puts one
+      page interface over both, so `check-a11y-browser.mjs` runs the same
+      axe rules, the same read-to-the-bottom and the same console watch in
+      either. First run: no violations and no console errors on 23 pages at
+      both widths. Proved it bites on a stub server, in both engines: a
+      console error, an uncaught exception, a CSP-refused inline script and
+      two 8 px buttons each fail it; a clean page passes. Firefox reports a
+      CSP refusal as a `javascript` log entry, so no listener is needed.
+      <https://w3c.github.io/webdriver-bidi/>
 - [ ] Run axe's `color-contrast` in the browser pass too, once the contrast item
       below is decided. Left out deliberately: it would be red today on the
       shortfalls already waiting on that decision.

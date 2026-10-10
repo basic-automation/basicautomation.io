@@ -34,7 +34,7 @@ import { readFile } from 'node:fs/promises'
 import { dirname, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { NOT_FOUND_PATH, sitePages } from './lib/pages.mjs'
-import { startBrowser } from './lib/cdp.mjs'
+import { ENGINES, startDriver } from './lib/browser.mjs'
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..')
 
@@ -44,6 +44,10 @@ const BASE = (args.find((a) => !a.startsWith('--'))
 	?? 'http://127.0.0.1:3000').replace(/\/$/, '')
 
 /** The layout rules `check-a11y.mjs` has to skip, less the two contrast ones. */
+/** `--firefox` runs the same pass in Firefox; Chromium is the default. */
+const ENGINE = args.includes('--firefox') ? 'firefox' : 'chromium'
+if (!ENGINES.includes(ENGINE)) throw new Error(`no engine ${ENGINE}`)
+
 const RULES = [
 	'target-size',
 	'scrollable-region-focusable',
@@ -62,91 +66,64 @@ const VIEWPORTS = [
 
 const PAGES = await sitePages(BASE)
 const axeSource = await readFile(resolve(ROOT, 'node_modules/axe-core/axe.min.js'), 'utf8')
-const { cdp, chrome, stop } = await startBrowser()
+const browser = await startDriver(ENGINE)
 
-console.log(`axe-core (${RULES.join(', ')}) over ${PAGES.length} pages × ${VIEWPORTS.length} widths in ${chrome}\n`)
+console.log(`axe-core (${RULES.join(', ')}) over ${PAGES.length} pages × ${VIEWPORTS.length} widths in ${browser.name} (${browser.binary})\n`)
 
 let violations = 0
 let consoleErrors = 0
 const seen = new Map()
 
 /**
- * What the page says went wrong while it loaded, until `stop()`. The 404 page
- * is expected to log its own 404 for the document — that one line is not
- * a fault, anything else on it is.
+ * What the page said went wrong while it loaded. The 404 page is expected to
+ * log its own 404 for the document — that one line is not a fault, anything
+ * else on it is.
  */
-function listenForErrors(sessionId) {
-	const errors = []
-	const off = cdp.on((msg) => {
-		if (msg.sessionId !== sessionId) return
-		if (msg.method === 'Runtime.exceptionThrown') {
-			errors.push(`exception: ${msg.params.exceptionDetails.exception?.description?.split('\n')[0] ?? msg.params.exceptionDetails.text}`)
-		}
-		else if (msg.method === 'Runtime.consoleAPICalled' && msg.params.type === 'error') {
-			errors.push(msg.params.args.map((a) => a.value ?? a.description ?? '').join(' ').slice(0, 200))
-		}
-		else if (msg.method === 'Log.entryAdded' && msg.params.entry.level === 'error') {
-			const { text, url } = msg.params.entry
-			if (/status of 404/.test(text) && url?.endsWith(NOT_FOUND_PATH)) return
-			errors.push(text.slice(0, 200))
-		}
-	})
-	return { stop: () => { off(); return errors } }
+function faults(page) {
+	return page.takeErrors()
+		.filter(({ text, url }) => !(/status of 404/.test(text) && url?.endsWith(NOT_FOUND_PATH)))
+		.map(({ text }) => text.slice(0, 200))
 }
 
 try {
 	for (const vp of VIEWPORTS) {
-		const { targetId } = await cdp.send('Target.createTarget', { url: 'about:blank' })
-		const { sessionId } = await cdp.send('Target.attachToTarget', { targetId, flatten: true })
-		await cdp.send('Page.enable', {}, sessionId)
-		await cdp.send('Runtime.enable', {}, sessionId)
-		await cdp.send('Log.enable', {}, sessionId)
 		const { name, ...metrics } = vp
-		await cdp.send('Emulation.setDeviceMetricsOverride', metrics, sessionId)
+		const page = await browser.open(metrics)
 
 		for (const path of PAGES) {
-			const noise = listenForErrors(sessionId)
-			const loaded = cdp.once('Page.loadEventFired', sessionId)
-			const nav = await cdp.send('Page.navigate', { url: BASE + path }, sessionId)
-			if (nav.errorText) throw new Error(`${path}: ${nav.errorText}`)
-			await loaded
+			page.takeErrors()
+			await page.goto(BASE + path)
 			// Let hydration settle, so what is measured is what a visitor gets.
-			await cdp.send('Runtime.evaluate', {
-				expression: 'new Promise((r) => requestIdleCallback(() => r(), { timeout: 2000 }))',
-				awaitPromise: true,
-			}, sessionId)
+			await page.evaluate('new Promise((r) => requestIdleCallback(() => r(), { timeout: 2000 }))')
 			// Then read to the bottom, a screen at a time, as a visitor would. The
 			// onion frame and the README's images are lazy: unscrolled, they never
 			// load, and whatever they would log is never seen.
-			await cdp.send('Runtime.evaluate', {
-				expression: `(async () => {
-					for (let y = 0; y < document.documentElement.scrollHeight; y += innerHeight) {
-						scrollTo(0, y)
-						await new Promise((r) => setTimeout(r, 150))
-					}
-					await new Promise((r) => setTimeout(r, 1000))
-					scrollTo(0, 0)
-				})()`,
-				awaitPromise: true,
-			}, sessionId)
+			await page.evaluate(`(async () => {
+				for (let y = 0; y < document.documentElement.scrollHeight; y += innerHeight) {
+					scrollTo(0, y)
+					await new Promise((r) => setTimeout(r, 150))
+				}
+				await new Promise((r) => setTimeout(r, 1000))
+				scrollTo(0, 0)
+			})()`)
 
 			const expected = path === NOT_FOUND_PATH ? 'error page' : 'page'
-			await cdp.send('Runtime.evaluate', { expression: axeSource }, sessionId)
-			const { result, exceptionDetails } = await cdp.send('Runtime.evaluate', {
-				expression: `axe.run(document, {
+			await page.run(axeSource)
+			let bad
+			try {
+				bad = await page.evaluate(`axe.run(document, {
 					runOnly: { type: 'rule', values: ${JSON.stringify(RULES)} },
 					resultTypes: ['violations'],
 				}).then((r) => r.violations.map((v) => ({
 					id: v.id, impact: v.impact, help: v.help, helpUrl: v.helpUrl,
 					nodes: v.nodes.map((n) => ({ target: n.target.join(' '), html: n.html, summary: n.failureSummary })),
-				})))`,
-				awaitPromise: true,
-				returnByValue: true,
-			}, sessionId)
-			if (exceptionDetails) throw new Error(`${path}: axe threw — ${exceptionDetails.exception?.description ?? exceptionDetails.text}`)
+				})))`)
+			}
+			catch (e) {
+				throw new Error(`${path}: axe threw — ${e.message}`)
+			}
 
-			const bad = result.value
-			const errors = noise.stop()
+			const errors = faults(page)
 			violations += bad.length
 			consoleErrors += errors.length
 			console.log(`  ${bad.length || errors.length ? '✗' : '·'} ${name.padEnd(7)} ${path} (${expected}) — ${bad.length} violation(s), ${errors.length} console error(s)`)
@@ -165,11 +142,11 @@ try {
 			}
 		}
 
-		await cdp.send('Target.closeTarget', { targetId })
+		await page.close()
 	}
 }
 finally {
-	await stop()
+	await browser.stop()
 }
 
 console.log('\nNot run: color-contrast, color-contrast-enhanced — `npm run contrast` measures the palette.')
@@ -180,4 +157,4 @@ if (violations || consoleErrors) {
 	process.exit(1)
 }
 
-console.log(`\n✓ No violations and no console errors across ${PAGES.length} pages at ${VIEWPORTS.map((v) => `${v.width}px`).join(' and ')}.`)
+console.log(`\n✓ No violations and no console errors across ${PAGES.length} pages at ${VIEWPORTS.map((v) => `${v.width}px`).join(' and ')} in ${browser.name}.`)

@@ -224,6 +224,7 @@ npm run check                      # against http://127.0.0.1:3000
 npm run check -- --external        # also follow links off the site
 npm run a11y                       # axe-core over every page, through jsdom
 npm run a11y:browser               # the layout rules, in headless Chromium
+npm run a11y:firefox               # …and the same, in headless Firefox
 npm run vitals                     # LCP and CLS, phone and desktop, median of 3
 npm run font                       # re-cut the preloaded core of Fira Code
 ```
@@ -237,7 +238,10 @@ whether each control's visible label is part of its accessible name —
 in headless Chromium at a desktop and a phone width (set `CHROME_PATH` if
 Chromium is not on `PATH`), reading each page to the bottom so lazy content
 loads, and fails on any console error, uncaught exception or CSP refusal the
-page produces along the way. Both walk every page the sitemap lists, so a new
+page produces along the way. `npm run a11y:firefox` is the same pass in
+headless Firefox, driven over WebDriver BiDi (set `FIREFOX_PATH` if it is not on
+`PATH`): the onion service is reached in Tor Browser, which is Firefox, and the
+two engines do differ. All three walk every page the sitemap lists, so a new
 project is audited the moment it is published. Colour contrast is measured
 separately and more directly by `npm run contrast`.
 

@@ -97,6 +97,11 @@ jobs:
           # access to scroll regions, the viewport meta — in the Google Chrome
           # the Ubuntu runner already ships, at desktop and phone widths.
           npm run a11y:browser
+          # …and the same pass in Firefox, which the runner also ships, over
+          # WebDriver BiDi. The onion service is reached in Tor Browser, which
+          # is Firefox, and the engines differ: a link to a README heading
+          # worked in Chromium and not in Firefox.
+          npm run a11y:firefox
 
   onion:
     name: onion gateway
