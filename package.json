@@ -29,6 +29,7 @@
     "a11y": "node scripts/check-a11y.mjs",
     "a11y:browser": "node scripts/check-a11y-browser.mjs",
     "a11y:firefox": "node scripts/check-a11y-browser.mjs --firefox",
+    "check:navigation": "node scripts/check-navigation.mjs",
     "vitals": "node scripts/measure-vitals.mjs",
     "font": "node scripts/build-font-subset.mjs",
     "font:check": "node scripts/build-font-subset.mjs --check"

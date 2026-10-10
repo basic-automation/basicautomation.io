@@ -841,6 +841,29 @@ record. There is no run log.
       two 8 px buttons each fail it; a clean page passes. Firefox reports a
       CSP refusal as a `javascript` log entry, so no listener is needed.
       <https://w3c.github.io/webdriver-bidi/>
+- [x] Hold the README fold to its behaviour — `npm run check:navigation`
+      (`scripts/check-navigation.mjs`), in CI in both engines. None of it runs
+      on the server, so nothing else could see it break. On every about page
+      whose README has a heading: unfold and read down, then Back, Forward and
+      Back, and a reload all return to the same place (±4 px of where the
+      reader was once the README's lazy images settled); a visit by link
+      starts folded at the top; a cold load of `about#<heading>` lands on the
+      heading; a client navigation to it shows it; a fold the visitor closed
+      stays closed on Back. 64 checks per engine, green on this build, and
+      against main's build 32 failures in Chromium and 41 in Firefox. It
+      waits for scrolling to stop rather than a fixed time, because the site
+      scrolls smoothly and a restore takes over a second. Writing it found a
+      bug in the fix: the reload position was keyed by vue-router's entry
+      number, which a fresh document load can reuse, so a cold link to a
+      heading went to an older reading position instead; it is now read only
+      on a reload or Back/Forward.
+- [ ] A client navigation to a README heading stops short of it: Nuxt's hash
+      scroll follows the stylesheet's `scroll-behavior: smooth`, and README
+      images between here and the heading load while the page passes them
+      and push it down, so it ends on screen (checked) but not at the top.
+      Same before tonight's changes. Images with known sizes, or an instant
+      hash scroll, would each fix it; the first needs the README's image
+      sizes at render time.
 - [ ] Run axe's `color-contrast` in the browser pass too, once the contrast item
       below is decided. Left out deliberately: it would be red today on the
       shortfalls already waiting on that decision.

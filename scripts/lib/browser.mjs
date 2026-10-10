@@ -1,7 +1,8 @@
 /**
  * One page-driving interface over two engines: Chromium through `cdp.mjs`,
- * Firefox through `bidi.mjs`. Only as much as `check-a11y-browser.mjs` needs —
- * open a page at a size, load a URL, evaluate in it, and hear what it logged.
+ * Firefox through `bidi.mjs`. Only as much as `check-a11y-browser.mjs` and
+ * `check-navigation.mjs` need — open a page at a size, load or reload a URL,
+ * evaluate in it, and hear what it logged.
  *
  *   const browser = await startDriver('firefox')
  *   const page = await browser.open({ width: 390, height: 844, deviceScaleFactor: 3, mobile: true })
@@ -61,6 +62,11 @@ async function chromiumDriver() {
 					if (nav.errorText) throw new Error(`${url}: ${nav.errorText}`)
 					await loaded
 				},
+				async reload() {
+					const loaded = cdp.once('Page.loadEventFired', sessionId)
+					await cdp.send('Page.reload', {}, sessionId)
+					await loaded
+				},
 				async run(source) {
 					const { exceptionDetails } = await cdp.send('Runtime.evaluate', { expression: source }, sessionId)
 					if (exceptionDetails) throw new Error(exceptionDetails.exception?.description ?? exceptionDetails.text)
@@ -110,6 +116,9 @@ async function firefoxDriver() {
 			return {
 				async goto(url) {
 					await bidi.send('browsingContext.navigate', { context, url, wait: 'complete' })
+				},
+				async reload() {
+					await bidi.send('browsingContext.reload', { context, wait: 'complete' })
 				},
 				async run(source) {
 					const r = await bidi.send('script.evaluate', {

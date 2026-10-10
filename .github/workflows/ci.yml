@@ -102,6 +102,11 @@ jobs:
           # is Firefox, and the engines differ: a link to a README heading
           # worked in Chromium and not in Firefox.
           npm run a11y:firefox
+          # What a visitor's own navigation does to the folded README — Back,
+          # Forward, reload, links to its headings — in both engines. None of
+          # it runs on the server, so nothing above can see it break.
+          npm run check:navigation
+          npm run check:navigation -- --firefox
 
   onion:
     name: onion gateway

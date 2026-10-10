@@ -225,6 +225,7 @@ npm run check -- --external        # also follow links off the site
 npm run a11y                       # axe-core over every page, through jsdom
 npm run a11y:browser               # the layout rules, in headless Chromium
 npm run a11y:firefox               # …and the same, in headless Firefox
+npm run check:navigation           # Back, reload and README links, in Chromium (--firefox too)
 npm run vitals                     # LCP and CLS, phone and desktop, median of 3
 npm run font                       # re-cut the preloaded core of Fira Code
 ```
@@ -241,7 +242,11 @@ loads, and fails on any console error, uncaught exception or CSP refusal the
 page produces along the way. `npm run a11y:firefox` is the same pass in
 headless Firefox, driven over WebDriver BiDi (set `FIREFOX_PATH` if it is not on
 `PATH`): the onion service is reached in Tor Browser, which is Firefox, and the
-two engines do differ. All three walk every page the sitemap lists, so a new
+two engines do differ. `npm run check:navigation` drives what a visitor's own
+navigation does to each about page's folded README: Back, Forward and a reload
+return a reader to the place they were reading, a visit by link starts folded,
+and a link to a README heading lands on it, in Chromium or (`--firefox`)
+Firefox. All of these walk every page the sitemap lists, so a new
 project is audited the moment it is published. Colour contrast is measured
 separately and more directly by `npm run contrast`.
 
