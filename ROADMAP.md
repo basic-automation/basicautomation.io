@@ -629,6 +629,24 @@ record. There is no run log.
       deliberate 300px shift, so there is no before/after CLS number here. What
       was verified is that the attributes render, that the remote README images
       are untouched, and that the layout is unchanged.
+- [x] A README's images reserve their space. Markdown cannot state an image's
+      size, so every README `<img>` was a zero-height box until its file
+      arrived, and everything below it moved when it did: with Skidbladnir's
+      README open, its last heading moved 691 px as the screenshots landed
+      (splimes 194, WeftDB 22). `shared/markdown/image-size.ts` reads the
+      size from the first 64 KB of the file (PNG, GIF, JPEG, WebP, an SVG's
+      root) and writes `width`/`height` in, keeping an author's own `width`
+      and its shape; `server/utils/readmeImages.ts` asks once per URL per day
+      (`defineCachedFunction`, a failure not stored), and `npm run sync` does
+      the same so the snapshot matches. Only https and the hosts GitHub
+      README images come from (github.com, *.githubusercontent.com,
+      img.shields.io) are asked, with `Range` and a hard 64 KB read limit; none
+      is GitHub's API, so the REST quota is untouched. A failed probe leaves
+      the image as it was. All 26 images across the eight READMEs measured
+      live in 0.47 s. Shift with the README open: 691 → 0 px on Skidbladnir,
+      0 on the others, in Chromium; Firefox the same within 2 px.
+      `test/image-size.test.ts` covers each format, the attribute rules, the
+      host list, the read limit and linear time on unclosed tags.
 - [x] A folded README costs no third-party request. Its images had no `loading`
       attribute, and an eager image inside a closed `<details>` is fetched anyway,
       so every visit to the Skidbladnir page fetched two screenshots from

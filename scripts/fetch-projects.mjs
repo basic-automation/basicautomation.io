@@ -23,9 +23,25 @@ import { projects } from '../data/projects.ts'
 // page when it takes over. The copied renderer had no highlighter, so it did.
 import { absolutize, stripLeadingLogo } from '../shared/markdown/readme.ts'
 import { renderMarkdown } from '../shared/markdown/render.ts'
+import { sizeImages, unsizedImages } from '../shared/markdown/image-size.ts'
+import { probeImageSize } from '../shared/markdown/image-probe.ts'
 import { paced } from '../shared/net/pace.ts'
 import { normaliseReleases, pickDownload, pickLatest } from '../shared/github/releases.ts'
 import { carryMissing } from '../shared/github/carry.ts'
+
+/**
+ * The same image sizing the server does (`server/utils/readmeImages.ts`), so a
+ * page served from the snapshot reserves its README images' space as a live
+ * one does. Uncached: this runs once per sync.
+ */
+async function withImageSizes(html) {
+  const sizes = new Map()
+  await Promise.all(unsizedImages(html).map(async (src) => {
+    const size = await probeImageSize(src)
+    if (size) sizes.set(src, size)
+  }))
+  return sizeImages(html, sizes)
+}
 
 /** crates.io asks for at most one API request a second: https://crates.io/data-access */
 const cratesIo = paced(1000)
@@ -96,7 +112,7 @@ async function fetchRepo(project) {
       'application/vnd.github.raw',
     )
     const prepared = absolutize(stripLeadingLogo(md), ORG, repo, out.defaultBranch)
-    out.readmeHtml = await renderMarkdown(prepared)
+    out.readmeHtml = await withImageSizes(await renderMarkdown(prepared))
   }
   catch {
     out.readmeHtml = null
