@@ -12,7 +12,11 @@ import { sizeImages, unsizedImages, type ImageSize } from '~~/shared/markdown/im
  * attachment URLs and img.shields.io, none of which draw on the REST quota.
  */
 const cachedImageSize = defineCachedFunction(
-  async (src: string): Promise<ImageSize | null> => probeImageSize(src),
+  // Two seconds, not the probe's default five: a repo refresh waits on these,
+  // and only a cold start does so in front of a visitor (measured: +0.1–0.4 s
+  // on Skidbladnir's first render). A host that hangs costs at most this, and
+  // the image renders unsized until the next refresh.
+  async (src: string): Promise<ImageSize | null> => probeImageSize(src, 2000),
   {
     name: 'readme-image-size',
     maxAge: 24 * 60 * 60,

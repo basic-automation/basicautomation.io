@@ -646,7 +646,11 @@ record. There is no run log.
       live in 0.47 s. Shift with the README open: 691 → 0 px on Skidbladnir,
       0 on the others, in Chromium; Firefox the same within 2 px.
       `test/image-size.test.ts` covers each format, the attribute rules, the
-      host list, the read limit and linear time on unclosed tags.
+      host list, the read limit and linear time on unclosed tags. The cost is
+      on a cold start only, since refreshes revalidate in the background:
+      Skidbladnir's first render 0.88–1.04 s on main, 1.02–1.47 s here (three
+      runs each); warm renders unchanged at ~9 ms. The server's probe gives up
+      after 2 s, so a hanging image host costs a cold render at most that.
 - [x] A folded README costs no third-party request. Its images had no `loading`
       attribute, and an eager image inside a closed `<details>` is fetched anyway,
       so every visit to the Skidbladnir page fetched two screenshots from
