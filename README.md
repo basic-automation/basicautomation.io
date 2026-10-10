@@ -22,7 +22,7 @@ it is flat.
 | --- | --- |
 | `/` | The pitch, live project stats, and the catalogue |
 | `/projects` | Every public project |
-| `/projects/<slug>/about` | A marketing page per project: hero, why it exists, features, a worked example, the recent releases, and the repo's README folded away underneath. A desktop app's page also gets a download section: a direct link per platform to the newest release's installers. `/projects/<slug>` redirects here |
+| `/projects/<slug>/about` | A marketing page per project: hero, why it exists, features, a worked example, the recent releases, and the repo's README folded away underneath — once opened, it stays open for Back, Forward and a reload, at the place the visitor was reading, and its images arrive with their sizes, so nothing jumps as they load. A desktop app's page also gets a download section: a direct link per platform to the newest release's installers. `/projects/<slug>` redirects here |
 | `/projects/<slug>/blog` | That project's news, and `/projects/<slug>/blog/<post>` for one post |
 | `/news` | The organization's own news, for what is about Basic Automation rather than one tool |
 | `/admin` | The post editor — behind a login the app checks itself, and absent over Tor (below) |
@@ -224,6 +224,8 @@ npm run check                      # against http://127.0.0.1:3000
 npm run check -- --external        # also follow links off the site
 npm run a11y                       # axe-core over every page, through jsdom
 npm run a11y:browser               # the layout rules, in headless Chromium
+npm run a11y:firefox               # …and the same, in headless Firefox
+npm run check:navigation           # Back, reload and README links, in Chromium (--firefox too)
 npm run vitals                     # LCP and CLS, phone and desktop, median of 3
 npm run font                       # re-cut the preloaded core of Fira Code
 ```
@@ -237,7 +239,14 @@ whether each control's visible label is part of its accessible name —
 in headless Chromium at a desktop and a phone width (set `CHROME_PATH` if
 Chromium is not on `PATH`), reading each page to the bottom so lazy content
 loads, and fails on any console error, uncaught exception or CSP refusal the
-page produces along the way. Both walk every page the sitemap lists, so a new
+page produces along the way. `npm run a11y:firefox` is the same pass in
+headless Firefox, driven over WebDriver BiDi (set `FIREFOX_PATH` if it is not on
+`PATH`): the onion service is reached in Tor Browser, which is Firefox, and the
+two engines do differ. `npm run check:navigation` drives what a visitor's own
+navigation does to each about page's folded README: Back, Forward and a reload
+return a reader to the place they were reading, a visit by link starts folded,
+and a link to a README heading lands on it, at both widths, in Chromium or
+(`--firefox`) Firefox. All of these walk every page the sitemap lists, so a new
 project is audited the moment it is published. Colour contrast is measured
 separately and more directly by `npm run contrast`.
 

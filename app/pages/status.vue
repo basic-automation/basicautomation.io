@@ -216,10 +216,14 @@ useSeoMeta({
     <!-- ── Endpoints ────────────────────────────────────────────────────── -->
     <section class="mb-24">
       <TermRule label="endpoints" />
-      <ul class="mt-8 space-y-2 text-xs">
+      <!-- Each link is its own 24px row, as in the footer, rather than 15px of
+           text with a gap: WCAG 2.2's minimum target size. Chromium's layout
+           passed it by a hair; Firefox's did not (`npm run a11y:firefox`, on
+           its first CI run). Same pitch as before. -->
+      <ul class="mt-7 text-xs">
         <li v-for="path in ['/healthz', '/api/projects', '/sitemap.xml', '/robots.txt', '/releases.xml', '/news.xml']" :key="path">
           <!-- Server routes, not pages: plain anchors, nothing for the router. -->
-          <a :href="path" class="text-pn-dim transition-colors hover:text-pn-fg-bright">{{ path }}</a>
+          <a :href="path" class="inline-block py-1 text-pn-dim transition-colors hover:text-pn-fg-bright">{{ path }}</a>
         </li>
       </ul>
     </section>

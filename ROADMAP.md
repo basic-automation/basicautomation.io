@@ -164,6 +164,16 @@ record. There is no run log.
       installation token has its own 5,000-an-hour limit and needs only
       read access to public repos' metadata.
       <https://docs.github.com/en/rest/using-the-rest-api/rate-limits-for-the-rest-api>
+- [ ] A `/.well-known/security.txt` — **needs an owner decision: the contact.**
+      Something asks for it about 16 times a day (`/.well-known/security.txt`
+      and `/security.txt` were the top non-scanner 404s in 21 hours of live
+      log, 2026-10-09). RFC 9116 requires a `Contact` and an `Expires` less
+      than a year out, served over HTTPS as `text/plain`. The obvious contact
+      is a GitHub private vulnerability report, but this repo has private
+      vulnerability reporting off (Skidbladnir alone has it on), and turning it
+      on, or publishing an address, is the owner's call. Once there is a
+      contact, a static file plus a check that `Expires` is in the future.
+      <https://www.rfc-editor.org/rfc/rfc9116.html>
 - [x] Conditional requests (`If-None-Match`) for the GitHub calls: a `304` to an
       authorized request does not count against the limit. Parked as unneeded
       at 252 of 5,000 — but the token is a person's, and its pool had spent 990
@@ -439,13 +449,29 @@ record. There is no run log.
       `^24.15.0`; the build image has 24.21.
       <https://github.com/nuxt/nuxt/releases/tag/v4.6.0>
       <https://github.com/nuxt/nuxt/issues/36514>
-- [ ] vue-router 5.4.0 (a direct dependency, published 2026-10-07), once it
-      has soaked. It changes client navigation defaults this site relies on:
-      the router now restores hashes and the top of the page by default, and
-      history invalidates obsolete scroll positions. Land it with a browser
-      check of in-page README anchors and back/forward between project tabs,
-      not just the server gates, because none of that runs on the server.
+- [x] vue-router 5.4.0 (a direct dependency, published 2026-10-07), landed
+      2026-10-09 after two days with no issue filed against it. It changes
+      client navigation defaults this site relies on: the router now restores
+      hashes and the top of the page by default, and history invalidates
+      obsolete scroll positions. Typecheck, 246 tests, build, `check`, `a11y`,
+      `a11y:browser` and `audit:runtime` clean, all 42 routes as on 5.3.1. In
+      headless Chromium, side by side with 5.3.1's build on onyums and
+      Skidbladnir: README anchor clicks, back and forward between anchors,
+      about → blog → back → forward, a cross-project hop and back, and a cold
+      load with a fragment land at the same positions on both, with no console
+      output. Nuxt's own `scrollBehavior` governs all of it, so the new
+      defaults change nothing a visitor sees here.
       <https://github.com/vuejs/router/releases/tag/v5.4.0>
+- [ ] Nuxt 4.6.1 (published 2026-10-09 22:59 UTC), once it has soaked like
+      4.6.0 did. A patch release: the fixes are mostly dev-server and typing
+      (`Serialize` types aligned with JSON, `$fetch` typed as `TypedFetch`,
+      `useId` hydration keeping `onServerPrefetch`), plus a Nitro performance
+      change that builds the portable event's web view lazily. The first issue
+      filed against it, nuxt/nuxt#36529 (an aborted navigation to an unmatched
+      route renders a 404), reproduces on 3.x too, so it is not a 4.6.1
+      regression. Land it with the full gates plus `check:navigation` in both
+      engines. <https://github.com/nuxt/nuxt/releases/tag/v4.6.1>
+      <https://github.com/nuxt/nuxt/issues/36529>
 - [x] Silenced Nitro's own `[request error]` stack-trace block on a 404, without
       replacing the error handler. Nitro logs it when the error is `fatal`, and
       `fatal` is only load-bearing on the client, where it is what makes a 404
@@ -603,6 +629,28 @@ record. There is no run log.
       deliberate 300px shift, so there is no before/after CLS number here. What
       was verified is that the attributes render, that the remote README images
       are untouched, and that the layout is unchanged.
+- [x] A README's images reserve their space. Markdown cannot state an image's
+      size, so every README `<img>` was a zero-height box until its file
+      arrived, and everything below it moved when it did: with Skidbladnir's
+      README open, its last heading moved 691 px as the screenshots landed
+      (splimes 194, WeftDB 22). `shared/markdown/image-size.ts` reads the
+      size from the first 64 KB of the file (PNG, GIF, JPEG, WebP, an SVG's
+      root) and writes `width`/`height` in, keeping an author's own `width`
+      and its shape; `server/utils/readmeImages.ts` asks once per URL per day
+      (`defineCachedFunction`, a failure not stored), and `npm run sync` does
+      the same so the snapshot matches. Only https and the hosts GitHub
+      README images come from (github.com, *.githubusercontent.com,
+      img.shields.io) are asked, with `Range` and a hard 64 KB read limit; none
+      is GitHub's API, so the REST quota is untouched. A failed probe leaves
+      the image as it was. All 26 images across the eight READMEs measured
+      live in 0.47 s. Shift with the README open: 691 → 0 px on Skidbladnir,
+      0 on the others, in Chromium; Firefox the same within 2 px.
+      `test/image-size.test.ts` covers each format, the attribute rules, the
+      host list, the read limit and linear time on unclosed tags. The cost is
+      on a cold start only, since refreshes revalidate in the background:
+      Skidbladnir's first render 0.88–1.04 s on main, 1.02–1.47 s here (three
+      runs each); warm renders unchanged at ~9 ms. The server's probe gives up
+      after 2 s, so a hanging image host costs a cold render at most that.
 - [x] A folded README costs no third-party request. Its images had no `loading`
       attribute, and an eager image inside a closed `<details>` is fetched anyway,
       so every visit to the Skidbladnir page fetched two screenshots from
@@ -793,6 +841,134 @@ record. There is no run log.
       selected; copy it with your keyboard." Checked over CDP with the
       permission denied: the selection is exactly the command, without the
       `$` sigil, and both buttons reset after 4 s.
+- [x] Back returns a reader to the README they were reading. The about page
+      folds its README, and a page reached by Back is rendered afresh, so it
+      came back folded: the scroll position vue-router saved no longer
+      existed, and a visitor 6,000 px down onyums' README landed at 2,700, the
+      bottom of the folded page. `useReadmeFold`
+      (`app/composables/useReadmeFold.ts`) keeps the fold in the history
+      entry beside vue-router's own state, so Back and Forward reopen it
+      before the page scrolls; a fresh visit by link still starts folded, and
+      one folded again stays folded. A client navigation to a fragment inside
+      the README opens it first (`hasAnchor`, `shared/markdown/anchor.ts`), as
+      a browser does on a real one. A reload reopens it too, at the place the
+      visitor was: Chromium drops a `replaceState` made while the page
+      unloads, so that position goes to session storage on `pagehide`. Found
+      by the vue-router 5.4 browser check; the same on 5.3.1. Proved in
+      headless Chromium on onyums and Nanna, before and after: Back 2,700 →
+      6,000, reload 2,700 → 6,000, a pushed `#heading` lands at the heading;
+      the server's markup is unchanged.
+- [x] …and a link to a README heading lands on it in Firefox. Chromium opens
+      a closed `<details>` for a fragment by itself; Firefox does not, and Tor
+      Browser is Firefox. So `/projects/onyums/about#how-onyums-compares`,
+      followed from anywhere, left a Firefox visitor at the bottom of the
+      folded page (y 2,701) with the heading hidden. `useReadmeFold` now looks
+      the fragment up in the document once mounted, opens the fold and scrolls
+      the heading in, unless the visitor already folded it in that entry.
+      Proved in headless Firefox 155 over WebDriver BiDi on onyums and Nanna:
+      the heading lands 80 px from the top (its scroll margin), Back and
+      reload as in Chromium, no console output; Chromium unchanged, an
+      encoded emoji slug included.
+- [x] Run the browser pass in Firefox too — `npm run a11y:firefox`, in CI
+      beside `a11y:browser`. Every browser check here was Chromium, and the
+      onion service is reached in Tor Browser, which is Firefox; the bug
+      above was visible only there. `scripts/lib/bidi.mjs` drives headless
+      Firefox over WebDriver BiDi with Node's own WebSocket, the way
+      `lib/cdp.mjs` drives Chromium, and `scripts/lib/browser.mjs` puts one
+      page interface over both, so `check-a11y-browser.mjs` runs the same
+      axe rules, the same read-to-the-bottom and the same console watch in
+      either. First run: no violations and no console errors on 23 pages at
+      both widths. Proved it bites on a stub server, in both engines: a
+      console error, an uncaught exception, a CSP-refused inline script and
+      two 8 px buttons each fail it; a clean page passes. Firefox reports a
+      CSP refusal as a `javascript` log entry, so no listener is needed.
+      The runner's Firefox is a deb from the Mozilla PPA, not a snap, so a
+      profile under `/tmp` is visible to it.
+      <https://w3c.github.io/webdriver-bidi/>
+      <https://github.com/actions/runner-images/blob/main/images/ubuntu/scripts/build/install-firefox.sh>
+      Its first CI run (Firefox 157 on the runner) found what the local
+      Firefox 155 did not: `/status` at phone width, its six endpoint links
+      15 px tall and stacked 8 px apart — a target-size failure Chromium's
+      layout had passed by a hair. Each is now a 24 px row, as in the footer,
+      at the same pitch.
+- [x] Hold the README fold to its behaviour — `npm run check:navigation`
+      (`scripts/check-navigation.mjs`), in CI in both engines. None of it runs
+      on the server, so nothing else could see it break. On every about page
+      whose README has a heading: unfold and read down, then Back, Forward and
+      Back, and a reload all return to the same place (±4 px of where the
+      reader was once the README's lazy images settled); a visit by link
+      starts folded at the top; a cold load of `about#<heading>` lands on the
+      heading; a client navigation to it shows it; a fold the visitor closed
+      stays closed on Back. At 1280 and 390 px, 128 checks per engine, green
+      on this build; at desktop width alone, main's build failed 32 in
+      Chromium and 41 in Firefox. Firefox logs every cookie it refuses to a
+      third-party response at error level (a README image from github.com
+      sets three), which the driver ignores as the browser's notice, not the
+      page's fault. It
+      waits for scrolling to stop rather than a fixed time, because the site
+      scrolls smoothly and a restore takes over a second. Writing it found a
+      bug in the fix: the reload position was keyed by vue-router's entry
+      number, which a fresh document load can reuse, so a cold link to a
+      heading went to an older reading position instead; it is now read only
+      on a reload or Back/Forward.
+- [x] …and a README opened before the app hydrates stays open. Binding the
+      fold to `open` made hydration write the bound `false` over the element,
+      so a reader who opened it in the first moments — on a slow line, Tor
+      say, there is time to — had it shut under them once the app took over:
+      open at load, closed 4 s later, on every about page. Not on main, which
+      had no binding; it came in with the fold's history state above, and no
+      check covered it. Hydrating, `useReadmeFold` now starts from the
+      document as it stands, and records the open fold in the entry once
+      mounted. `check:navigation` has the case (a preload script opens the
+      fold at `DOMContentLoaded`): the build with the bug fails it on all 16
+      pages × widths and nothing else, this build passes 144 checks per engine.
+- [x] A client navigation to a README heading stops short of it: Nuxt's hash
+      scroll follows the stylesheet's `scroll-behavior: smooth`, and README
+      images between here and the heading load while the page passes them
+      and push it down, so it ends on screen (checked) but not at the top.
+      Same before tonight's changes. Images with known sizes, or an instant
+      hash scroll, would each fix it; the first needs the README's image
+      sizes at render time. Low priority: nothing on the site makes such a
+      navigation — the README's own contents links and the hero's
+      `#download` are plain anchors, and those land on their heading in both
+      engines (measured on five READMEs: 80 px, the scroll margin).
+      Fixed by the image sizes below: with every README image's space reserved
+      nothing grows while the page passes it, and `check:navigation` now holds
+      a client navigation to the same band as a cold load (heading within
+      200 px of the top), 144 checks per engine in both. Before the sizes the
+      same assertion failed in Chromium, e.g. Skidbladnir's `#editions` at
+      771 px.
+- [ ] Without script, a link to a README heading cannot open the fold in a
+      browser that does not do it itself, and no CSS can open a `<details>`.
+      That is Tor Browser at "Safest". Recorded rather than fixed: the
+      alternative is not folding the README at all. Mozilla's bug 1724299 is
+      described as shipping auto-expanding `<details>` in Firefox 139, fragment
+      navigation included, yet headless Firefox 155 left the fold closed on a
+      cold `about#heading` load here, on main's build before any of this
+      run's changes; worth re-checking in a real Firefox and in Tor Browser
+      before relying on either answer.
+      <https://bugzilla.mozilla.org/show_bug.cgi?id=1724299>
+      <https://github.com/whatwg/html/pull/6466>
+- [ ] Look at the masthead in a real Firefox and in Tor Browser, scrolled.
+      Headless Firefox drew no blur at all behind it, not even the plain
+      `blur()` the CSS gives every other browser, so its screenshots show body
+      text crisp behind the nav links — most likely the headless software
+      compositor, not the site, but no screenshot this routine can take
+      settles it.
+- [x] No dead controls without script. Every page is server-rendered and
+      reads fine with script off, which is how Tor Browser's "Safest" level
+      serves the onion service — except the `[copy]` buttons, which were shown
+      and did nothing when pressed. They carry `needs-script` now, and
+      `@media (scripting: none)` in `main.css` hides them: the browser's own
+      answer, so a visitor with script never sees a button arrive late.
+      Checked in Firefox with `javascript.enabled` off (gone) and on (there),
+      and in Chromium over CDP with script execution disabled (`display:
+      none` on both, `flex` with script). `npm run check` fails a `<button>`
+      on a public page without the class; on main's build it failed 12.
+      <https://drafts.csswg.org/mediaqueries-5/#scripting> — Baseline, widely
+      available since December 2023; MDN notes a script-blocking extension
+      may not change what it reports.
+      <https://developer.mozilla.org/en-US/docs/Web/CSS/Reference/At-rules/@media/scripting>
 - [ ] Run axe's `color-contrast` in the browser pass too, once the contrast item
       below is decided. Left out deliberately: it would be red today on the
       shortfalls already waiting on that decision.
@@ -895,6 +1071,16 @@ record. There is no run log.
       server's TLS) — neither reaches the image; `audit:runtime` is clean.
       <https://github.com/advisories/GHSA-vfj7-8cjw-p6xm>
       <https://github.com/advisories/GHSA-86w9-cpqp-85rv>
+      Since 2026-10-09 `npm audit` also names, all dev or build time and all
+      unreachable from the image (`audit:runtime` clean): `simple-git` ≤3.36.0
+      (config includes, GHSA-g4wm-2vf7-vfgr; trailer config,
+      GHSA-x6jw-m9v5-85vh, fixed in 4.0.1) and `@simple-git/argv-parser`
+      <2.0.1 (`VISUAL`, GHSA-v5rq-49vh-5v5c), both under devtools 3.4.2, whose
+      only newer release is 4.0.0-beta.4; and `esbuild` 0.27.7 (Windows dev
+      server file read, GHSA-g7r4-m6w7-qqqr, fixed in 0.28.1), pinned by
+      `fontless` ^0.2 under `@nuxt/fonts` 0.14, the latest.
+      <https://github.com/advisories/GHSA-g4wm-2vf7-vfgr>
+      <https://github.com/advisories/GHSA-g7r4-m6w7-qqqr>
 - [x] …and the image's other binary. The onion gateway's 594 crates were
       audited by nothing. CI's onion job now runs `cargo audit --deny yanked
       --deny unsound`. First run, 2026-10-02: `yoke-derive` 0.8.3 was yanked,

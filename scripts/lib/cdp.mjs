@@ -142,8 +142,16 @@ export async function startBrowser() {
 		cdp,
 		chrome,
 		async stop() {
+			// Asked to close, Chromium shuts its child processes down with it; a
+			// kill left the network service writing to the profile after the
+			// browser had gone, so the profile outlived its removal (dozens a
+			// day in /tmp). The kill stays as the fallback.
+			const exited = new Promise((r) => (proc.exitCode !== null || proc.signalCode !== null ? r() : proc.once('exit', r)))
+			await Promise.race([cdp.send('Browser.close').catch(() => {}), new Promise((r) => setTimeout(r, 3000))])
 			cdp.close()
-			proc.kill()
+			const timer = setTimeout(() => proc.kill(), 5000)
+			await exited
+			clearTimeout(timer)
 			await rm(profile, { recursive: true, force: true }).catch(() => {})
 		},
 	}

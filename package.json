@@ -28,6 +28,8 @@
     "sizes:check": "node scripts/build-asset-sizes.mjs --check",
     "a11y": "node scripts/check-a11y.mjs",
     "a11y:browser": "node scripts/check-a11y-browser.mjs",
+    "a11y:firefox": "node scripts/check-a11y-browser.mjs --firefox",
+    "check:navigation": "node scripts/check-navigation.mjs",
     "vitals": "node scripts/measure-vitals.mjs",
     "font": "node scripts/build-font-subset.mjs",
     "font:check": "node scripts/build-font-subset.mjs --check"
@@ -39,7 +41,7 @@
     "nuxt": "^4.6.0",
     "shiki": "^4.4.3",
     "vue": "^3.5.43",
-    "vue-router": "^5.3.1"
+    "vue-router": "^5.4.0"
   },
   "devDependencies": {
     "@tailwindcss/vite": "^4.3.3",

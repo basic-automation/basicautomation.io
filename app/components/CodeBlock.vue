@@ -16,7 +16,7 @@ const target = useTemplateRef<HTMLElement>('target')
       <span class="truncate"># {{ label }}</span>
       <UButton
         :ui="{ base: 'bg-transparent! p-0! ring-0! font-mono text-xs cursor-pointer hover:bg-transparent!' }"
-        class="ml-auto shrink-0 text-pn-muted hover:text-pn-fg-bright"
+        class="needs-script ml-auto shrink-0 text-pn-muted hover:text-pn-fg-bright"
         :aria-label="`Copy ${label}`"
         @click="copy(code, target)"
       >

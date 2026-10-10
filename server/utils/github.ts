@@ -209,9 +209,9 @@ async function fetchRepo(project: Project): Promise<RepoMeta> {
   const incomplete: NonNullable<RepoMeta['incomplete']> = []
 
   if (readme.status === 'fulfilled' && typeof readme.value === 'string') {
-    out.readmeHtml = await renderMarkdown(
+    out.readmeHtml = await sizeReadmeImages(await renderMarkdown(
       absolutize(stripLeadingLogo(readme.value), ORG, repo, defaultBranch),
-    )
+    ))
   }
   else {
     incomplete.push('readme')
