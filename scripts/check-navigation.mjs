@@ -20,7 +20,7 @@
  *   - reload: unfolded, same place
  *   - blog tab, then the about tab by its link: folded, at the top
  *   - a cold load of `about#<heading>`: unfolded, the heading at the top
- *   - a client navigation to `about#<heading>`: unfolded, the heading on screen
+ *   - a client navigation to `about#<heading>`: the same
  *   - fold it, blog tab, Back: still folded — even with the fragment
  *   - opened before the app hydrates: still open after it has
  *
@@ -169,10 +169,7 @@ try {
 			await page.evaluate(`document.querySelector('#__nuxt').__vue_app__.config.globalProperties.$router.push(${JSON.stringify(about + hash)})`)
 			await arrive(about)
 			s = await state(id)
-			// On screen, not at the top: this one scrolls smoothly (Nuxt's hash
-			// behaviour is the stylesheet's), and README images above the heading
-			// load while the page passes them, so where it stops depends on them.
-			expect(`a client navigation to ${hash} opens it with the heading on screen`, s.open === true && s.heading >= HEADING_BAND[0] && s.heading <= viewport.height - 40, s)
+			expect(`a client navigation to ${hash} opens it at the heading`, s.open === true && s.heading >= HEADING_BAND[0] && s.heading <= HEADING_BAND[1], s)
 
 			await click('details > summary')
 			await sleep(300)

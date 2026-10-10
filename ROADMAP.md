@@ -913,7 +913,7 @@ record. There is no run log.
       mounted. `check:navigation` has the case (a preload script opens the
       fold at `DOMContentLoaded`): the build with the bug fails it on all 16
       pages × widths and nothing else, this build passes 144 checks per engine.
-- [ ] A client navigation to a README heading stops short of it: Nuxt's hash
+- [x] A client navigation to a README heading stops short of it: Nuxt's hash
       scroll follows the stylesheet's `scroll-behavior: smooth`, and README
       images between here and the heading load while the page passes them
       and push it down, so it ends on screen (checked) but not at the top.
@@ -923,6 +923,12 @@ record. There is no run log.
       navigation — the README's own contents links and the hero's
       `#download` are plain anchors, and those land on their heading in both
       engines (measured on five READMEs: 80 px, the scroll margin).
+      Fixed by the image sizes below: with every README image's space reserved
+      nothing grows while the page passes it, and `check:navigation` now holds
+      a client navigation to the same band as a cold load (heading within
+      200 px of the top), 144 checks per engine in both. Before the sizes the
+      same assertion failed in Chromium, e.g. Skidbladnir's `#editions` at
+      771 px.
 - [ ] Without script, a link to a README heading cannot open the fold in a
       browser that does not do it itself, and no CSS can open a `<details>`.
       That is Tor Browser at "Safest". Recorded rather than fixed: the
