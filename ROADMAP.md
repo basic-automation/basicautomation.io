@@ -454,7 +454,7 @@ record. There is no run log.
       client navigation defaults this site relies on: the router now restores
       hashes and the top of the page by default, and history invalidates
       obsolete scroll positions. Typecheck, 246 tests, build, `check`, `a11y`,
-      `a11y:browser` and `audit:runtime` clean, all 43 routes as on 5.3.1. In
+      `a11y:browser` and `audit:runtime` clean, all 42 routes as on 5.3.1. In
       headless Chromium, side by side with 5.3.1's build on onyums and
       Skidbladnir: README anchor clicks, back and forward between anchors,
       about → blog → back → forward, a cross-project hop and back, and a cold
