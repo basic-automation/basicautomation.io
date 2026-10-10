@@ -164,6 +164,16 @@ record. There is no run log.
       installation token has its own 5,000-an-hour limit and needs only
       read access to public repos' metadata.
       <https://docs.github.com/en/rest/using-the-rest-api/rate-limits-for-the-rest-api>
+- [ ] A `/.well-known/security.txt` — **needs an owner decision: the contact.**
+      Something asks for it about 16 times a day (`/.well-known/security.txt`
+      and `/security.txt` were the top non-scanner 404s in 21 hours of live
+      log, 2026-10-09). RFC 9116 requires a `Contact` and an `Expires` less
+      than a year out, served over HTTPS as `text/plain`. The obvious contact
+      is a GitHub private vulnerability report, but this repo has private
+      vulnerability reporting off (Skidbladnir alone has it on), and turning it
+      on, or publishing an address, is the owner's call. Once there is a
+      contact, a static file plus a check that `Expires` is in the future.
+      <https://www.rfc-editor.org/rfc/rfc9116.html>
 - [x] Conditional requests (`If-None-Match`) for the GitHub calls: a `304` to an
       authorized request does not count against the limit. Parked as unneeded
       at 252 of 5,000 — but the token is a person's, and its pool had spent 990
@@ -452,6 +462,16 @@ record. There is no run log.
       output. Nuxt's own `scrollBehavior` governs all of it, so the new
       defaults change nothing a visitor sees here.
       <https://github.com/vuejs/router/releases/tag/v5.4.0>
+- [ ] Nuxt 4.6.1 (published 2026-10-09 22:59 UTC), once it has soaked like
+      4.6.0 did. A patch release: the fixes are mostly dev-server and typing
+      (`Serialize` types aligned with JSON, `$fetch` typed as `TypedFetch`,
+      `useId` hydration keeping `onServerPrefetch`), plus a Nitro performance
+      change that builds the portable event's web view lazily. The first issue
+      filed against it, nuxt/nuxt#36529 (an aborted navigation to an unmatched
+      route renders a 404), reproduces on 3.x too, so it is not a 4.6.1
+      regression. Land it with the full gates plus `check:navigation` in both
+      engines. <https://github.com/nuxt/nuxt/releases/tag/v4.6.1>
+      <https://github.com/nuxt/nuxt/issues/36529>
 - [x] Silenced Nitro's own `[request error]` stack-trace block on a 404, without
       replacing the error handler. Nitro logs it when the error is `fatal`, and
       `fatal` is only load-bearing on the client, where it is what makes a 404
@@ -840,7 +860,10 @@ record. There is no run log.
       console error, an uncaught exception, a CSP-refused inline script and
       two 8 px buttons each fail it; a clean page passes. Firefox reports a
       CSP refusal as a `javascript` log entry, so no listener is needed.
+      The runner's Firefox is a deb from the Mozilla PPA, not a snap, so a
+      profile under `/tmp` is visible to it.
       <https://w3c.github.io/webdriver-bidi/>
+      <https://github.com/actions/runner-images/blob/main/images/ubuntu/scripts/build/install-firefox.sh>
 - [x] Hold the README fold to its behaviour — `npm run check:navigation`
       (`scripts/check-navigation.mjs`), in CI in both engines. None of it runs
       on the server, so nothing else could see it break. On every about page
@@ -867,7 +890,27 @@ record. There is no run log.
       and push it down, so it ends on screen (checked) but not at the top.
       Same before tonight's changes. Images with known sizes, or an instant
       hash scroll, would each fix it; the first needs the README's image
-      sizes at render time.
+      sizes at render time. Low priority: nothing on the site makes such a
+      navigation — the README's own contents links and the hero's
+      `#download` are plain anchors, and those land on their heading in both
+      engines (measured on five READMEs: 80 px, the scroll margin).
+- [ ] Without script, a link to a README heading cannot open the fold in a
+      browser that does not do it itself, and no CSS can open a `<details>`.
+      That is Tor Browser at "Safest". Recorded rather than fixed: the
+      alternative is not folding the README at all. Mozilla's bug 1724299 is
+      described as shipping auto-expanding `<details>` in Firefox 139, fragment
+      navigation included, yet headless Firefox 155 left the fold closed on a
+      cold `about#heading` load here, on main's build before any of this
+      run's changes; worth re-checking in a real Firefox and in Tor Browser
+      before relying on either answer.
+      <https://bugzilla.mozilla.org/show_bug.cgi?id=1724299>
+      <https://github.com/whatwg/html/pull/6466>
+- [ ] Look at the masthead in a real Firefox and in Tor Browser, scrolled.
+      Headless Firefox drew no blur at all behind it, not even the plain
+      `blur()` the CSS gives every other browser, so its screenshots show body
+      text crisp behind the nav links — most likely the headless software
+      compositor, not the site, but no screenshot this routine can take
+      settles it.
 - [x] No dead controls without script. Every page is server-rendered and
       reads fine with script off, which is how Tor Browser's "Safest" level
       serves the onion service — except the `[copy]` buttons, which were shown
@@ -878,7 +921,10 @@ record. There is no run log.
       and in Chromium over CDP with script execution disabled (`display:
       none` on both, `flex` with script). `npm run check` fails a `<button>`
       on a public page without the class; on main's build it failed 12.
-      <https://drafts.csswg.org/mediaqueries-5/#scripting>
+      <https://drafts.csswg.org/mediaqueries-5/#scripting> — Baseline, widely
+      available since December 2023; MDN notes a script-blocking extension
+      may not change what it reports.
+      <https://developer.mozilla.org/en-US/docs/Web/CSS/Reference/At-rules/@media/scripting>
 - [ ] Run axe's `color-contrast` in the browser pass too, once the contrast item
       below is decided. Left out deliberately: it would be red today on the
       shortfalls already waiting on that decision.
@@ -981,6 +1027,16 @@ record. There is no run log.
       server's TLS) — neither reaches the image; `audit:runtime` is clean.
       <https://github.com/advisories/GHSA-vfj7-8cjw-p6xm>
       <https://github.com/advisories/GHSA-86w9-cpqp-85rv>
+      Since 2026-10-09 `npm audit` also names, all dev or build time and all
+      unreachable from the image (`audit:runtime` clean): `simple-git` ≤3.36.0
+      (config includes, GHSA-g4wm-2vf7-vfgr; trailer config,
+      GHSA-x6jw-m9v5-85vh, fixed in 4.0.1) and `@simple-git/argv-parser`
+      <2.0.1 (`VISUAL`, GHSA-v5rq-49vh-5v5c), both under devtools 3.4.2, whose
+      only newer release is 4.0.0-beta.4; and `esbuild` 0.27.7 (Windows dev
+      server file read, GHSA-g7r4-m6w7-qqqr, fixed in 0.28.1), pinned by
+      `fontless` ^0.2 under `@nuxt/fonts` 0.14, the latest.
+      <https://github.com/advisories/GHSA-g4wm-2vf7-vfgr>
+      <https://github.com/advisories/GHSA-g7r4-m6w7-qqqr>
 - [x] …and the image's other binary. The onion gateway's 594 crates were
       audited by nothing. CI's onion job now runs `cargo audit --deny yanked
       --deny unsound`. First run, 2026-10-02: `yoke-derive` 0.8.3 was yanked,
