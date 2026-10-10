@@ -886,6 +886,11 @@ record. There is no run log.
       profile under `/tmp` is visible to it.
       <https://w3c.github.io/webdriver-bidi/>
       <https://github.com/actions/runner-images/blob/main/images/ubuntu/scripts/build/install-firefox.sh>
+      Its first CI run (Firefox 157 on the runner) found what the local
+      Firefox 155 did not: `/status` at phone width, its six endpoint links
+      15 px tall and stacked 8 px apart — a target-size failure Chromium's
+      layout had passed by a hair. Each is now a 24 px row, as in the footer,
+      at the same pitch.
 - [x] Hold the README fold to its behaviour — `npm run check:navigation`
       (`scripts/check-navigation.mjs`), in CI in both engines. None of it runs
       on the server, so nothing else could see it break. On every about page
