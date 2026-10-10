@@ -114,7 +114,7 @@ export async function startFirefox() {
 			await bidi.send('session.end').catch(() => {})
 			bidi.close()
 			proc.kill()
-			await new Promise((r) => proc.exitCode !== null ? r() : proc.once('exit', r))
+			await new Promise((r) => (proc.exitCode !== null || proc.signalCode !== null ? r() : proc.once('exit', r)))
 			await rm(profile, { recursive: true, force: true }).catch(() => {})
 		},
 	}
