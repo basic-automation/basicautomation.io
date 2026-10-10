@@ -816,6 +816,17 @@ record. There is no run log.
       headless Chromium on onyums and Nanna, before and after: Back 2,700 →
       6,000, reload 2,700 → 6,000, a pushed `#heading` lands at the heading;
       the server's markup is unchanged.
+- [x] …and a link to a README heading lands on it in Firefox. Chromium opens
+      a closed `<details>` for a fragment by itself; Firefox does not, and Tor
+      Browser is Firefox. So `/projects/onyums/about#how-onyums-compares`,
+      followed from anywhere, left a Firefox visitor at the bottom of the
+      folded page (y 2,701) with the heading hidden. `useReadmeFold` now looks
+      the fragment up in the document once mounted, opens the fold and scrolls
+      the heading in, unless the visitor already folded it in that entry.
+      Proved in headless Firefox 155 over WebDriver BiDi on onyums and Nanna:
+      the heading lands 80 px from the top (its scroll margin), Back and
+      reload as in Chromium, no console output; Chromium unchanged, an
+      encoded emoji slug included.
 - [ ] Run axe's `color-contrast` in the browser pass too, once the contrast item
       below is decided. Left out deliberately: it would be red today on the
       shortfalls already waiting on that decision.

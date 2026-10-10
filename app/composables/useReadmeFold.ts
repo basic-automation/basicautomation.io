@@ -16,8 +16,12 @@ const KEY = 'readmeOpen'
  * it before the page scrolls, while a fresh visit by link starts folded, as
  * the page is designed to.
  *
- * A fragment that names a README heading opens it too, on a client-side
- * navigation; a browser does that itself on a real one.
+ * A fragment that names a README heading opens it too — on a client-side
+ * navigation, and on arrival from a link elsewhere, because only Chromium
+ * opens a closed `<details>` for a fragment itself. Firefox, and so Tor
+ * Browser, which is how the onion service is reached, left a link to
+ * `/projects/onyums/about#how-onyums-compares` at the bottom of the folded
+ * page with the heading hidden inside it.
  *
  * Never while hydrating: the element must match the server's markup, which
  * is folded. `onMounted` catches up — that is a reload, where the entry's
@@ -53,16 +57,20 @@ export function useReadmeFold(readmeHtml: Readonly<Ref<string | null>>) {
   }
   onMounted(async () => {
     window.addEventListener('pagehide', remember)
-    if (open.value || !wanted()) return
+    if (open.value) return
+    // While hydrating the README is markup, not a string, so a fragment is
+    // looked up in the document. Not when the visitor already chose.
+    const heading = typeof history.state?.[KEY] === 'boolean' ? null : readmeHeading(route.hash)
+    if (!heading && !wanted()) return
     open.value = true
     let top = Number.NaN
     try {
       top = Number(sessionStorage.getItem(entry()) ?? Number.NaN)
     }
     catch {}
-    if (!Number.isFinite(top)) return
     await nextTick()
-    window.scrollTo({ top, behavior: 'instant' })
+    if (Number.isFinite(top)) window.scrollTo({ top, behavior: 'instant' })
+    else heading?.scrollIntoView({ block: 'start', behavior: 'instant' })
   })
   onBeforeUnmount(() => window.removeEventListener('pagehide', remember))
 
@@ -76,4 +84,17 @@ export function useReadmeFold(readmeHtml: Readonly<Ref<string | null>>) {
   }
 
   return { open, onToggle }
+}
+
+/** The README element a location hash names, if it names one. */
+function readmeHeading(hash: string): HTMLElement | null {
+  const raw = hash.replace(/^#/, '')
+  if (!raw) return null
+  let id = raw
+  try {
+    id = decodeURIComponent(raw)
+  }
+  catch {}
+  const el = document.getElementById(id)
+  return el?.closest('.readme') ? el : null
 }
