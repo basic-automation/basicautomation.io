@@ -439,12 +439,18 @@ record. There is no run log.
       `^24.15.0`; the build image has 24.21.
       <https://github.com/nuxt/nuxt/releases/tag/v4.6.0>
       <https://github.com/nuxt/nuxt/issues/36514>
-- [ ] vue-router 5.4.0 (a direct dependency, published 2026-10-07), once it
-      has soaked. It changes client navigation defaults this site relies on:
-      the router now restores hashes and the top of the page by default, and
-      history invalidates obsolete scroll positions. Land it with a browser
-      check of in-page README anchors and back/forward between project tabs,
-      not just the server gates, because none of that runs on the server.
+- [x] vue-router 5.4.0 (a direct dependency, published 2026-10-07), landed
+      2026-10-09 after two days with no issue filed against it. It changes
+      client navigation defaults this site relies on: the router now restores
+      hashes and the top of the page by default, and history invalidates
+      obsolete scroll positions. Typecheck, 246 tests, build, `check`, `a11y`,
+      `a11y:browser` and `audit:runtime` clean, all 43 routes as on 5.3.1. In
+      headless Chromium, side by side with 5.3.1's build on onyums and
+      Skidbladnir: README anchor clicks, back and forward between anchors,
+      about → blog → back → forward, a cross-project hop and back, and a cold
+      load with a fragment land at the same positions on both, with no console
+      output. Nuxt's own `scrollBehavior` governs all of it, so the new
+      defaults change nothing a visitor sees here.
       <https://github.com/vuejs/router/releases/tag/v5.4.0>
 - [x] Silenced Nitro's own `[request error]` stack-trace block on a 404, without
       replacing the error handler. Nitro logs it when the error is `fatal`, and
