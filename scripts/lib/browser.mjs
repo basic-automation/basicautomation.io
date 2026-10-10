@@ -108,6 +108,11 @@ async function firefoxDriver() {
 			const off = bidi.on((msg) => {
 				if (msg.method !== 'log.entryAdded' || msg.params.source?.context !== context) return
 				if (msg.params.level !== 'error') return
+				// Firefox reports, at error level, every cookie it refuses to a
+				// third-party response — a README image served by github.com sets
+				// three. That is the browser declining someone else's cookie, not
+				// the page failing, and Chromium says nothing of it.
+				if (/^Cookie “[^”]*” has been rejected/.test(msg.params.text ?? '')) return
 				// `javascript` entries are uncaught errors and, in Firefox, the
 				// browser's own refusals too — a CSP-blocked script arrives here.
 				const prefix = msg.params.type === 'javascript' ? 'exception: ' : ''

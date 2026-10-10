@@ -245,8 +245,8 @@ headless Firefox, driven over WebDriver BiDi (set `FIREFOX_PATH` if it is not on
 two engines do differ. `npm run check:navigation` drives what a visitor's own
 navigation does to each about page's folded README: Back, Forward and a reload
 return a reader to the place they were reading, a visit by link starts folded,
-and a link to a README heading lands on it, in Chromium or (`--firefox`)
-Firefox. All of these walk every page the sitemap lists, so a new
+and a link to a README heading lands on it, at both widths, in Chromium or
+(`--firefox`) Firefox. All of these walk every page the sitemap lists, so a new
 project is audited the moment it is published. Colour contrast is measured
 separately and more directly by `npm run contrast`.
 

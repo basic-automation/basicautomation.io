@@ -849,8 +849,12 @@ record. There is no run log.
       reader was once the README's lazy images settled); a visit by link
       starts folded at the top; a cold load of `about#<heading>` lands on the
       heading; a client navigation to it shows it; a fold the visitor closed
-      stays closed on Back. 64 checks per engine, green on this build, and
-      against main's build 32 failures in Chromium and 41 in Firefox. It
+      stays closed on Back. At 1280 and 390 px, 128 checks per engine, green
+      on this build; at desktop width alone, main's build failed 32 in
+      Chromium and 41 in Firefox. Firefox logs every cookie it refuses to a
+      third-party response at error level (a README image from github.com
+      sets three), which the driver ignores as the browser's notice, not the
+      page's fault. It
       waits for scrolling to stop rather than a fixed time, because the site
       scrolls smoothly and a restore takes over a second. Writing it found a
       bug in the fix: the reload position was keyed by vue-router's entry
