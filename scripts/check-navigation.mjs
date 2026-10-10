@@ -22,6 +22,7 @@
  *   - a cold load of `about#<heading>`: unfolded, the heading at the top
  *   - a client navigation to `about#<heading>`: unfolded, the heading on screen
  *   - fold it, blog tab, Back: still folded — even with the fragment
+ *   - opened before the app hydrates: still open after it has
  *
  * And, as in `check-a11y-browser.mjs`, any console error fails it.
  */
@@ -182,7 +183,18 @@ try {
 			s = await state()
 			expect('folded by the visitor, it stays folded on Back', s.open === false, s)
 
-			for (const { text } of page.takeErrors()) problems.push(`console: ${text}`)
+			// A reader on a slow line opens the fold before the app has hydrated:
+		// it must stay open. Hydration once wrote the bound `false` over it.
+		const undo = await page.preload(`document.addEventListener('DOMContentLoaded', () => { document.querySelector('.readme')?.closest('details')?.setAttribute('open', '') })`)
+		await page.goto('about:blank')
+		await page.goto(BASE + about)
+		await arrive(about)
+		await sleep(1500)
+		await undo()
+		s = await state()
+		expect('opened before hydration, it stays open', s.open === true, s)
+
+		for (const { text } of page.takeErrors()) problems.push(`console: ${text}`)
 			console.log(`  ${problems.length ? '✗' : '·'} ${name.padEnd(7)} ${about}${deep ? '' : ' (README too short to test the scroll position)'}`)
 			for (const p of problems) console.error(`      ${p}`)
 			failures.push(...problems.map((p) => `${name} ${about}: ${p}`))

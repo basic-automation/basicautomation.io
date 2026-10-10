@@ -884,6 +884,17 @@ record. There is no run log.
       number, which a fresh document load can reuse, so a cold link to a
       heading went to an older reading position instead; it is now read only
       on a reload or Back/Forward.
+- [x] …and a README opened before the app hydrates stays open. Binding the
+      fold to `open` made hydration write the bound `false` over the element,
+      so a reader who opened it in the first moments — on a slow line, Tor
+      say, there is time to — had it shut under them once the app took over:
+      open at load, closed 4 s later, on every about page. Not on main, which
+      had no binding; it came in with the fold's history state above, and no
+      check covered it. Hydrating, `useReadmeFold` now starts from the
+      document as it stands, and records the open fold in the entry once
+      mounted. `check:navigation` has the case (a preload script opens the
+      fold at `DOMContentLoaded`): the build with the bug fails it on all 16
+      pages × widths and nothing else, this build passes 144 checks per engine.
 - [ ] A client navigation to a README heading stops short of it: Nuxt's hash
       scroll follows the stylesheet's `scroll-behavior: smooth`, and README
       images between here and the heading load while the page passes them

@@ -10,7 +10,8 @@
  *
  * `evaluate` takes an expression and resolves with its value (awaited, as
  * JSON); `run` executes a whole script, such as a library's source, and
- * resolves with nothing.
+ * resolves with nothing; `preload` runs one in every later document before
+ * the page's own, and resolves with a function that stops it.
  *
  * `takeErrors()` returns, and forgets, `{ text, url }` for every console
  * error, uncaught exception and refused load the page reported.
@@ -61,6 +62,11 @@ async function chromiumDriver() {
 					const nav = await cdp.send('Page.navigate', { url }, sessionId)
 					if (nav.errorText) throw new Error(`${url}: ${nav.errorText}`)
 					await loaded
+				},
+				/** Run `source` in every document this page loads from now on, before its own scripts; resolves with an undo. */
+				async preload(source) {
+					const { identifier } = await cdp.send('Page.addScriptToEvaluateOnNewDocument', { source }, sessionId)
+					return () => cdp.send('Page.removeScriptToEvaluateOnNewDocument', { identifier }, sessionId)
 				},
 				async reload() {
 					const loaded = cdp.once('Page.loadEventFired', sessionId)
@@ -121,6 +127,12 @@ async function firefoxDriver() {
 			return {
 				async goto(url) {
 					await bidi.send('browsingContext.navigate', { context, url, wait: 'complete' })
+				},
+				async preload(source) {
+					const { script } = await bidi.send('script.addPreloadScript', {
+						functionDeclaration: `() => { ${source} }`, contexts: [context],
+					})
+					return () => bidi.send('script.removePreloadScript', { script })
 				},
 				async reload() {
 					await bidi.send('browsingContext.reload', { context, wait: 'complete' })

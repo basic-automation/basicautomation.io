@@ -23,9 +23,9 @@ const KEY = 'readmeOpen'
  * `/projects/onyums/about#how-onyums-compares` at the bottom of the folded
  * page with the heading hidden inside it.
  *
- * Never while hydrating: the element must match the server's markup, which
- * is folded. `onMounted` catches up — that is a reload, where the entry's
- * state survives.
+ * Never while hydrating: the element must match the markup as it stands, so
+ * `open` starts from the document (see below). `onMounted` catches up — that
+ * is a reload, where the entry's state survives.
  */
 export function useReadmeFold(readmeHtml: Readonly<Ref<string | null>>) {
   const route = useRoute()
@@ -40,7 +40,11 @@ export function useReadmeFold(readmeHtml: Readonly<Ref<string | null>>) {
     return !!route.hash && hasAnchor(readmeHtml.value, route.hash)
   }
 
-  const open = ref(!nuxtApp.isHydrating && wanted())
+  // Hydrating, the fold is whatever the server's markup is now: folded, unless
+  // the reader has already opened it (a slow line — Tor, say — leaves time to)
+  // or the browser opened it for a fragment. Vue writes the bound value over
+  // the element as it hydrates, so starting from `false` shut it under them.
+  const open = ref(nuxtApp.isHydrating ? foldInDocument() : wanted())
   // A reload: the browser restores the scroll position against the page as
   // the server sent it, folded, so a visitor reading the README lands short
   // of where they were. Neither it nor vue-router keeps the position across
@@ -57,7 +61,11 @@ export function useReadmeFold(readmeHtml: Readonly<Ref<string | null>>) {
   }
   onMounted(async () => {
     window.addEventListener('pagehide', remember)
-    if (open.value) return
+    if (open.value) {
+      // Opened before hydration: no `toggle` reached `onToggle`, so record it.
+      if (history.state?.[KEY] !== true) history.replaceState({ ...history.state, [KEY]: true }, '')
+      return
+    }
     // While hydrating the README is markup, not a string, so a fragment is
     // looked up in the document. Not when the visitor already chose.
     const heading = typeof history.state?.[KEY] === 'boolean' ? null : readmeHeading(route.hash)
@@ -107,4 +115,10 @@ function readmeHeading(hash: string): HTMLElement | null {
 function returning(): boolean {
   const nav = performance.getEntriesByType('navigation')[0] as PerformanceNavigationTiming | undefined
   return nav?.type === 'reload' || nav?.type === 'back_forward'
+}
+
+/** Whether the README's fold is open in the document as it stands. */
+function foldInDocument(): boolean {
+  if (!import.meta.client) return false
+  return document.querySelector('.readme')?.closest('details')?.open === true
 }
