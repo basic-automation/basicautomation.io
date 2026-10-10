@@ -799,6 +799,23 @@ record. There is no run log.
       selected; copy it with your keyboard." Checked over CDP with the
       permission denied: the selection is exactly the command, without the
       `$` sigil, and both buttons reset after 4 s.
+- [x] Back returns a reader to the README they were reading. The about page
+      folds its README, and a page reached by Back is rendered afresh, so it
+      came back folded: the scroll position vue-router saved no longer
+      existed, and a visitor 6,000 px down onyums' README landed at 2,700, the
+      bottom of the folded page. `useReadmeFold`
+      (`app/composables/useReadmeFold.ts`) keeps the fold in the history
+      entry beside vue-router's own state, so Back and Forward reopen it
+      before the page scrolls; a fresh visit by link still starts folded, and
+      one folded again stays folded. A client navigation to a fragment inside
+      the README opens it first (`hasAnchor`, `shared/markdown/anchor.ts`), as
+      a browser does on a real one. A reload reopens it too, at the place the
+      visitor was: Chromium drops a `replaceState` made while the page
+      unloads, so that position goes to session storage on `pagehide`. Found
+      by the vue-router 5.4 browser check; the same on 5.3.1. Proved in
+      headless Chromium on onyums and Nanna, before and after: Back 2,700 →
+      6,000, reload 2,700 → 6,000, a pushed `#heading` lands at the heading;
+      the server's markup is unchanged.
 - [ ] Run axe's `color-contrast` in the browser pass too, once the contrast item
       below is decided. Left out deliberately: it would be red today on the
       shortfalls already waiting on that decision.

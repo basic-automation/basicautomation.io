@@ -1,0 +1,79 @@
+import { hasAnchor } from '~~/shared/markdown/anchor'
+
+/** The key this keeps in `history.state`, beside vue-router's own. */
+const KEY = 'readmeOpen'
+
+/**
+ * Whether the about page's folded README is open — kept in the history entry.
+ *
+ * A visitor who unfolds a README, reads down it and moves to the blog tab
+ * comes Back to a page rendered afresh, folded. vue-router hands Nuxt the
+ * scroll position it saved for that entry, but on the folded page it no
+ * longer exists, so the visitor landed at the bottom of a short page,
+ * thousands of pixels from where they were reading (13,201 px down onyums'
+ * README, restored to 2,700). Recording the fold in `history.state` makes
+ * it part of the entry, as the scroll position is: Back and Forward reopen
+ * it before the page scrolls, while a fresh visit by link starts folded, as
+ * the page is designed to.
+ *
+ * A fragment that names a README heading opens it too, on a client-side
+ * navigation; a browser does that itself on a real one.
+ *
+ * Never while hydrating: the element must match the server's markup, which
+ * is folded. `onMounted` catches up — that is a reload, where the entry's
+ * state survives.
+ */
+export function useReadmeFold(readmeHtml: Readonly<Ref<string | null>>) {
+  const route = useRoute()
+  const nuxtApp = useNuxtApp()
+
+  const wanted = (): boolean => {
+    if (!import.meta.client) return false
+    // What the visitor last did with this entry's fold wins, even over a
+    // fragment: one who folded it and came Back meant it.
+    const kept: unknown = history.state?.[KEY]
+    if (typeof kept === 'boolean') return kept
+    return !!route.hash && hasAnchor(readmeHtml.value, route.hash)
+  }
+
+  const open = ref(!nuxtApp.isHydrating && wanted())
+  // A reload: the browser restores the scroll position against the page as
+  // the server sent it, folded, so a visitor reading the README lands short
+  // of where they were. Neither it nor vue-router keeps the position across
+  // a reload (`history.state.scroll` is `false` then), and Chromium drops a
+  // `replaceState` made while the page unloads, so it goes to session
+  // storage, keyed by the history entry. A convenience: if storage is
+  // refused, a reload just lands where it did before.
+  const entry = () => `readme-top:${history.state?.position ?? ''}:${route.path}`
+  const remember = () => {
+    try {
+      if (open.value) sessionStorage.setItem(entry(), String(Math.round(window.scrollY)))
+    }
+    catch {}
+  }
+  onMounted(async () => {
+    window.addEventListener('pagehide', remember)
+    if (open.value || !wanted()) return
+    open.value = true
+    let top = Number.NaN
+    try {
+      top = Number(sessionStorage.getItem(entry()) ?? Number.NaN)
+    }
+    catch {}
+    if (!Number.isFinite(top)) return
+    await nextTick()
+    window.scrollTo({ top, behavior: 'instant' })
+  })
+  onBeforeUnmount(() => window.removeEventListener('pagehide', remember))
+
+  /** The `<details>`'s own `toggle`, from a click or from the binding. */
+  function onToggle(event: Event) {
+    const now = (event.target as HTMLDetailsElement).open
+    open.value = now
+    // vue-router merges `history.state` into the entry when it next writes
+    // it, so the key survives navigating away; a new entry starts without it.
+    if (history.state?.[KEY] !== now) history.replaceState({ ...history.state, [KEY]: now }, '')
+  }
+
+  return { open, onToggle }
+}

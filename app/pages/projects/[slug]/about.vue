@@ -9,6 +9,7 @@ const route = useRoute()
 const slug = computed(() => String(route.params.slug))
 
 const { project, error, readmeHtml, hasReadme } = await useProject(slug)
+const readmeFold = useReadmeFold(readmeHtml)
 
 if (error.value || !project.value) {
   // Client-only `fatal`, for the reason spelled out in `app/pages/[...slug].vue`:
@@ -545,7 +546,7 @@ useSeoMeta({
     <!-- Folded away: the pitch is above, and the full documentation is long. -->
     <section v-if="hasReadme">
       <TermRule label="documentation" />
-      <details class="mt-7 group">
+      <details class="mt-7 group" :open="readmeFold.open.value" @toggle="readmeFold.onToggle">
         <summary
           class="cursor-pointer list-none text-sm text-pn-dim transition-colors hover:text-pn-fg-bright"
         >
