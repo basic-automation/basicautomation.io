@@ -923,8 +923,8 @@ record. There is no run log.
       (`scripts/check-navigation.mjs`), in CI in both engines. None of it runs
       on the server, so nothing else could see it break. On every about page
       whose README has a heading: unfold and read down, then Back, Forward and
-      Back, and a reload all return to the same place (±12 px, half a line,
-      of where the reader was once the README's lazy images settled); a visit by link
+      Back, and a reload all return to the same place (±4 px of where the
+      reader was once the README's lazy images settled); a visit by link
       starts folded at the top; a cold load of `about#<heading>` lands on the
       heading; a client navigation to it shows it; a fold the visitor closed
       stays closed on Back. At 1280 and 390 px, 128 checks per engine, green
@@ -939,17 +939,19 @@ record. There is no run log.
       number, which a fresh document load can reuse, so a cold link to a
       heading went to an older reading position instead; it is now read only
       on a reload or Back/Forward.
-- [x] …and `check:navigation` stopped failing main on a few pixels. The run
-      on main after #20 merged went red on one case: a reload of onyums'
-      README at 390 px landed at 5,425 against 5,418 left, outside a ±4 px
-      slack. Reproduced locally at +2 px on about one reload in three. The
-      site's own `scrollTo` puts the page exactly where it was left; the
-      extra pixels arrive in the next frame with no script scrolling (every
-      scrolling call hooked), the page height and the README's offset
-      unchanged, and with `history.scrollRestoration` manual or
-      `overflow-anchor: none` alike — somewhere in the browser itself. The
-      slack is now half a line of body text (12 px). The bug the check
-      exists for was 3,300 px. Both engines 144/144.
+- [x] A restored scroll position is a jump, not an animation. `main` went red
+      after #20 on `check:navigation`: a reload of onyums' README at 390 px
+      landed 7 px past the reader's place, and this branch's first CI run
+      21 px past on Skidbladnir's. The site's `scroll-behavior: smooth`
+      applied to vue-router's own restore, a bare `scrollTo({ left, top })`
+      on Back, Forward and reload, so each was an animation from the top,
+      racing the README fold's instant restore — on a fast machine it lost
+      by nothing, on a slow one it did not. With the CPU slowed 6× all 16
+      reload cases failed (7–34 px past). `app/router.options.ts` keeps
+      Nuxt's `scrollBehavior` and marks a saved position `instant`, as a
+      browser's own restoration is; the same 6× run passes all 144 with the
+      slack at 1 px. A failed reload check now prints a frame-by-frame trace
+      of the page's first seconds, which is how this was found.
 - [x] The browser accessibility pass ran axe on a page still scrolling. The
       site scrolls smoothly, so `check-a11y-browser.mjs`'s bare `scrollTo`
       calls only started animations: its reading pass stalled about a screen

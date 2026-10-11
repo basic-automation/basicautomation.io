@@ -22,7 +22,7 @@ it is flat.
 | --- | --- |
 | `/` | The pitch, live project stats, and the catalogue |
 | `/projects` | Every public project |
-| `/projects/<slug>/about` | A marketing page per project: hero, why it exists, features, a worked example, the recent releases, and the repo's README folded away underneath — once opened, it stays open for Back, Forward and a reload, at the place the visitor was reading, and its images arrive with their sizes, so nothing jumps as they load. A desktop app's page also gets a download section: a direct link per platform to the newest release's installers. `/projects/<slug>` redirects here |
+| `/projects/<slug>/about` | A marketing page per project: hero, why it exists, features, a worked example, the recent releases, and the repo's README folded away underneath — once opened, it stays open for Back, Forward and a reload, at the place the visitor was reading (put back in one jump, as a browser restores a page — the site's smooth scrolling is for following a link, not for returning), and its images arrive with their sizes, so nothing jumps as they load. A desktop app's page also gets a download section: a direct link per platform to the newest release's installers. `/projects/<slug>` redirects here |
 | `/projects/<slug>/blog` | That project's news, and `/projects/<slug>/blog/<post>` for one post |
 | `/news` | The organization's own news, for what is about Basic Automation rather than one tool |
 | `/admin` | The post editor — behind a login the app checks itself, and absent over Tor (below) |
@@ -248,7 +248,9 @@ two engines do differ. `npm run check:navigation` drives what a visitor's own
 navigation does to each about page's folded README: Back, Forward and a reload
 return a reader to the place they were reading, a visit by link starts folded,
 and a link to a README heading lands on it, at both widths, in Chromium or
-(`--firefox`) Firefox. All of these walk every page the sitemap lists, so a new
+(`--firefox`) Firefox. A reload it fails prints a frame-by-frame trace of
+the page's first seconds — every scroll call, scroll position and page height —
+so a failure on CI says where the pixels went. All of these walk every page the sitemap lists, so a new
 project is audited the moment it is published. Colour contrast is measured
 separately and more directly by `npm run contrast`.
 

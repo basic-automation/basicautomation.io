@@ -36,19 +36,8 @@ const BASE = (args.find((a) => !a.startsWith('--'))
 	?? 'http://127.0.0.1:3000').replace(/\/$/, '')
 const ENGINE = args.includes('--firefox') ? 'firefox' : 'chromium'
 
-/**
- * How far from the saved position a restored one may land, in CSS pixels:
- * half a line of body text (14 px × 1.65). A reload can land a couple of
- * pixels past where the page was left, after the site's own `scrollTo` has
- * put it exactly there: +2 px on about one reload in three here (onyums at
- * 390 px, 2026-10-10), +7 on main's CI run after #20, which failed this
- * check at 4. No script scrolls in between (every scrolling call was
- * hooked), the page's height and the README's offset do not move, and it
- * happens with `history.scrollRestoration` manual and `overflow-anchor:
- * none` too — something in the browser's own first frames. A reader cannot
- * see seven pixels; the bug this guards against was 3,300.
- */
-const SLACK = 12
+/** How far from the saved position a restored one may land, in CSS pixels. */
+const SLACK = 4
 /** Where a heading scrolled to may sit: its scroll margin clears the masthead. */
 const HEADING_BAND = [-2, 200]
 
@@ -57,6 +46,29 @@ const VIEWPORTS = [
 	{ name: 'desktop', width: 1280, height: 900, deviceScaleFactor: 1, mobile: false },
 	{ name: 'phone', width: 390, height: 844, deviceScaleFactor: 3, mobile: true },
 ]
+
+/**
+ * A frame-by-frame record of a document's first seconds: every frame where
+ * the scroll position, the page height, the README's offset or the font
+ * state changed, plus each `scrollTo` the page made and each layout shift.
+ * Kept short: it is printed beside a failure, not stored.
+ */
+const TRACE = `(() => {
+	const t = []; window.__trace = t
+	const now = () => Math.round(performance.now())
+	const readme = () => { const r = document.querySelector('.readme'); return r ? Math.round(r.getBoundingClientRect().top + scrollY) : null }
+	const scrollTo = window.scrollTo.bind(window)
+	window.scrollTo = (...a) => { t.push([now(), 'scrollTo', JSON.stringify(a[0] ?? a), Math.round(scrollY)]); return scrollTo(...a) }
+	try { new PerformanceObserver((l) => { for (const e of l.getEntries()) t.push([now(), 'shift', +e.value.toFixed(4), (e.sources ?? []).map((x) => x.node?.nodeName + ' ' + Math.round(x.previousRect.y) + '>' + Math.round(x.currentRect.y)).join(';')]) }).observe({ type: 'layout-shift', buffered: true }) } catch {}
+	let last = '', frames = 0
+	const frame = () => {
+		const row = [Math.round(scrollY), document.documentElement.scrollHeight, readme(), document.fonts.status, document.readyState]
+		const key = row.join()
+		if (key !== last) { t.push([now(), 'frame', ...row]); last = key }
+		if (++frames < 300 && t.length < 60) requestAnimationFrame(frame)
+	}
+	requestAnimationFrame(frame)
+})()`
 
 const ABOUT = /^\/projects\/([^/]+)\/about$/
 const slugs = (await sitePages(BASE)).map((p) => ABOUT.exec(p)?.[1]).filter(Boolean)
@@ -156,10 +168,15 @@ try {
 			s = await state()
 			expect(`Forward and Back again, at y ${left}`, s.open === true && near(s.y), s)
 
+			// What the page did on its way back, frame by frame — only read when
+			// the check fails, so a CI failure says where the pixels went.
+			const untrace = await page.preload(TRACE)
 			await page.reload()
 			await arrive(about)
+			await untrace()
 			s = await state()
-			expect(`a reload reopens it at y ${left}`, s.open === true && near(s.y), s)
+			const reloaded = s.open === true && near(s.y)
+			expect(`a reload reopens it at y ${left}`, reloaded, reloaded ? s : { ...s, trace: await page.evaluate('window.__trace ?? null') })
 
 			await click(`a[href="${blog}"]`)
 			await arrive(blog)
