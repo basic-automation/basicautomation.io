@@ -207,6 +207,30 @@ record. There is no run log.
       now take those fields from one `requester()`
       (`server/plugins/request-log.ts`); still one line per request, HEAD
       still logged as HEAD, onion requests still `ip: null`.
+- [x] …and it names a visitor again. 5,548 of 5,555 lines in 21 hours of
+      live log (2026-10-10) carried `ip: 172.18.0.1`: Caddy trusts no proxy,
+      so its `x-forwarded-for` is its own peer, and that peer is Docker's
+      bridge gateway. Each line now also carries `cfIp`, from Cloudflare's
+      `cf-connecting-ip`, which Caddy passes through
+      (`shared/log/client.ts`). Logged under its own name because nothing on
+      the way in checks that a request came through Cloudflare; nothing in
+      the site decides anything from it. Over Tor, neither address.
+      <https://developers.cloudflare.com/fundamentals/reference/http-headers/>
+- [ ] A verified client address at the edge — **owner's stack**. Caddy sees
+      every clearnet request from `172.18.0.1`, so neither its
+      `{client_ip}` nor the `x-forwarded-for` it hands the site is the
+      visitor, and Caddy cannot tell Cloudflare from anyone else who reaches
+      the origin. Docker's docs say a published port's IPv6 traffic to an
+      IPv4-only bridge network goes through the userland proxy, which
+      connects from the gateway; this host has a global IPv6 address and
+      `caddy-shared-network` is IPv4-only, which would fit, but whether
+      Cloudflare reaches the origin over IPv6 is in the Cloudflare
+      dashboard, not here. With the real peer in hand, Caddy's
+      `trusted_proxies` set to Cloudflare's ranges plus `client_ip_headers
+      CF-Connecting-IP` would make `x-forwarded-for` the verified visitor and
+      `cfIp` redundant.
+      <https://docs.docker.com/engine/network/port-publishing/>
+      <https://caddyserver.com/docs/caddyfile/options>
 - [x] `/api/posts?project=<unknown>` is a 404, like `/api/projects/<unknown>`,
       not an empty list.
 - [x] Answer HEAD wherever GET is answered. Nitro routes by filename suffix, so
