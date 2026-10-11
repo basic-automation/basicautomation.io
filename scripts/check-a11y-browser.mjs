@@ -98,13 +98,23 @@ try {
 			// Then read to the bottom, a screen at a time, as a visitor would. The
 			// onion frame and the README's images are lazy: unscrolled, they never
 			// load, and whatever they would log is never seen.
+			//
+			// Every jump is `instant`. The site scrolls smoothly, so a bare
+			// `scrollTo` only starts an animation: the pass stalled a screen or
+			// so down (Chromium, onyums at 390 px: 1,014 of 3,894 px by the last
+			// step), and the return to the top was still ~1,700 px out when axe
+			// ran. axe then measured a page in motion, with links passing under
+			// the fixed masthead, and `target-size` failed /status's links as
+			// "partially obscured" on one Firefox run in four (2026-10-10).
 			await page.evaluate(`(async () => {
 				for (let y = 0; y < document.documentElement.scrollHeight; y += innerHeight) {
-					scrollTo(0, y)
+					scrollTo({ top: y, behavior: 'instant' })
 					await new Promise((r) => setTimeout(r, 150))
 				}
 				await new Promise((r) => setTimeout(r, 1000))
-				scrollTo(0, 0)
+				scrollTo({ top: 0, behavior: 'instant' })
+				await new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r)))
+				if (scrollY !== 0) throw new Error('still ' + scrollY + ' px down after scrolling to the top')
 			})()`)
 
 			const expected = path === NOT_FOUND_PATH ? 'error page' : 'page'

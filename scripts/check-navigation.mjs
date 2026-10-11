@@ -47,6 +47,29 @@ const VIEWPORTS = [
 	{ name: 'phone', width: 390, height: 844, deviceScaleFactor: 3, mobile: true },
 ]
 
+/**
+ * A frame-by-frame record of a document's first seconds: every frame where
+ * the scroll position, the page height, the README's offset or the font
+ * state changed, plus each `scrollTo` the page made and each layout shift.
+ * Kept short: it is printed beside a failure, not stored.
+ */
+const TRACE = `(() => {
+	const t = []; window.__trace = t
+	const now = () => Math.round(performance.now())
+	const readme = () => { const r = document.querySelector('.readme'); return r ? Math.round(r.getBoundingClientRect().top + scrollY) : null }
+	const scrollTo = window.scrollTo.bind(window)
+	window.scrollTo = (...a) => { t.push([now(), 'scrollTo', JSON.stringify(a[0] ?? a), Math.round(scrollY)]); return scrollTo(...a) }
+	try { new PerformanceObserver((l) => { for (const e of l.getEntries()) t.push([now(), 'shift', +e.value.toFixed(4), (e.sources ?? []).map((x) => x.node?.nodeName + ' ' + Math.round(x.previousRect.y) + '>' + Math.round(x.currentRect.y)).join(';')]) }).observe({ type: 'layout-shift', buffered: true }) } catch {}
+	let last = '', frames = 0
+	const frame = () => {
+		const row = [Math.round(scrollY), document.documentElement.scrollHeight, readme(), document.fonts.status, document.readyState]
+		const key = row.join()
+		if (key !== last) { t.push([now(), 'frame', ...row]); last = key }
+		if (++frames < 300 && t.length < 60) requestAnimationFrame(frame)
+	}
+	requestAnimationFrame(frame)
+})()`
+
 const ABOUT = /^\/projects\/([^/]+)\/about$/
 const slugs = (await sitePages(BASE)).map((p) => ABOUT.exec(p)?.[1]).filter(Boolean)
 if (!slugs.length) throw new Error(`${BASE}/sitemap.xml lists no about pages`)
@@ -145,10 +168,15 @@ try {
 			s = await state()
 			expect(`Forward and Back again, at y ${left}`, s.open === true && near(s.y), s)
 
+			// What the page did on its way back, frame by frame — only read when
+			// the check fails, so a CI failure says where the pixels went.
+			const untrace = await page.preload(TRACE)
 			await page.reload()
 			await arrive(about)
+			await untrace()
 			s = await state()
-			expect(`a reload reopens it at y ${left}`, s.open === true && near(s.y), s)
+			const reloaded = s.open === true && near(s.y)
+			expect(`a reload reopens it at y ${left}`, reloaded, reloaded ? s : { ...s, trace: await page.evaluate('window.__trace ?? null') })
 
 			await click(`a[href="${blog}"]`)
 			await arrive(blog)

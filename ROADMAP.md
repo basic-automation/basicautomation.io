@@ -207,6 +207,30 @@ record. There is no run log.
       now take those fields from one `requester()`
       (`server/plugins/request-log.ts`); still one line per request, HEAD
       still logged as HEAD, onion requests still `ip: null`.
+- [x] …and it names a visitor again. 5,548 of 5,555 lines in 21 hours of
+      live log (2026-10-10) carried `ip: 172.18.0.1`: Caddy trusts no proxy,
+      so its `x-forwarded-for` is its own peer, and that peer is Docker's
+      bridge gateway. Each line now also carries `cfIp`, from Cloudflare's
+      `cf-connecting-ip`, which Caddy passes through
+      (`shared/log/client.ts`). Logged under its own name because nothing on
+      the way in checks that a request came through Cloudflare; nothing in
+      the site decides anything from it. Over Tor, neither address.
+      <https://developers.cloudflare.com/fundamentals/reference/http-headers/>
+- [ ] A verified client address at the edge — **owner's stack**. Caddy sees
+      every clearnet request from `172.18.0.1`, so neither its
+      `{client_ip}` nor the `x-forwarded-for` it hands the site is the
+      visitor, and Caddy cannot tell Cloudflare from anyone else who reaches
+      the origin. Docker's docs say a published port's IPv6 traffic to an
+      IPv4-only bridge network goes through the userland proxy, which
+      connects from the gateway; this host has a global IPv6 address and
+      `caddy-shared-network` is IPv4-only, which would fit, but whether
+      Cloudflare reaches the origin over IPv6 is in the Cloudflare
+      dashboard, not here. With the real peer in hand, Caddy's
+      `trusted_proxies` set to Cloudflare's ranges plus `client_ip_headers
+      CF-Connecting-IP` would make `x-forwarded-for` the verified visitor and
+      `cfIp` redundant.
+      <https://docs.docker.com/engine/network/port-publishing/>
+      <https://caddyserver.com/docs/caddyfile/options>
 - [x] `/api/posts?project=<unknown>` is a 404, like `/api/projects/<unknown>`,
       not an empty list.
 - [x] Answer HEAD wherever GET is answered. Nitro routes by filename suffix, so
@@ -462,15 +486,19 @@ record. There is no run log.
       output. Nuxt's own `scrollBehavior` governs all of it, so the new
       defaults change nothing a visitor sees here.
       <https://github.com/vuejs/router/releases/tag/v5.4.0>
-- [ ] Nuxt 4.6.1 (published 2026-10-09 22:59 UTC), once it has soaked like
-      4.6.0 did. A patch release: the fixes are mostly dev-server and typing
-      (`Serialize` types aligned with JSON, `$fetch` typed as `TypedFetch`,
-      `useId` hydration keeping `onServerPrefetch`), plus a Nitro performance
-      change that builds the portable event's web view lazily. The first issue
-      filed against it, nuxt/nuxt#36529 (an aborted navigation to an unmatched
-      route renders a 404), reproduces on 3.x too, so it is not a 4.6.1
-      regression. Land it with the full gates plus `check:navigation` in both
-      engines. <https://github.com/nuxt/nuxt/releases/tag/v4.6.1>
+- [x] Nuxt 4.6.1 (published 2026-10-09 22:59 UTC), landed 2026-10-10 after
+      27 hours with two issues filed against it, neither touching this site:
+      nuxt/nuxt#36529 (an aborted navigation to an unmatched route renders a
+      404) reproduces on 3.x too, and #36530 is the `cloudflare_module`
+      preset. A patch release: mostly dev-server and typing fixes, plus a
+      Nitro change that builds the portable event's web view lazily. Taken
+      with vue-tsc 3.3.13 (setup macros without static imports) and
+      `@types/node` 26.6.5; the lockfile also moved cssnano 9.3 → 9.6, and the
+      built CSS came out byte-identical (same hash). Typecheck, 273 tests,
+      build, `check`, `a11y`, `a11y:browser`, `a11y:firefox`,
+      `check:navigation` in both engines (144 each), `audit:runtime`; all 42
+      routes answer as on 4.6.0, every page body the same size.
+      <https://github.com/nuxt/nuxt/releases/tag/v4.6.1>
       <https://github.com/nuxt/nuxt/issues/36529>
 - [x] Silenced Nitro's own `[request error]` stack-trace block on a 404, without
       replacing the error handler. Nitro logs it when the error is `fatal`, and
@@ -911,6 +939,27 @@ record. There is no run log.
       number, which a fresh document load can reuse, so a cold link to a
       heading went to an older reading position instead; it is now read only
       on a reload or Back/Forward.
+- [x] A restored scroll position is a jump, not an animation. `main` went red
+      after #20 on `check:navigation`: a reload of onyums' README at 390 px
+      landed 7 px past the reader's place, and this branch's first CI run
+      21 px past on Skidbladnir's. The site's `scroll-behavior: smooth`
+      applied to vue-router's own restore, a bare `scrollTo({ left, top })`
+      on Back, Forward and reload, so each was an animation from the top,
+      racing the README fold's instant restore — on a fast machine it lost
+      by nothing, on a slow one it did not. With the CPU slowed 6× all 16
+      reload cases failed (7–34 px past). `app/router.options.ts` keeps
+      Nuxt's `scrollBehavior` and marks a saved position `instant`, as a
+      browser's own restoration is; the same 6× run passes all 144 with the
+      slack at 1 px. A failed reload check now prints a frame-by-frame trace
+      of the page's first seconds, which is how this was found.
+- [x] The browser accessibility pass ran axe on a page still scrolling. The
+      site scrolls smoothly, so `check-a11y-browser.mjs`'s bare `scrollTo`
+      calls only started animations: its reading pass stalled about a screen
+      down, and its return to the top was still ~1,700 px out when axe ran,
+      so links passing under the fixed masthead failed `target-size` as
+      "partially obscured" — /status in Firefox, one run in four
+      (2026-10-10). Every jump is `instant` now, and the pass throws if the
+      page is not at the top when axe starts.
 - [x] …and a README opened before the app hydrates stays open. Binding the
       fold to `open` made hydration write the bound `false` over the element,
       so a reader who opened it in the first moments — on a slow line, Tor

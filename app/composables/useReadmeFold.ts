@@ -45,13 +45,13 @@ export function useReadmeFold(readmeHtml: Readonly<Ref<string | null>>) {
   // or the browser opened it for a fragment. Vue writes the bound value over
   // the element as it hydrates, so starting from `false` shut it under them.
   const open = ref(nuxtApp.isHydrating ? foldInDocument() : wanted())
-  // A reload: the browser restores the scroll position against the page as
-  // the server sent it, folded, so a visitor reading the README lands short
-  // of where they were. Neither it nor vue-router keeps the position across
-  // a reload (`history.state.scroll` is `false` then), and Chromium drops a
-  // `replaceState` made while the page unloads, so it goes to session
-  // storage, keyed by the history entry. A convenience: if storage is
-  // refused, a reload just lands where it did before.
+  // A reload: the browser, and vue-router from `history.state.scroll`, restore the scroll
+  // position against the page as the server sent it, folded, so a visitor
+  // reading the README lands short of where they were. The fold's own state
+  // can't ride along in the entry — Chromium drops a `replaceState` made
+  // while the page unloads — so the position goes to session storage, keyed
+  // by the history entry. A convenience: if storage is refused, a reload
+  // just lands where it did before.
   const entry = () => `readme-top:${history.state?.position ?? ''}:${route.path}`
   const remember = () => {
     try {
