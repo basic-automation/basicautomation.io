@@ -899,8 +899,8 @@ record. There is no run log.
       (`scripts/check-navigation.mjs`), in CI in both engines. None of it runs
       on the server, so nothing else could see it break. On every about page
       whose README has a heading: unfold and read down, then Back, Forward and
-      Back, and a reload all return to the same place (±4 px of where the
-      reader was once the README's lazy images settled); a visit by link
+      Back, and a reload all return to the same place (±12 px, half a line,
+      of where the reader was once the README's lazy images settled); a visit by link
       starts folded at the top; a cold load of `about#<heading>` lands on the
       heading; a client navigation to it shows it; a fold the visitor closed
       stays closed on Back. At 1280 and 390 px, 128 checks per engine, green
@@ -915,6 +915,25 @@ record. There is no run log.
       number, which a fresh document load can reuse, so a cold link to a
       heading went to an older reading position instead; it is now read only
       on a reload or Back/Forward.
+- [x] …and `check:navigation` stopped failing main on a few pixels. The run
+      on main after #20 merged went red on one case: a reload of onyums'
+      README at 390 px landed at 5,425 against 5,418 left, outside a ±4 px
+      slack. Reproduced locally at +2 px on about one reload in three. The
+      site's own `scrollTo` puts the page exactly where it was left; the
+      extra pixels arrive in the next frame with no script scrolling (every
+      scrolling call hooked), the page height and the README's offset
+      unchanged, and with `history.scrollRestoration` manual or
+      `overflow-anchor: none` alike — somewhere in the browser itself. The
+      slack is now half a line of body text (12 px). The bug the check
+      exists for was 3,300 px. Both engines 144/144.
+- [x] The browser accessibility pass ran axe on a page still scrolling. The
+      site scrolls smoothly, so `check-a11y-browser.mjs`'s bare `scrollTo`
+      calls only started animations: its reading pass stalled about a screen
+      down, and its return to the top was still ~1,700 px out when axe ran,
+      so links passing under the fixed masthead failed `target-size` as
+      "partially obscured" — /status in Firefox, one run in four
+      (2026-10-10). Every jump is `instant` now, and the pass throws if the
+      page is not at the top when axe starts.
 - [x] …and a README opened before the app hydrates stays open. Binding the
       fold to `open` made hydration write the bound `false` over the element,
       so a reader who opened it in the first moments — on a slow line, Tor

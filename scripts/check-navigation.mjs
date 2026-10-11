@@ -36,8 +36,19 @@ const BASE = (args.find((a) => !a.startsWith('--'))
 	?? 'http://127.0.0.1:3000').replace(/\/$/, '')
 const ENGINE = args.includes('--firefox') ? 'firefox' : 'chromium'
 
-/** How far from the saved position a restored one may land, in CSS pixels. */
-const SLACK = 4
+/**
+ * How far from the saved position a restored one may land, in CSS pixels:
+ * half a line of body text (14 px × 1.65). A reload can land a couple of
+ * pixels past where the page was left, after the site's own `scrollTo` has
+ * put it exactly there: +2 px on about one reload in three here (onyums at
+ * 390 px, 2026-10-10), +7 on main's CI run after #20, which failed this
+ * check at 4. No script scrolls in between (every scrolling call was
+ * hooked), the page's height and the README's offset do not move, and it
+ * happens with `history.scrollRestoration` manual and `overflow-anchor:
+ * none` too — something in the browser's own first frames. A reader cannot
+ * see seven pixels; the bug this guards against was 3,300.
+ */
+const SLACK = 12
 /** Where a heading scrolled to may sit: its scroll margin clears the masthead. */
 const HEADING_BAND = [-2, 200]
 
