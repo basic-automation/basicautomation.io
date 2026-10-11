@@ -462,15 +462,19 @@ record. There is no run log.
       output. Nuxt's own `scrollBehavior` governs all of it, so the new
       defaults change nothing a visitor sees here.
       <https://github.com/vuejs/router/releases/tag/v5.4.0>
-- [ ] Nuxt 4.6.1 (published 2026-10-09 22:59 UTC), once it has soaked like
-      4.6.0 did. A patch release: the fixes are mostly dev-server and typing
-      (`Serialize` types aligned with JSON, `$fetch` typed as `TypedFetch`,
-      `useId` hydration keeping `onServerPrefetch`), plus a Nitro performance
-      change that builds the portable event's web view lazily. The first issue
-      filed against it, nuxt/nuxt#36529 (an aborted navigation to an unmatched
-      route renders a 404), reproduces on 3.x too, so it is not a 4.6.1
-      regression. Land it with the full gates plus `check:navigation` in both
-      engines. <https://github.com/nuxt/nuxt/releases/tag/v4.6.1>
+- [x] Nuxt 4.6.1 (published 2026-10-09 22:59 UTC), landed 2026-10-10 after
+      27 hours with two issues filed against it, neither touching this site:
+      nuxt/nuxt#36529 (an aborted navigation to an unmatched route renders a
+      404) reproduces on 3.x too, and #36530 is the `cloudflare_module`
+      preset. A patch release: mostly dev-server and typing fixes, plus a
+      Nitro change that builds the portable event's web view lazily. Taken
+      with vue-tsc 3.3.13 (setup macros without static imports) and
+      `@types/node` 26.6.5; the lockfile also moved cssnano 9.3 → 9.6, and the
+      built CSS came out byte-identical (same hash). Typecheck, 273 tests,
+      build, `check`, `a11y`, `a11y:browser`, `a11y:firefox`,
+      `check:navigation` in both engines (144 each), `audit:runtime`; all 42
+      routes answer as on 4.6.0, every page body the same size.
+      <https://github.com/nuxt/nuxt/releases/tag/v4.6.1>
       <https://github.com/nuxt/nuxt/issues/36529>
 - [x] Silenced Nitro's own `[request error]` stack-trace block on a 404, without
       replacing the error handler. Nitro logs it when the error is `fatal`, and
