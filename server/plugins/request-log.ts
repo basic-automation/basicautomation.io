@@ -11,6 +11,7 @@
  * a log that is 90% noise does not get read.
  */
 
+import { clientAddress } from '~~/shared/log/client'
 import { VIA_ONION, cameOverOnion } from '~~/shared/onion/via'
 
 const SILENT = [/^\/healthz$/, /^\/_nuxt\//, /^\/fonts\//, /\.(?:ico|png|webp|svg|woff2?)$/]
@@ -59,11 +60,16 @@ function via(event: InstanceType<typeof H3Event>): 'onion' | 'web' {
  * were the one kind of line with no address and no user agent.
  */
 function requester(event: InstanceType<typeof H3Event>) {
+  const way = via(event)
   return {
-    // Caddy terminates TLS and proxies in, so the real client is in the
-    // forwarded header; the socket address is Caddy's every time.
-    ip: getRequestHeader(event, 'x-forwarded-for')?.split(',')[0]?.trim() ?? null,
-    via: via(event),
+    // The socket address is Caddy's every time, and Caddy's own peer is
+    // docker's bridge gateway; `shared/log/client.ts` says which header is
+    // whose.
+    ...clientAddress({
+      forwardedFor: getRequestHeader(event, 'x-forwarded-for'),
+      cfConnectingIp: getRequestHeader(event, 'cf-connecting-ip'),
+    }, way),
+    via: way,
     ua: getRequestHeader(event, 'user-agent') ?? null,
     ref: getRequestHeader(event, 'referer') ?? null,
   }
@@ -109,7 +115,7 @@ export default defineNitroPlugin((nitro) => {
       path: event?.path ?? null,
       status,
       ms: started === undefined ? null : Math.round(performance.now() - started),
-      ...(event ? requester(event) : { ip: null, via: null, ua: null, ref: null }),
+      ...(event ? requester(event) : { ip: null, cfIp: null, via: null, ua: null, ref: null }),
       message: error.message,
     }))
   })

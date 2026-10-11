@@ -145,9 +145,11 @@ service was last reached over Tor, from the gateway's own ten-minute self-fetch.
 Thirty minutes without one turns `/healthz`'s `status` to `degraded` (still a
 200: the clearnet site is serving). The server
 also logs one JSON object per request on stdout, failed ones included, each
-with the client's `ip`, `ua` and `ref` — `docker logs basicautomation-site | jq
+with the client's `ua` and `ref`, the `ip` Caddy forwarded (behind Docker's port
+proxy that is the bridge gateway) and `cfIp`, the visitor as Cloudflare names
+them — a header, not a verified hop. `docker logs basicautomation-site | jq
 'select(.status >= 400)'`, or `select(.via == "onion")` for the visits that
-came over Tor — and warns once an hour for
+came over Tor, which carry no address at all — and warns once an hour for
 as long as it has been answering from the snapshot, once when the GitHub
 quota runs out (`event: "upstream.rate_limited"`), and once an hour while the
 onion service is unreachable (`onion.unreachable`, then `onion.recovered`). Every other line the app
