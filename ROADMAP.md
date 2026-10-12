@@ -391,6 +391,19 @@ record. There is no run log.
       Dockerfile, asks the node image for `/etc/alpine-release`, and fails on a
       mismatch. CI's `image` job runs it, which pulls an image that job needs
       anyway. Today: node:24-alpine is Alpine 3.24.2, runtime is 3.24 — in step.
+- [ ] Find out whether arti's steady descriptor-upload failures cost the onion
+      service visitors. In the container's first 21 h after the 2026-10-10 deploy
+      the log holds 1,040 "Too many preemptive onion service circuits
+      failed" lines and 1,502 "failed to upload descriptor" lines across 22
+      HSDirs, while the site's own fetch over Tor logged 123
+      successes and no `onion.unreachable`. Another
+      arti-hosted onion project hit the same two symptoms — a share of
+      descriptors never reachable, intro/rendezvous circuits timing out — on
+      Arti 2.1 and moved to C Tor on 2026-09-25, citing open arti#2621,
+      #2482 and #2065. Next: measure reachability from a separate client over
+      a day before weighing C Tor (an owner decision: it is a second runtime
+      in the image). <https://github.com/brewsterkahle/onionpress/issues/96>
+      <https://github.com/brewsterkahle/onionpress/pull/283>
 - [ ] Move the runtime to distroless — **needs an owner decision, because the
       size case for it is gone.** Measured 2026-09-27: the same build on
       `gcr.io/distroless/nodejs24-debian13:nonroot` is 73.0 MB of image content
