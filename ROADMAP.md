@@ -404,6 +404,19 @@ record. There is no run log.
       a day before weighing C Tor (an owner decision: it is a second runtime
       in the image). <https://github.com/brewsterkahle/onionpress/issues/96>
       <https://github.com/brewsterkahle/onionpress/pull/283>
+      - [x] The outside view, repeatable: `npm run probe:onion`
+            (`scripts/probe-onion.mjs`) reaches the service through a separate
+            Tor client with Tor Browser's headers, solves the gate's
+            proof-of-work and checks the site's `<title>` behind it — the
+            gateway's own fetch skips the gate with a clearance it mints for
+            itself. From this host's user `tor` on 2026-10-11: through the
+            gate on the first try, in 7.0 s and 10.8 s. A made-up address and
+            a dead SOCKS port each fail with exit 1; no address to probe, 2.
+      - [ ] …run every six hours: `.github/workflows/onion.yml` (a fresh Tor
+            client on a GitHub runner, one tracking issue kept in sync, the
+            shape of `links.yml`). Landed with this slice; tick once its first
+            scheduled runs on `main` have reported, and read a few days of
+            them before weighing C Tor.
 - [ ] Move the runtime to distroless — **needs an owner decision, because the
       size case for it is gone.** Measured 2026-09-27: the same build on
       `gcr.io/distroless/nodejs24-debian13:nonroot` is 73.0 MB of image content

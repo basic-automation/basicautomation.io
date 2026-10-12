@@ -229,6 +229,7 @@ npm run a11y:browser               # the layout rules, in headless Chromium
 npm run a11y:firefox               # …and the same, in headless Firefox
 npm run check:navigation           # Back, reload and README links, in Chromium (--firefox too)
 npm run vitals                     # LCP and CLS, phone and desktop, median of 3
+npm run probe:onion                # reach the onion service from outside, through its gate
 npm run font                       # re-cut the preloaded core of Fira Code
 ```
 
@@ -335,6 +336,15 @@ over loopback and writes its `.onion` address to `/run/onion/address`, which the
 site reads back through `/api/onion` to advertise the address on the onyums
 project page. The identity key lives in the named volume `basicautomation-onion`
 — that volume *is* the address, so losing it renames the service.
+
+The site's own view of the onion service comes from the gateway fetching
+itself, in its own Tor client, past its own gate. `npm run probe:onion` is the
+outside view: through any bootstrapped Tor client (`--socks=host:port`, default
+`127.0.0.1:9050`) it reads the address from `/api/onion`, sends Tor Browser's
+headers, solves the abuse gate's proof-of-work and checks the site's `<title>`
+is behind it. `.github/workflows/onion.yml` runs it every six hours from a
+fresh Tor client on a GitHub runner and keeps one issue in sync — open while the
+service cannot be reached from outside, closed the first run it can.
 
 `docs/onion.md` is the design note: why a forwarding `Router` rather than a raw
 TCP tunnel, and what each slice actually answered.

@@ -1,0 +1,123 @@
+# The onion service, reached from outside.
+#
+# The site reports its own onion health (`/api/onion`, the onyums page), but
+# that comes from the gateway fetching itself in its own arti, with a
+# clearance it mints for itself. This job is a visitor the gateway has never
+# seen: a fresh Tor client on a GitHub runner, finding the descriptor, solving
+# the abuse gate's proof-of-work with Tor Browser's headers, and checking that
+# what is behind the gate is the site (`scripts/probe-onion.mjs`).
+#
+# Like the link check, a report and not a gate: it keeps ONE issue in sync —
+# opened while the service cannot be reached, closed the first run it can.
+# Every six hours, because a descriptor that stops being found is an outage
+# hours long (2026-10-08 was four and a half), and weekly would miss it.
+#
+# It also runs on a pull request that changes the probe or this file, so a
+# broken probe is caught before it starts reporting outages that aren't.
+
+name: Onion service
+
+on:
+  schedule:
+    - cron: "17 */6 * * *"
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - scripts/probe-onion.mjs
+      - .github/workflows/onion.yml
+
+permissions:
+  contents: read
+  issues: write
+
+concurrency:
+  group: onion-${{ github.event_name }}
+  cancel-in-progress: false
+
+env:
+  ISSUE_TITLE: "Onion service: not reachable from outside"
+
+jobs:
+  probe:
+    name: reach the onion service through Tor
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 24
+
+      # A private tor on its own port and data directory, rather than the
+      # system service the package starts: its log is ours to read, so the job
+      # knows when it has bootstrapped instead of guessing with a sleep.
+      - name: Start Tor
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq tor
+          mkdir -p tor
+          tor --SocksPort 19050 --DataDirectory "$PWD/tor/data" \
+            --Log "notice file $PWD/tor/log" --RunAsDaemon 1 --PidFile "$PWD/tor/pid"
+          for _ in $(seq 1 180); do
+            grep -q 'Bootstrapped 100%' tor/log && break
+            sleep 2
+          done
+          tail -n 3 tor/log
+          grep -q 'Bootstrapped 100%' tor/log || { echo "tor did not bootstrap in 6 minutes"; exit 1; }
+
+      # `set +e`: an unreachable service is the thing being reported, so its
+      # exit code must not end a scheduled job before the issue is kept in sync.
+      # On a pull request there is no issue to keep, and it fails the run.
+      - name: Probe
+        id: probe
+        run: |
+          set +e
+          node scripts/probe-onion.mjs --socks=127.0.0.1:19050 --tries=4 2>&1 | tee probe.log
+          status=${PIPESTATUS[0]}
+          set -e
+          echo "status=$status" >> "$GITHUB_OUTPUT"
+          {
+            echo "## Onion service"
+            echo
+            echo '```'
+            cat probe.log
+            echo '```'
+          } | tee report.md >> "$GITHUB_STEP_SUMMARY"
+          if [ "$status" != 0 ] && [ "${{ github.event_name }}" = pull_request ]; then exit "$status"; fi
+          # Not a verdict on the service: the probe could not even ask.
+          if [ "$status" != 0 ] && [ "$status" != 1 ]; then exit "$status"; fi
+
+      - name: Open, update or close the tracking issue
+        if: github.event_name != 'pull_request'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          STATUS: ${{ steps.probe.outputs.status }}
+        run: |
+          existing=$(gh issue list --state open --limit 50 \
+            --json number,title \
+            --jq "[.[] | select(.title == \"$ISSUE_TITLE\")] | .[0].number // empty")
+
+          if [ "$STATUS" != 0 ]; then
+            {
+              cat report.md
+              echo
+              echo "A fresh Tor client on a GitHub runner could not reach the site through the"
+              echo "onion service's front door. Compare with the site's own view at"
+              echo "https://basicautomation.io/api/onion and the gateway's lines in"
+              echo "\`docker logs basicautomation-site\` (\`onion.unreachable\`, arti's own)."
+              echo
+              echo "[Run]($RUN_URL) · \`npm run probe:onion\` against any running Tor client."
+            } > body.md
+            if [ -n "$existing" ]; then
+              gh issue comment "$existing" --body-file body.md
+              echo "Updated #$existing"
+            else
+              gh issue create --title "$ISSUE_TITLE" --body-file body.md
+            fi
+          elif [ -n "$existing" ]; then
+            gh issue close "$existing" --comment "Reached from outside again. Closed by [this run]($RUN_URL)."
+            echo "Closed #$existing"
+          else
+            echo "Reached, and no issue is open. Nothing to do."
+          fi
