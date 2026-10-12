@@ -1038,6 +1038,17 @@ record. There is no run log.
       that should have caught it measured from the top of the window:
       `check:navigation` now measures a heading's first line from the
       masthead's bottom edge, and on main's build failed 32 checks with it.
+- [x] A short window does not keep the masthead. At 400% zoom a 1280-wide
+      window is 320×225 CSS px, and the sticky 128 px pane left 97 px to read
+      in; a phone held sideways gave it a third of the screen. WCAG's Reflow
+      understanding names exactly this and asks for static positioning at
+      small viewport sizes. Under `max-height: 30rem` the masthead (`.masthead`
+      in `SiteHeader.vue`) is `position: relative` and the scroll padding drops
+      to 1rem; above it nothing changed (screenshots at 1280×900 and 390×844,
+      scrolled, still show the pane over the page). `a11y:browser` gained a
+      third viewport, 320×256 — the Reflow size — where all 21 pages pass, and
+      no page scrolls sideways at 320 px (README tables scroll inside their
+      own box). <https://www.w3.org/WAI/WCAG21/Understanding/reflow.html>
 - [x] Focus the masthead hides fails the browser pass. WCAG 2.2's 2.4.11
       (Focus Not Obscured, AA) forbids a focused control entirely hidden by
       author content, and the sticky masthead is exactly the case its failure

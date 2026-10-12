@@ -128,6 +128,19 @@ html {
   -webkit-text-size-adjust: 100%;
 }
 
+/* A short window does not keep the masthead. At 400% zoom a 1280×900 window
+   is 320×225 CSS px, and a sticky 128 px pane left 97 px to read in; a phone
+   held sideways gave it a third of the screen. Below 30rem of height the pane
+   scrolls away with the page instead — the same pane, at the top of it — and
+   nothing has to clear it. WCAG 2.1's Reflow names sticky headers at high
+   zoom as the case. <https://www.w3.org/WAI/WCAG21/Understanding/reflow.html>
+   `rem` in a media query is the browser's default font size, so a reader who
+   has raised theirs reaches this sooner. */
+@media (max-height: 30rem) {
+  html { scroll-padding-top: 1rem; }
+  .masthead { position: relative; }
+}
+
 body {
   background-color: var(--color-pn-bg);
   color: var(--color-pn-fg);

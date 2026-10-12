@@ -74,6 +74,11 @@ const RULES = [
 const VIEWPORTS = [
 	{ name: 'desktop', width: 1280, height: 900, deviceScaleFactor: 1, mobile: false },
 	{ name: 'phone', width: 390, height: 844, deviceScaleFactor: 3, mobile: true },
+	// A 1280×1024 window at 400% zoom: the size WCAG's Reflow is judged at
+	// (320 wide, 256 tall). The masthead stops being sticky this short, so
+	// this is the width the focus walk checks without it.
+	// <https://www.w3.org/WAI/WCAG21/Understanding/reflow.html>
+	{ name: 'zoomed', width: 320, height: 256, deviceScaleFactor: 4, mobile: false },
 ]
 
 const PAGES = await sitePages(BASE)

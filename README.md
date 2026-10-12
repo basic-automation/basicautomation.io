@@ -14,7 +14,10 @@ palette from the Omarchy theme set. One flat background, no cards, no borders,
 no rounded corners, Fira Code throughout: structure comes from rules and accent
 bars the way a terminal does it. The one deliberate exception is the masthead,
 a "glass" pane with a bevel, a drop shadow and rounded ends; everything below
-it is flat.
+it is flat. It stays at the top of the window as the page scrolls — except in
+a window under 30rem tall (a phone held sideways, a desktop zoomed to 400%),
+where it would take a third to a half of the screen and scrolls away instead.
+Links to a heading, and keyboard focus, always stop below it.
 
 ## What renders where
 
@@ -239,7 +242,7 @@ rather than silently failing — jsdom has none — so this is "every axe rule t
 can be judged from markup". `npm run a11y:browser` runs those skipped rules —
 touch-target size, keyboard access to scrollable regions, the viewport meta,
 whether each control's visible label is part of its accessible name —
-in headless Chromium at a desktop and a phone width (set `CHROME_PATH` if
+in headless Chromium at a desktop width, a phone width and 320×256 (a desktop at 400% zoom) (set `CHROME_PATH` if
 Chromium is not on `PATH`), reading each page to the bottom so lazy content
 loads, and fails on any console error, uncaught exception or CSP refusal the
 page produces along the way. It also walks each page's controls the way
