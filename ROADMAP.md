@@ -1059,14 +1059,6 @@ record. There is no run log.
       lightness flipped and its own hues kept. Light themes and the normal
       page are unchanged. No palette colour is involved: system colours are
       the visitor's. <https://developer.mozilla.org/en-US/docs/Web/CSS/@media/forced-colors>
-- [x] Reduced transparency gets a solid masthead. A visitor whose system
-      asks for less transparency (Windows' transparency effects off, macOS's
-      Reduce transparency) now gets the pane opaque — the same 2% green over
-      the ground, no backdrop — so body text no longer passes, blurred, behind
-      the nav links. Bevel, rims and grille stay. Not Baseline (MDN marks it
-      experimental), so elsewhere nothing changes; checked with the feature
-      emulated in Chromium against the unemulated page.
-      <https://developer.mozilla.org/en-US/docs/Web/CSS/@media/prefers-reduced-transparency>
 - [x] Focus the masthead hides fails the browser pass. WCAG 2.2's 2.4.11
       (Focus Not Obscured, AA) forbids a focused control entirely hidden by
       author content, and the sticky masthead is exactly the case its failure

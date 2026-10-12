@@ -562,21 +562,6 @@ body {
   }
 }
 
-/* A visitor who has asked their system for less transparency (Windows'
-   transparency effects off, macOS's Reduce transparency) gets the pane solid:
-   the same whisper of green, at full strength over the ground, and no
-   backdrop — so body text no longer passes, blurred, behind the nav links.
-   Bevel, rims and grille are the pane's shape and stay. Not Baseline: where
-   the query is unknown it is false and nothing changes.
-   <https://developer.mozilla.org/en-US/docs/Web/CSS/@media/prefers-reduced-transparency> */
-@media (prefers-reduced-transparency: reduce) {
-  .crt-glass {
-    background-color: color-mix(in srgb, var(--color-pn-accent) 2%, var(--color-pn-bg));
-    backdrop-filter: none;
-    -webkit-backdrop-filter: none;
-  }
-}
-
 /* The phosphor grille. Full height of the glass, no fade — the lines are the
    screen, not a decoration on it.
 
