@@ -38,8 +38,14 @@ const ENGINE = args.includes('--firefox') ? 'firefox' : 'chromium'
 
 /** How far from the saved position a restored one may land, in CSS pixels. */
 const SLACK = 4
-/** Where a heading scrolled to may sit: its scroll margin clears the masthead. */
-const HEADING_BAND = [-2, 200]
+/**
+ * Where a heading scrolled to may sit, in CSS pixels below the masthead's
+ * bottom edge: its first line of text clears the pane, and is not far below
+ * it. Measured from the masthead, not from the top of the window — a heading
+ * at the top of the window is a heading behind the glass, which this check
+ * once passed at 106 px under a 128 px pane.
+ */
+const HEADING_BAND = [0, 200]
 
 /** The same two widths `check-a11y-browser.mjs` uses. */
 const VIEWPORTS = [
@@ -110,7 +116,15 @@ try {
 			path: location.pathname,
 			y: Math.round(scrollY),
 			open: document.querySelector('details')?.open ?? null,
-			heading: ${id ? `Math.round(document.getElementById(${JSON.stringify(id)})?.getBoundingClientRect().top ?? NaN)` : 'null'},
+			heading: ${id ? `(() => {
+				const el = document.getElementById(${JSON.stringify(id)})
+				if (!el) return -1e9
+				const range = document.createRange()
+				range.selectNodeContents(el)
+				const line = [...range.getClientRects()].find((r) => r.height > 0)
+				const glass = document.querySelector('header .crt-glass').getBoundingClientRect()
+				return Math.round((line ?? el.getBoundingClientRect()).top - glass.bottom)
+			})()` : 'null'},
 		})`)
 
 		for (const slug of slugs) {

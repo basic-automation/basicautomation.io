@@ -250,12 +250,17 @@ useSeoMeta({
            heading of its own and the only h1 on the page comes out of the
            fetched README. -->
       <div v-if="project.logo" class="mt-10">
+        <!-- The image's own text classes are for when it does not draw: Tor
+             Browser at "Safest" turns SVG off, and an unloaded image's alt is
+             set in the image's font — so the name stands as the h1 it is,
+             at the size the no-logo heading below uses, not a caption in a
+             blank box. -->
         <h1>
           <img
             :src="project.logo"
             :alt="project.name"
             v-bind="assetSize(project.logo)"
-            class="h-24 w-auto max-w-full sm:h-36 lg:h-44"
+            class="wordmark h-24 w-auto max-w-full text-4xl text-pn-fg-bright sm:h-36 sm:text-5xl lg:h-44"
           >
         </h1>
         <StatusDot :status="project.status" class="mt-6" />

@@ -391,6 +391,32 @@ record. There is no run log.
       Dockerfile, asks the node image for `/etc/alpine-release`, and fails on a
       mismatch. CI's `image` job runs it, which pulls an image that job needs
       anyway. Today: node:24-alpine is Alpine 3.24.2, runtime is 3.24 — in step.
+- [ ] Find out whether arti's steady descriptor-upload failures cost the onion
+      service visitors. In the container's first 21 h after the 2026-10-10 deploy
+      the log holds 1,040 "Too many preemptive onion service circuits
+      failed" lines and 1,502 "failed to upload descriptor" lines across 22
+      HSDirs, while the site's own fetch over Tor logged 123
+      successes and no `onion.unreachable`. Another
+      arti-hosted onion project hit the same two symptoms — a share of
+      descriptors never reachable, intro/rendezvous circuits timing out — on
+      Arti 2.1 and moved to C Tor on 2026-09-25, citing open arti#2621,
+      #2482 and #2065. Next: measure reachability from a separate client over
+      a day before weighing C Tor (an owner decision: it is a second runtime
+      in the image). <https://github.com/brewsterkahle/onionpress/issues/96>
+      <https://github.com/brewsterkahle/onionpress/pull/283>
+      - [x] The outside view, repeatable: `npm run probe:onion`
+            (`scripts/probe-onion.mjs`) reaches the service through a separate
+            Tor client with Tor Browser's headers, solves the gate's
+            proof-of-work and checks the site's `<title>` behind it — the
+            gateway's own fetch skips the gate with a clearance it mints for
+            itself. From this host's user `tor` on 2026-10-11: through the
+            gate on the first try, in 7.0 s and 10.8 s. A made-up address and
+            a dead SOCKS port each fail with exit 1; no address to probe, 2.
+      - [ ] …run every six hours: `.github/workflows/onion.yml` (a fresh Tor
+            client on a GitHub runner, one tracking issue kept in sync, the
+            shape of `links.yml`). Landed with this slice; tick once its first
+            scheduled runs on `main` have reported, and read a few days of
+            them before weighing C Tor.
 - [ ] Move the runtime to distroless — **needs an owner decision, because the
       size case for it is gone.** Measured 2026-09-27: the same build on
       `gcr.io/distroless/nodejs24-debian13:nonroot` is 73.0 MB of image content
@@ -987,17 +1013,102 @@ record. There is no run log.
       200 px of the top), 144 checks per engine in both. Before the sizes the
       same assertion failed in Chromium, e.g. Skidbladnir's `#editions` at
       771 px.
-- [ ] Without script, a link to a README heading cannot open the fold in a
-      browser that does not do it itself, and no CSS can open a `<details>`.
-      That is Tor Browser at "Safest". Recorded rather than fixed: the
-      alternative is not folding the README at all. Mozilla's bug 1724299 is
-      described as shipping auto-expanding `<details>` in Firefox 139, fragment
-      navigation included, yet headless Firefox 155 left the fold closed on a
-      cold `about#heading` load here, on main's build before any of this
-      run's changes; worth re-checking in a real Firefox and in Tor Browser
-      before relying on either answer.
+- [x] Without script, a link to a README heading opens the fold — the browser
+      does it itself. Feared otherwise, because no CSS can open a `<details>`
+      and that is Tor Browser at "Safest"; the earlier note that headless
+      Firefox 155 left the fold closed on a cold `about#heading` load did not
+      reproduce on 2026-10-11. With `javascript.enabled` off (the page reports
+      `(scripting: none)` and never hydrates), a cold load of
+      `/projects/onyums/about#features` opened the fold with the heading on
+      screen in headless Firefox 155.0.1 and in Tor Browser 15.0.23 (Firefox
+      140.17 ESR), and so did a bare `<details>` test page. Only script was
+      turned off, not the rest of what "Safest" changes.
       <https://bugzilla.mozilla.org/show_bug.cgi?id=1724299>
       <https://github.com/whatwg/html/pull/6466>
+- [x] A heading link lands below the masthead, not behind it. Every fragment
+      target on the site — README headings, `#download`, the home page's
+      `#projects` and `#about` — came to rest 0–106 px from the top of the
+      window, under a sticky pane whose bottom edge is at 128 px, in Chromium
+      and Firefox, by link, by cold load and with script off. The README's
+      `scroll-margin-top: 5rem` predated the 8rem masthead. Now
+      `html { scroll-padding-top: calc(var(--masthead) + 1rem) }` in
+      `main.css`, with `.crt-glass` taking its height from the same
+      `--masthead`; Nuxt's router adds the padding to its own hash scrolls, so
+      client navigation agrees. Every target now rests at 144 px. The check
+      that should have caught it measured from the top of the window:
+      `check:navigation` now measures a heading's first line from the
+      masthead's bottom edge, and on main's build failed 32 checks with it.
+- [x] A short window does not keep the masthead. At 400% zoom a 1280-wide
+      window is 320×225 CSS px, and the sticky 128 px pane left 97 px to read
+      in; a phone held sideways gave it a third of the screen. WCAG's Reflow
+      understanding names exactly this and asks for static positioning at
+      small viewport sizes. Under `max-height: 30rem` the masthead (`.masthead`
+      in `SiteHeader.vue`) is `position: relative` and the scroll padding drops
+      to 1rem; above it nothing changed (screenshots at 1280×900 and 390×844,
+      scrolled, still show the pane over the page). `a11y:browser` gained a
+      third viewport, 320×256 — the Reflow size — where all 21 pages pass, and
+      no page scrolls sideways at 320 px (README tables scroll inside their
+      own box). <https://www.w3.org/WAI/WCAG21/Understanding/reflow.html>
+- [x] Forced colours (Windows contrast themes) keep the marks visible. The
+      browser repaints text, backgrounds and borders in the visitor's colours,
+      resets an SVG's fill to SVG's initial black, and leaves an image's
+      pixels alone, so on a dark contrast theme
+      the org mark (the home link) and each project's wordmark — an about
+      page's h1 — were ink-dark on black (Chromium, `forced-colors: active`
+      emulated, screenshots of before and after). The mark now takes
+      `CanvasText`; a wordmark on a dark theme is `invert(1) hue-rotate(180deg)`,
+      lightness flipped and its own hues kept. Light themes and the normal
+      page are unchanged. No palette colour is involved: system colours are
+      the visitor's. <https://developer.mozilla.org/en-US/docs/Web/CSS/@media/forced-colors>
+- [x] A page prints flat. Printed, the masthead's glass — drop shadow,
+      sheen, grille, lit rims — came out as a grey smear round the mark, and
+      every `[copy]` button printed beside a command no one can copy from
+      paper. `@media print` in `main.css` drops both; screen is untouched.
+      Checked with Chromium's `printToPDF` of `/` and onyums' about page:
+      no `[copy]` in the PDF text (two before), the mark and nav on a white
+      page.
+- [x] A wordmark that does not draw still reads as the title. Tor Browser
+      at "Safest" turns SVG off, and every project wordmark is an SVG: in Tor
+      Browser 15.0.23 with `svg.disabled`, downloadable fonts off and script
+      off, an about page's h1 came out as "onyums" in 14 px body text above
+      a blank box, and each card's name the same. A missing image's alt is
+      set in the image's own font, so the wordmark `<img>`s now carry the
+      text size of the no-logo heading (`text-4xl`/`sm:text-5xl`): the name
+      stands as a heading. A drawn wordmark is unchanged (screenshots of
+      both). The org mark is inline SVG and falls back to its `<title>`,
+      "Basic Automation", in the masthead — readable, left as it is.
+- [x] Focus the masthead hides fails the browser pass. WCAG 2.2's 2.4.11
+      (Focus Not Obscured, AA) forbids a focused control entirely hidden by
+      author content, and the sticky masthead is exactly the case its failure
+      F110 names; axe has no rule for it. `check-a11y-browser.mjs` now walks
+      each page's controls bottom-up as Shift+Tab does and hit-tests five
+      points of each. Against the live site (main, before the scroll padding
+      above) it failed 80 controls in Chromium — "read the full readme",
+      release links, the status table's names, download links; against this
+      build none, in Chromium and in Firefox. The scroll padding is the
+      sufficient technique C43.
+      <https://www.w3.org/WAI/WCAG22/Understanding/focus-not-obscured-minimum.html>
+      <https://developer.mozilla.org/en-US/docs/Web/CSS/scroll-padding-top>
+- [ ] A reload of an unfolded README lands 2–9 px past the reader's place,
+      now and then, in Chromium at 390 px — and creeps: twelve reloads of
+      onyums ran +2, +2, +2, +4 … +6 (2026-10-11, normal CPU; none at 4×
+      throttle). The same 9 px failure hit `check:navigation` once on main's
+      build and once on this run's, of seven runs, so CI can go red on it.
+      Not fonts: waiting on `document.fonts.ready` before the restore made no
+      difference, and the page's block heights are identical before and
+      after; the restore's `scrollTo` itself reports the extra pixels in its
+      first scroll event. Scroll anchoring looked involved: a style of
+      `* { overflow-anchor: none !important }` added at `DOMContentLoaded`
+      took the drift to 0 over 2 × 12 reloads — but setting it only on
+      `<html>` for the second around the fold's `scrollTo` did not (+2 … +10
+      over 12, four pages), and neither did `none` on `html`, `body`,
+      `details` or `.readme *` alone from `DOMContentLoaded` (each still
+      drifted, +6 to +12 over 10) — nor did `* { overflow-anchor: none }`
+      without `!important` (+6 over 10), nor `main *`, `header *, footer *`
+      or the root chain. So anchoring is not shown to be the cause; the two
+      clean runs with `!important` may have been luck. Next: record
+      `scrollY` in every frame between the fold opening and the restore,
+      and whether vue-router's own `scrollTo` lands before or after it.
 - [ ] Look at the masthead in a real Firefox and in Tor Browser, scrolled.
       Headless Firefox drew no blur at all behind it, not even the plain
       `blur()` the CSS gives every other browser, so its screenshots show body

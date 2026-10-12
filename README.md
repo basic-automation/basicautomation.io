@@ -14,7 +14,10 @@ palette from the Omarchy theme set. One flat background, no cards, no borders,
 no rounded corners, Fira Code throughout: structure comes from rules and accent
 bars the way a terminal does it. The one deliberate exception is the masthead,
 a "glass" pane with a bevel, a drop shadow and rounded ends; everything below
-it is flat.
+it is flat. It stays at the top of the window as the page scrolls — except in
+a window under 30rem tall (a phone held sideways, a desktop zoomed to 400%),
+where it would take a third to a half of the screen and scrolls away instead.
+Links to a heading, and keyboard focus, always stop below it.
 
 ## What renders where
 
@@ -229,6 +232,7 @@ npm run a11y:browser               # the layout rules, in headless Chromium
 npm run a11y:firefox               # …and the same, in headless Firefox
 npm run check:navigation           # Back, reload and README links, in Chromium (--firefox too)
 npm run vitals                     # LCP and CLS, phone and desktop, median of 3
+npm run probe:onion                # reach the onion service from outside, through its gate
 npm run font                       # re-cut the preloaded core of Fira Code
 ```
 
@@ -238,16 +242,18 @@ rather than silently failing — jsdom has none — so this is "every axe rule t
 can be judged from markup". `npm run a11y:browser` runs those skipped rules —
 touch-target size, keyboard access to scrollable regions, the viewport meta,
 whether each control's visible label is part of its accessible name —
-in headless Chromium at a desktop and a phone width (set `CHROME_PATH` if
+in headless Chromium at a desktop width, a phone width and 320×256 (a desktop at 400% zoom) (set `CHROME_PATH` if
 Chromium is not on `PATH`), reading each page to the bottom so lazy content
 loads, and fails on any console error, uncaught exception or CSP refusal the
-page produces along the way. `npm run a11y:firefox` is the same pass in
+page produces along the way. It also walks each page's controls the way
+Shift+Tab does, and fails on any focused control the sticky masthead hides
+entirely (WCAG 2.2's Focus Not Obscured), which no axe rule covers. `npm run a11y:firefox` is the same pass in
 headless Firefox, driven over WebDriver BiDi (set `FIREFOX_PATH` if it is not on
 `PATH`): the onion service is reached in Tor Browser, which is Firefox, and the
 two engines do differ. `npm run check:navigation` drives what a visitor's own
 navigation does to each about page's folded README: Back, Forward and a reload
 return a reader to the place they were reading, a visit by link starts folded,
-and a link to a README heading lands on it, at both widths, in Chromium or
+and a link to a README heading lands on it, below the masthead, at both widths, in Chromium or
 (`--firefox`) Firefox. A reload it fails prints a frame-by-frame trace of
 the page's first seconds — every scroll call, scroll position and page height —
 so a failure on CI says where the pixels went. All of these walk every page the sitemap lists, so a new
@@ -333,6 +339,15 @@ over loopback and writes its `.onion` address to `/run/onion/address`, which the
 site reads back through `/api/onion` to advertise the address on the onyums
 project page. The identity key lives in the named volume `basicautomation-onion`
 — that volume *is* the address, so losing it renames the service.
+
+The site's own view of the onion service comes from the gateway fetching
+itself, in its own Tor client, past its own gate. `npm run probe:onion` is the
+outside view: through any bootstrapped Tor client (`--socks=host:port`, default
+`127.0.0.1:9050`) it reads the address from `/api/onion`, sends Tor Browser's
+headers, solves the abuse gate's proof-of-work and checks the site's `<title>`
+is behind it. `.github/workflows/onion.yml` runs it every six hours from a
+fresh Tor client on a GitHub runner and keeps one issue in sync — open while the
+service cannot be reached from outside, closed the first run it can.
 
 `docs/onion.md` is the design note: why a forwarding `Router` rather than a raw
 TCP tunnel, and what each slice actually answered.

@@ -112,10 +112,33 @@
 
 /* ── Base ─────────────────────────────────────────────────────────────────── */
 html {
+  /* The masthead's visible height: the glass pane is sticky at the top of the
+     window and is this tall at every width (`.crt-glass` takes its height from
+     here, so the two cannot drift). */
+  --masthead: 8rem;
   background-color: var(--color-pn-bg);
   color-scheme: light;
   scroll-behavior: smooth;
+  /* Whatever the browser scrolls to — a `#heading` link, a cold load of one, a
+     focused control — stops below the masthead rather than under it. Every
+     fragment target used to land at 0–106 px, behind a pane whose bottom edge
+     is at 128. Nuxt's router adds this padding to its own hash scrolls too,
+     so client navigation agrees with the browser. The extra 1rem is air. */
+  scroll-padding-top: calc(var(--masthead) + 1rem);
   -webkit-text-size-adjust: 100%;
+}
+
+/* A short window does not keep the masthead. At 400% zoom a 1280×900 window
+   is 320×225 CSS px, and a sticky 128 px pane left 97 px to read in; a phone
+   held sideways gave it a third of the screen. Below 30rem of height the pane
+   scrolls away with the page instead — the same pane, at the top of it — and
+   nothing has to clear it. WCAG 2.1's Reflow names sticky headers at high
+   zoom as the case. <https://www.w3.org/WAI/WCAG21/Understanding/reflow.html>
+   `rem` in a media query is the browser's default font size, so a reader who
+   has raised theirs reaches this sooner. */
+@media (max-height: 30rem) {
+  html { scroll-padding-top: 1rem; }
+  .masthead { position: relative; }
 }
 
 body {
@@ -126,6 +149,43 @@ body {
   line-height: 1.65;
   font-variant-ligatures: contextual;
   -webkit-font-smoothing: antialiased;
+}
+
+/* Forced colours (Windows contrast themes). The browser repaints text,
+   backgrounds and borders in the visitor's own colours. An SVG's fill it
+   discards as if the author had set none — which leaves SVG's initial black,
+   not the theme's text colour — and an image's pixels it leaves alone. Those
+   are this site's ink-dark marks: on a dark contrast theme the org mark (the
+   home link) and each project's wordmark (an about page's h1) were dark on
+   black, all but invisible.
+   The mark takes the theme's text colour. A wordmark is a picture, so on a
+   dark theme it is turned over: inverted for lightness, rotated back to its
+   own hues. On a light theme both read as they are.
+   <https://developer.mozilla.org/en-US/docs/Web/CSS/@media/forced-colors> */
+@media (forced-colors: active) {
+  .brand-mark { fill: CanvasText; }
+}
+@media (forced-colors: active) and (prefers-color-scheme: dark) {
+  .wordmark { filter: invert(1) hue-rotate(180deg); }
+}
+
+/* On paper. A `[copy]` button cannot be pressed, and the masthead's glass —
+   a drop shadow, a drifting sheen, a phosphor grille and two lit rims, all
+   built for a page that scrolls under it — prints as a grey smear around the
+   mark. Printed, the pane is just the mark and the nav: flat, like every
+   other thing on the site. */
+@media print {
+  .needs-script { display: none !important; }
+  .masthead { position: static; }
+  .crt-glass {
+    box-shadow: none !important;
+    background: none !important;
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
+  }
+  .crt-glass::before,
+  .crt-glass::after,
+  .crt-glass > .crt-rim { display: none !important; }
 }
 
 /* Nothing on this site is rounded. */
@@ -226,7 +286,6 @@ body {
   font-weight: 600;
   line-height: 1.35;
   margin: 2.25rem 0 0.75rem;
-  scroll-margin-top: 5rem;
 }
 .readme h2 { font-size: 1.25rem; }
 .readme h3 {
@@ -443,10 +502,10 @@ body {
   /* The height is here rather than an `h-32` utility on the element, because
      the overhang has to be added to it and a utility would fix the total —
      `h-32` plus this padding does not make a taller pane, it makes the same
-     pane with nowhere to put the logo. The visible part stays 8rem; the
+     pane with nowhere to put the logo. The visible part stays `--masthead`; the
      overhang is extra, paid back by the negative margin so the flow is
      unchanged. */
-  height: calc(8rem + var(--crt-overhang));
+  height: calc(var(--masthead) + var(--crt-overhang));
   margin-top: calc(-1 * var(--crt-overhang));
   padding-top: var(--crt-overhang);
 

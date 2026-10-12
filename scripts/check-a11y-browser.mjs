@@ -21,6 +21,18 @@
  * CSP refusals from the onion frame on every visit to two pages, and a
  * hydration mismatch from a clock read on both sides. Nothing else looked.
  *
+ * # And focus the masthead hides
+ *
+ * WCAG 2.2's 2.4.11, Focus Not Obscured (Minimum): a focused control may not
+ * be entirely hidden by content the author put over it — here, the sticky
+ * glass masthead. axe has no rule for it. So every page is also walked the
+ * way Shift+Tab walks it, from the bottom up, focusing each control and
+ * hit-testing five points of it; one that none of the five reaches fails.
+ * Before `scroll-padding-top` in `main.css` the live site hid 1–7 focused
+ * controls a page this way — release links, "read the full readme", the
+ * status table's project names — and passed every axe rule.
+ * <https://www.w3.org/WAI/WCAG22/Understanding/focus-not-obscured-minimum.html>
+ *
  * # What is still not run
  *
  * `color-contrast` and `color-contrast-enhanced`. They would fail today, on
@@ -62,6 +74,11 @@ const RULES = [
 const VIEWPORTS = [
 	{ name: 'desktop', width: 1280, height: 900, deviceScaleFactor: 1, mobile: false },
 	{ name: 'phone', width: 390, height: 844, deviceScaleFactor: 3, mobile: true },
+	// A 1280×1024 window at 400% zoom: the size WCAG's Reflow is judged at
+	// (320 wide, 256 tall). The masthead stops being sticky this short, so
+	// this is the width the focus walk checks without it.
+	// <https://www.w3.org/WAI/WCAG21/Understanding/reflow.html>
+	{ name: 'zoomed', width: 320, height: 256, deviceScaleFactor: 4, mobile: false },
 ]
 
 const PAGES = await sitePages(BASE)
@@ -72,6 +89,7 @@ console.log(`axe-core (${RULES.join(', ')}) over ${PAGES.length} pages × ${VIEW
 
 let violations = 0
 let consoleErrors = 0
+let obscured = 0
 const seen = new Map()
 
 /**
@@ -133,10 +151,42 @@ try {
 				throw new Error(`${path}: axe threw — ${e.message}`)
 			}
 
+			// Focus, backwards from the bottom. Only what really takes focus is
+			// counted — a link inside the folded README does not, and Tab skips
+			// it too. Each focus may scroll the page (smoothly, here), so wait
+			// for three still frames before looking.
+			const hidden = await page.evaluate(`(async () => {
+				const frame = () => new Promise((r) => requestAnimationFrame(r))
+				const settle = async () => { let last = -1, still = 0; for (let i = 0; i < 120 && still < 3; i++) { await frame(); still = scrollY === last ? still + 1 : 0; last = scrollY } }
+				const glass = document.querySelector('header .crt-glass')
+				if (!glass) return []
+				scrollTo({ top: document.documentElement.scrollHeight, behavior: 'instant' })
+				await settle()
+				const controls = [...document.querySelectorAll('a[href], button, summary, input, select, textarea, [tabindex]:not([tabindex="-1"])')]
+					.filter((el) => !glass.contains(el))
+				const hidden = []
+				for (const el of controls.reverse()) {
+					el.focus()
+					if (document.activeElement !== el) continue
+					await settle()
+					const r = el.getBoundingClientRect()
+					const seen = [[0.5, 0.5], [0.1, 0.1], [0.9, 0.1], [0.1, 0.9], [0.9, 0.9]].some(([fx, fy]) => {
+						const hit = document.elementFromPoint(r.left + r.width * fx, r.top + r.height * fy)
+						return hit && (hit === el || el.contains(hit))
+					})
+					if (!seen) hidden.push(\`\${el.tagName.toLowerCase()} "\${(el.textContent || el.getAttribute('aria-label') || '').trim().replace(/\\s+/g, ' ').slice(0, 50)}" at y \${Math.round(r.top)}–\${Math.round(r.bottom)}\`)
+				}
+				document.activeElement?.blur()
+				scrollTo({ top: 0, behavior: 'instant' })
+				return hidden
+			})()`)
+			obscured += hidden.length
+			for (const h of hidden) console.error(`      focus not visible: ${h}`)
+
 			const errors = faults(page)
 			violations += bad.length
 			consoleErrors += errors.length
-			console.log(`  ${bad.length || errors.length ? '✗' : '·'} ${name.padEnd(7)} ${path} (${expected}) — ${bad.length} violation(s), ${errors.length} console error(s)`)
+			console.log(`  ${bad.length || errors.length || hidden.length ? '✗' : '·'} ${name.padEnd(7)} ${path} (${expected}) — ${bad.length} violation(s), ${hidden.length} hidden focus, ${errors.length} console error(s)`)
 			for (const e of errors) console.error(`      console: ${e}`)
 
 			for (const v of bad) {
@@ -161,10 +211,11 @@ finally {
 
 console.log('\nNot run: color-contrast, color-contrast-enhanced — `npm run contrast` measures the palette.')
 
-if (violations || consoleErrors) {
+if (violations || consoleErrors || obscured) {
 	if (violations) console.error(`\n${violations} violation(s): ${[...seen].map(([id, n]) => `${id}×${n}`).join(', ')}`)
+	if (obscured) console.error(`\n${obscured} focused control(s) entirely behind the masthead (WCAG 2.4.11) — see above.`)
 	if (consoleErrors) console.error(`\n${consoleErrors} console error(s) — see above.`)
 	process.exit(1)
 }
 
-console.log(`\n✓ No violations and no console errors across ${PAGES.length} pages at ${VIEWPORTS.map((v) => `${v.width}px`).join(' and ')} in ${browser.name}.`)
+console.log(`\n✓ No violations, no focus behind the masthead and no console errors across ${PAGES.length} pages at ${VIEWPORTS.map((v) => `${v.width}px`).join(' and ')} in ${browser.name}.`)

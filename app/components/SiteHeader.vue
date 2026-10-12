@@ -93,7 +93,7 @@ onBeforeUnmount(() => {
 </script>
 
 <template>
-  <header class="sticky top-0 z-50">
+  <header class="masthead sticky top-0 z-50">
     <!-- The glass is a pane, not a band: it stops at the content measure so it
          reads as an object sitting over the page rather than a bar welded to
          the window. Inside it, the same gutter as the content below, so the
