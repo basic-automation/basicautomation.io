@@ -167,6 +167,25 @@ body {
   .wordmark { filter: invert(1) hue-rotate(180deg); }
 }
 
+/* On paper. A `[copy]` button cannot be pressed, and the masthead's glass —
+   a drop shadow, a drifting sheen, a phosphor grille and two lit rims, all
+   built for a page that scrolls under it — prints as a grey smear around the
+   mark. Printed, the pane is just the mark and the nav: flat, like every
+   other thing on the site. */
+@media print {
+  .needs-script { display: none !important; }
+  .masthead { position: static; }
+  .crt-glass {
+    box-shadow: none !important;
+    background: none !important;
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
+  }
+  .crt-glass::before,
+  .crt-glass::after,
+  .crt-glass > .crt-rim { display: none !important; }
+}
+
 /* Nothing on this site is rounded. */
 *, *::before, *::after { border-radius: 0 !important; }
 

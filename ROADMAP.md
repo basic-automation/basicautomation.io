@@ -1059,6 +1059,13 @@ record. There is no run log.
       lightness flipped and its own hues kept. Light themes and the normal
       page are unchanged. No palette colour is involved: system colours are
       the visitor's. <https://developer.mozilla.org/en-US/docs/Web/CSS/@media/forced-colors>
+- [x] A page prints flat. Printed, the masthead's glass — drop shadow,
+      sheen, grille, lit rims — came out as a grey smear round the mark, and
+      every `[copy]` button printed beside a command no one can copy from
+      paper. `@media print` in `main.css` drops both; screen is untouched.
+      Checked with Chromium's `printToPDF` of `/` and onyums' about page:
+      no `[copy]` in the PDF text (two before), the mark and nav on a white
+      page.
 - [x] Focus the masthead hides fails the browser pass. WCAG 2.2's 2.4.11
       (Focus Not Obscured, AA) forbids a focused control entirely hidden by
       author content, and the sticky masthead is exactly the case its failure
