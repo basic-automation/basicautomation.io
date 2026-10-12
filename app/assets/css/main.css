@@ -151,6 +151,22 @@ body {
   -webkit-font-smoothing: antialiased;
 }
 
+/* Forced colours (Windows contrast themes). The browser repaints text,
+   backgrounds and borders in the visitor's own colours, but not an SVG's fill
+   or an image's pixels — and those are this site's ink-dark marks. On a dark
+   contrast theme the org mark (the home link) and each project's wordmark
+   (an about page's h1) were dark on black, all but invisible.
+   The mark takes the theme's text colour. A wordmark is a picture, so on a
+   dark theme it is turned over: inverted for lightness, rotated back to its
+   own hues. On a light theme both read as they are.
+   <https://developer.mozilla.org/en-US/docs/Web/CSS/@media/forced-colors> */
+@media (forced-colors: active) {
+  .brand-mark { fill: CanvasText; }
+}
+@media (forced-colors: active) and (prefers-color-scheme: dark) {
+  .wordmark { filter: invert(1) hue-rotate(180deg); }
+}
+
 /* Nothing on this site is rounded. */
 *, *::before, *::after { border-radius: 0 !important; }
 

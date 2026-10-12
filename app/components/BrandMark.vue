@@ -10,6 +10,7 @@ const { title = '' } = defineProps<{ title?: string }>()
 
 <template>
   <svg
+    class="brand-mark"
     :viewBox="'0 0 151.2 151.2'"
     fill="currentColor"
     :role="title ? 'img' : undefined"

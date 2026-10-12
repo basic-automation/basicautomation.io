@@ -255,7 +255,7 @@ useSeoMeta({
             :src="project.logo"
             :alt="project.name"
             v-bind="assetSize(project.logo)"
-            class="h-24 w-auto max-w-full sm:h-36 lg:h-44"
+            class="wordmark h-24 w-auto max-w-full sm:h-36 lg:h-44"
           >
         </h1>
         <StatusDot :status="project.status" class="mt-6" />

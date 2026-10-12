@@ -1049,6 +1049,16 @@ record. There is no run log.
       third viewport, 320×256 — the Reflow size — where all 21 pages pass, and
       no page scrolls sideways at 320 px (README tables scroll inside their
       own box). <https://www.w3.org/WAI/WCAG21/Understanding/reflow.html>
+- [x] Forced colours (Windows contrast themes) keep the marks visible. The
+      browser repaints text, backgrounds and borders in the visitor's colours
+      but not an SVG's fill or an image's pixels, so on a dark contrast theme
+      the org mark (the home link) and each project's wordmark — an about
+      page's h1 — were ink-dark on black (Chromium, `forced-colors: active`
+      emulated, screenshots of before and after). The mark now takes
+      `CanvasText`; a wordmark on a dark theme is `invert(1) hue-rotate(180deg)`,
+      lightness flipped and its own hues kept. Light themes and the normal
+      page are unchanged. No palette colour is involved: system colours are
+      the visitor's. <https://developer.mozilla.org/en-US/docs/Web/CSS/@media/forced-colors>
 - [x] Focus the masthead hides fails the browser pass. WCAG 2.2's 2.4.11
       (Focus Not Obscured, AA) forbids a focused control entirely hidden by
       author content, and the sticky masthead is exactly the case its failure
