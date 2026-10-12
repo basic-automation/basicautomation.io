@@ -112,9 +112,19 @@
 
 /* ── Base ─────────────────────────────────────────────────────────────────── */
 html {
+  /* The masthead's visible height: the glass pane is sticky at the top of the
+     window and is this tall at every width (`.crt-glass` takes its height from
+     here, so the two cannot drift). */
+  --masthead: 8rem;
   background-color: var(--color-pn-bg);
   color-scheme: light;
   scroll-behavior: smooth;
+  /* Whatever the browser scrolls to — a `#heading` link, a cold load of one, a
+     focused control — stops below the masthead rather than under it. Every
+     fragment target used to land at 0–106 px, behind a pane whose bottom edge
+     is at 128. Nuxt's router adds this padding to its own hash scrolls too,
+     so client navigation agrees with the browser. The extra 1rem is air. */
+  scroll-padding-top: calc(var(--masthead) + 1rem);
   -webkit-text-size-adjust: 100%;
 }
 
@@ -226,7 +236,6 @@ body {
   font-weight: 600;
   line-height: 1.35;
   margin: 2.25rem 0 0.75rem;
-  scroll-margin-top: 5rem;
 }
 .readme h2 { font-size: 1.25rem; }
 .readme h3 {
@@ -443,10 +452,10 @@ body {
   /* The height is here rather than an `h-32` utility on the element, because
      the overhang has to be added to it and a utility would fix the total —
      `h-32` plus this padding does not make a taller pane, it makes the same
-     pane with nowhere to put the logo. The visible part stays 8rem; the
+     pane with nowhere to put the logo. The visible part stays `--masthead`; the
      overhang is extra, paid back by the negative margin so the flow is
      unchanged. */
-  height: calc(8rem + var(--crt-overhang));
+  height: calc(var(--masthead) + var(--crt-overhang));
   margin-top: calc(-1 * var(--crt-overhang));
   padding-top: var(--crt-overhang);
 

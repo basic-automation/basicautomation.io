@@ -987,17 +987,31 @@ record. There is no run log.
       200 px of the top), 144 checks per engine in both. Before the sizes the
       same assertion failed in Chromium, e.g. Skidbladnir's `#editions` at
       771 px.
-- [ ] Without script, a link to a README heading cannot open the fold in a
-      browser that does not do it itself, and no CSS can open a `<details>`.
-      That is Tor Browser at "Safest". Recorded rather than fixed: the
-      alternative is not folding the README at all. Mozilla's bug 1724299 is
-      described as shipping auto-expanding `<details>` in Firefox 139, fragment
-      navigation included, yet headless Firefox 155 left the fold closed on a
-      cold `about#heading` load here, on main's build before any of this
-      run's changes; worth re-checking in a real Firefox and in Tor Browser
-      before relying on either answer.
+- [x] Without script, a link to a README heading opens the fold — the browser
+      does it itself. Feared otherwise, because no CSS can open a `<details>`
+      and that is Tor Browser at "Safest"; the earlier note that headless
+      Firefox 155 left the fold closed on a cold `about#heading` load did not
+      reproduce on 2026-10-11. With `javascript.enabled` off (the page reports
+      `(scripting: none)` and never hydrates), a cold load of
+      `/projects/onyums/about#features` opened the fold with the heading on
+      screen in headless Firefox 155.0.1 and in Tor Browser 15.0.23 (Firefox
+      140.17 ESR), and so did a bare `<details>` test page. Only script was
+      turned off, not the rest of what "Safest" changes.
       <https://bugzilla.mozilla.org/show_bug.cgi?id=1724299>
       <https://github.com/whatwg/html/pull/6466>
+- [x] A heading link lands below the masthead, not behind it. Every fragment
+      target on the site — README headings, `#download`, the home page's
+      `#projects` and `#about` — came to rest 0–106 px from the top of the
+      window, under a sticky pane whose bottom edge is at 128 px, in Chromium
+      and Firefox, by link, by cold load and with script off. The README's
+      `scroll-margin-top: 5rem` predated the 8rem masthead. Now
+      `html { scroll-padding-top: calc(var(--masthead) + 1rem) }` in
+      `main.css`, with `.crt-glass` taking its height from the same
+      `--masthead`; Nuxt's router adds the padding to its own hash scrolls, so
+      client navigation agrees. Every target now rests at 144 px. The check
+      that should have caught it measured from the top of the window:
+      `check:navigation` now measures a heading's first line from the
+      masthead's bottom edge, and on main's build failed 32 checks with it.
 - [ ] Look at the masthead in a real Firefox and in Tor Browser, scrolled.
       Headless Firefox drew no blur at all behind it, not even the plain
       `blur()` the CSS gives every other browser, so its screenshots show body
