@@ -152,10 +152,12 @@ body {
 }
 
 /* Forced colours (Windows contrast themes). The browser repaints text,
-   backgrounds and borders in the visitor's own colours, but not an SVG's fill
-   or an image's pixels — and those are this site's ink-dark marks. On a dark
-   contrast theme the org mark (the home link) and each project's wordmark
-   (an about page's h1) were dark on black, all but invisible.
+   backgrounds and borders in the visitor's own colours. An SVG's fill it
+   discards as if the author had set none — which leaves SVG's initial black,
+   not the theme's text colour — and an image's pixels it leaves alone. Those
+   are this site's ink-dark marks: on a dark contrast theme the org mark (the
+   home link) and each project's wordmark (an about page's h1) were dark on
+   black, all but invisible.
    The mark takes the theme's text colour. A wordmark is a picture, so on a
    dark theme it is turned over: inverted for lightness, rotated back to its
    own hues. On a light theme both read as they are.

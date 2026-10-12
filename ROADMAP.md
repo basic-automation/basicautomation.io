@@ -1050,8 +1050,9 @@ record. There is no run log.
       no page scrolls sideways at 320 px (README tables scroll inside their
       own box). <https://www.w3.org/WAI/WCAG21/Understanding/reflow.html>
 - [x] Forced colours (Windows contrast themes) keep the marks visible. The
-      browser repaints text, backgrounds and borders in the visitor's colours
-      but not an SVG's fill or an image's pixels, so on a dark contrast theme
+      browser repaints text, backgrounds and borders in the visitor's colours,
+      resets an SVG's fill to SVG's initial black, and leaves an image's
+      pixels alone, so on a dark contrast theme
       the org mark (the home link) and each project's wordmark — an about
       page's h1 — were ink-dark on black (Chromium, `forced-colors: active`
       emulated, screenshots of before and after). The mark now takes
