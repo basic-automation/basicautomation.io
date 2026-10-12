@@ -1087,9 +1087,15 @@ record. There is no run log.
       Not fonts: waiting on `document.fonts.ready` before the restore made no
       difference, and the page's block heights are identical before and
       after; the restore's `scrollTo` itself reports the extra pixels in its
-      first scroll event. Next: log `scrollTo`'s target against the first
-      scroll event's `scrollY` with scroll anchoring off
-      (`overflow-anchor: none`) to rule anchoring in or out.
+      first scroll event. Scroll anchoring is involved: a style of
+      `* { overflow-anchor: none !important }` added at `DOMContentLoaded`
+      took the drift to 0 over 2 × 12 reloads — but setting it only on
+      `<html>` for the second around the fold's `scrollTo` did not (+2 … +10
+      over 12, four pages), and neither did `none` on `html`, `body`,
+      `details` or `.readme *` alone from `DOMContentLoaded` (each still
+      drifted, +6 to +12 over 10). Only the universal rule cures it, which
+      no single-element theory explains yet. Next: halve the universal
+      selector (`main *`, `header *`, …) until one subtree accounts for it.
 - [ ] Look at the masthead in a real Firefox and in Tor Browser, scrolled.
       Headless Firefox drew no blur at all behind it, not even the plain
       `blur()` the CSS gives every other browser, so its screenshots show body
