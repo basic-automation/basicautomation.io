@@ -1066,6 +1066,16 @@ record. There is no run log.
       Checked with Chromium's `printToPDF` of `/` and onyums' about page:
       no `[copy]` in the PDF text (two before), the mark and nav on a white
       page.
+- [x] A wordmark that does not draw still reads as the title. Tor Browser
+      at "Safest" turns SVG off, and every project wordmark is an SVG: in Tor
+      Browser 15.0.23 with `svg.disabled`, downloadable fonts off and script
+      off, an about page's h1 came out as "onyums" in 14 px body text above
+      a blank box, and each card's name the same. A missing image's alt is
+      set in the image's own font, so the wordmark `<img>`s now carry the
+      text size of the no-logo heading (`text-4xl`/`sm:text-5xl`): the name
+      stands as a heading. A drawn wordmark is unchanged (screenshots of
+      both). The org mark is inline SVG and falls back to its `<title>`,
+      "Basic Automation", in the masthead — readable, left as it is.
 - [x] Focus the masthead hides fails the browser pass. WCAG 2.2's 2.4.11
       (Focus Not Obscured, AA) forbids a focused control entirely hidden by
       author content, and the sticky masthead is exactly the case its failure

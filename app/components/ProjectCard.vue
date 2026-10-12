@@ -73,7 +73,7 @@ const ago = useRelativeTime()
         :alt="project.name"
         :loading="loading"
         :fetchpriority="fetchpriority"
-        class="wordmark absolute inset-0 h-full w-full object-contain p-10 transition-transform duration-300 group-hover:scale-[1.03] sm:p-14"
+        class="wordmark absolute inset-0 h-full w-full object-contain p-10 text-4xl text-pn-fg transition-transform duration-300 group-hover:scale-[1.03] sm:p-14 sm:text-5xl"
       >
       <!-- Bordered for the same reason as the one on the project page: a
            screenshot is a window onto another application, and a light-themed
