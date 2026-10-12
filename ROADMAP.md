@@ -1059,6 +1059,14 @@ record. There is no run log.
       lightness flipped and its own hues kept. Light themes and the normal
       page are unchanged. No palette colour is involved: system colours are
       the visitor's. <https://developer.mozilla.org/en-US/docs/Web/CSS/@media/forced-colors>
+- [x] Reduced transparency gets a solid masthead. A visitor whose system
+      asks for less transparency (Windows' transparency effects off, macOS's
+      Reduce transparency) now gets the pane opaque — the same 2% green over
+      the ground, no backdrop — so body text no longer passes, blurred, behind
+      the nav links. Bevel, rims and grille stay. Not Baseline (MDN marks it
+      experimental), so elsewhere nothing changes; checked with the feature
+      emulated in Chromium against the unemulated page.
+      <https://developer.mozilla.org/en-US/docs/Web/CSS/@media/prefers-reduced-transparency>
 - [x] Focus the masthead hides fails the browser pass. WCAG 2.2's 2.4.11
       (Focus Not Obscured, AA) forbids a focused control entirely hidden by
       author content, and the sticky masthead is exactly the case its failure
@@ -1071,6 +1079,17 @@ record. There is no run log.
       sufficient technique C43.
       <https://www.w3.org/WAI/WCAG22/Understanding/focus-not-obscured-minimum.html>
       <https://developer.mozilla.org/en-US/docs/Web/CSS/scroll-padding-top>
+- [ ] A reload of an unfolded README lands 2–9 px past the reader's place,
+      now and then, in Chromium at 390 px — and creeps: twelve reloads of
+      onyums ran +2, +2, +2, +4 … +6 (2026-10-11, normal CPU; none at 4×
+      throttle). The same 9 px failure hit `check:navigation` once on main's
+      build and once on this run's, of seven runs, so CI can go red on it.
+      Not fonts: waiting on `document.fonts.ready` before the restore made no
+      difference, and the page's block heights are identical before and
+      after; the restore's `scrollTo` itself reports the extra pixels in its
+      first scroll event. Next: log `scrollTo`'s target against the first
+      scroll event's `scrollY` with scroll anchoring off
+      (`overflow-anchor: none`) to rule anchoring in or out.
 - [ ] Look at the masthead in a real Firefox and in Tor Browser, scrolled.
       Headless Firefox drew no blur at all behind it, not even the plain
       `blur()` the CSS gives every other browser, so its screenshots show body
