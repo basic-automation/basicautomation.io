@@ -241,13 +241,15 @@ whether each control's visible label is part of its accessible name —
 in headless Chromium at a desktop and a phone width (set `CHROME_PATH` if
 Chromium is not on `PATH`), reading each page to the bottom so lazy content
 loads, and fails on any console error, uncaught exception or CSP refusal the
-page produces along the way. `npm run a11y:firefox` is the same pass in
+page produces along the way. It also walks each page's controls the way
+Shift+Tab does, and fails on any focused control the sticky masthead hides
+entirely (WCAG 2.2's Focus Not Obscured), which no axe rule covers. `npm run a11y:firefox` is the same pass in
 headless Firefox, driven over WebDriver BiDi (set `FIREFOX_PATH` if it is not on
 `PATH`): the onion service is reached in Tor Browser, which is Firefox, and the
 two engines do differ. `npm run check:navigation` drives what a visitor's own
 navigation does to each about page's folded README: Back, Forward and a reload
 return a reader to the place they were reading, a visit by link starts folded,
-and a link to a README heading lands on it, at both widths, in Chromium or
+and a link to a README heading lands on it, below the masthead, at both widths, in Chromium or
 (`--firefox`) Firefox. A reload it fails prints a frame-by-frame trace of
 the page's first seconds — every scroll call, scroll position and page height —
 so a failure on CI says where the pixels went. All of these walk every page the sitemap lists, so a new

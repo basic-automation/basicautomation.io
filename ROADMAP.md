@@ -1012,6 +1012,18 @@ record. There is no run log.
       that should have caught it measured from the top of the window:
       `check:navigation` now measures a heading's first line from the
       masthead's bottom edge, and on main's build failed 32 checks with it.
+- [x] Focus the masthead hides fails the browser pass. WCAG 2.2's 2.4.11
+      (Focus Not Obscured, AA) forbids a focused control entirely hidden by
+      author content, and the sticky masthead is exactly the case its failure
+      F110 names; axe has no rule for it. `check-a11y-browser.mjs` now walks
+      each page's controls bottom-up as Shift+Tab does and hit-tests five
+      points of each. Against the live site (main, before the scroll padding
+      above) it failed 80 controls in Chromium — "read the full readme",
+      release links, the status table's names, download links; against this
+      build none, in Chromium and in Firefox. The scroll padding is the
+      sufficient technique C43.
+      <https://www.w3.org/WAI/WCAG22/Understanding/focus-not-obscured-minimum.html>
+      <https://developer.mozilla.org/en-US/docs/Web/CSS/scroll-padding-top>
 - [ ] Look at the masthead in a real Firefox and in Tor Browser, scrolled.
       Headless Firefox drew no blur at all behind it, not even the plain
       `blur()` the CSS gives every other browser, so its screenshots show body
