@@ -1132,12 +1132,35 @@ record. There is no run log.
       reader was (Firefox already restored those from its back-forward cache).
       `check:navigation` now reloads each folded about page halfway down and
       expects it to stay there; main's build fails it.
-- [ ] The browser's own restore animates. A reload of the home page at
-      1,200 px scrolls from the top to 1,200 over ~600 ms in Chromium, because
-      the site's `scroll-behavior: smooth` applies to it; vue-router's restores
-      were made instant (`app/router.options.ts`), the browser's cannot be
-      told so. The page would have to hold `scroll-behavior: auto` until the
-      restore has finished, and when that is is not something the page is told.
+- [ ] Upstream: report Nuxt's reload-to-top to nuxt/nuxt — **owner's call**,
+      as it speaks for the organization in another project's tracker. Nuxt's
+      router plugin answers its start-up navigation, from `START_LOCATION`
+      with no saved position, with `{ top: 0 }`, which cancels the browser's
+      restore on every path but `/` (fixed here in `app/router.options.ts`,
+      above). nuxt/nuxt#36346, "Scroll is not restored after refresh", was
+      closed on 2026-10-11 as a duplicate of an `@nuxtjs/i18n` issue; this
+      site has no i18n and reproduces it on Nuxt 4.6.1, in Chromium and
+      Firefox. <https://github.com/nuxt/nuxt/issues/36346>
+      <https://github.com/nuxt-modules/i18n/issues/4157>
+- [x] The browser's own restore is a jump, not an animation. A reload of the
+      home page at 1,200 px scrolled from the top to 1,200 over ~550 ms in
+      Chromium (34 scroll events), because the site's `scroll-behavior:
+      smooth` applies to the browser's restore too; Firefox jumps. vue-router's
+      restores were made instant in `app/router.options.ts`, but the browser's
+      cannot be asked. `app/plugins/restore-jump.client.ts` holds
+      `scroll-behavior: auto` on a reload or Back/Forward to a document until
+      scrolling has been still for 300 ms (3 s at most), then hands the
+      smooth scrolling back. Chromium, `/` and `/projects` at 1,200 px: 34
+      scroll events → 1, landing at 1,200 every time; Firefox unchanged (1).
+      A fresh visit, and a page without script, are untouched.
+- [ ] A cold load of `about#<heading>` can land a couple of pixels short of
+      the masthead's edge: once in three `check:navigation` runs in Chromium
+      on 2026-10-12, Nanna at 390 px, `#api-key-invalid` 16,253 px down, its
+      first line 2 px under the pane (the band is 0–200), so CI can go red on
+      it. A fresh `navigate` load, which none of that night's restore changes
+      touch (each returns early unless the load is a reload or Back/Forward),
+      and the other two runs passed all 160. Next: run that one case in a loop
+      with the check's frame trace, on main's build and this one.
 - [ ] Look at the masthead in a real Firefox and in Tor Browser, scrolled.
       Headless Firefox drew no blur at all behind it, not even the plain
       `blur()` the CSS gives every other browser, so its screenshots show body
