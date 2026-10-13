@@ -15,6 +15,7 @@
  * fragment by itself. `app/composables/useReadmeFold.ts` fixed both. This
  * holds them fixed, on every about page whose README has a heading:
  *
+ *   - folded, read down and reload: still folded, same place
  *   - unfold, read down, go to the blog tab, Back: unfolded, same place
  *   - Forward and Back again: the same
  *   - reload: unfolded, same place
@@ -157,6 +158,21 @@ try {
 			// Unfold and read down past where the folded page ends, so a page that
 			// came back folded could not land there.
 			const foldedBottom = await page.evaluate('document.documentElement.scrollHeight - innerHeight')
+
+			// The browser's own restore, on a page the fold leaves alone. Nuxt's
+			// start-up scroll to the top used to cancel it on every page but `/`
+			// (see app/router.options.ts), so this landed at 0 in both engines.
+			const halfway = Math.round(foldedBottom / 2)
+			await page.evaluate(`scrollTo({ top: ${halfway}, behavior: 'instant' })`)
+			await arrive(about)
+			const read = (await state()).y
+			await page.reload()
+			await arrive(about)
+			s = await state()
+			expect(`a reload of the folded page stays at y ${read}`, s.open === false && Math.abs(s.y - read) <= SLACK, s)
+			await page.evaluate(`scrollTo({ top: 0, behavior: 'instant' })`)
+			await arrive(about)
+
 			await click('details > summary')
 			await sleep(300)
 			const target = await page.evaluate(`Math.min(${foldedBottom} + 1500, document.documentElement.scrollHeight - innerHeight - 10)`)

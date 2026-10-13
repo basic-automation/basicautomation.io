@@ -412,11 +412,20 @@ record. There is no run log.
             itself. From this host's user `tor` on 2026-10-11: through the
             gate on the first try, in 7.0 s and 10.8 s. A made-up address and
             a dead SOCKS port each fail with exit 1; no address to probe, 2.
-      - [ ] …run every six hours: `.github/workflows/onion.yml` (a fresh Tor
+      - [x] …run every six hours: `.github/workflows/onion.yml` (a fresh Tor
             client on a GitHub runner, one tracking issue kept in sync, the
-            shape of `links.yml`). Landed with this slice; tick once its first
-            scheduled runs on `main` have reported, and read a few days of
-            them before weighing C Tor.
+            shape of `links.yml`). Its first scheduled runs on `main` have
+            reported, both green: 2026-10-12 15:25 UTC through the gate in
+            82.6 s on the second try — the first timed out connecting after
+            120 s — and 2026-10-13 00:39 UTC on the first, in 11.1 s.
+      - [ ] Read a few days of those runs before weighing C Tor: how many
+            first tries fail, and how long a reach takes. Each run's tries are
+            in its step summary. The schedule is thinner than it looks: two
+            scheduled runs in the first ~20 h, not three or four, and the
+            first landed three hours after its slot; GitHub documents that
+            `schedule` runs can be delayed under load and, if the load is high
+            enough, dropped. Count the runs that happened, not the slots.
+            <https://docs.github.com/en/actions/reference/workflows-and-actions/events-that-trigger-workflows#schedule>
 - [ ] Move the runtime to distroless — **needs an owner decision, because the
       size case for it is gone.** Measured 2026-09-27: the same build on
       `gcr.io/distroless/nodejs24-debian13:nonroot` is 73.0 MB of image content
@@ -482,6 +491,16 @@ record. There is no run log.
       Golar's ~2.7 s.
       <https://devblogs.microsoft.com/typescript/announcing-typescript-7-0/>
       <https://github.com/vuejs/language-tools/pull/6123>
+- [ ] marked 18.1.1 (published 2026-10-12 12:28 UTC; it renders every README
+      and post). Held a night: it changes output, not just speed — a
+      blockquote ends before a lazy line after a heading, hr or html block;
+      indented and type 3–5 html blocks may interrupt a paragraph; a backslash
+      in a code span no longer hides emphasis; list continuation respects tab
+      stops. Its `walkTokens` fix (quadratic → linear, marked#4120) does not
+      apply here: `shared/markdown/render.ts` registers no `walkTokens`. Take
+      it with a byte diff of all eight READMEs and every post, before and after.
+      <https://github.com/markedjs/marked/releases/tag/v18.1.1>
+      <https://github.com/markedjs/marked/issues/4120>
 - [ ] Move the type checker to TypeScript 7 once 7.1 ships its API and vue-tsc
       adopts it — the 6.0 API is a bridge, not a destination.
       <https://devblogs.microsoft.com/typescript/announcing-typescript-7-0/>
@@ -1089,26 +1108,87 @@ record. There is no run log.
       sufficient technique C43.
       <https://www.w3.org/WAI/WCAG22/Understanding/focus-not-obscured-minimum.html>
       <https://developer.mozilla.org/en-US/docs/Web/CSS/scroll-padding-top>
-- [ ] A reload of an unfolded README lands 2–9 px past the reader's place,
-      now and then, in Chromium at 390 px — and creeps: twelve reloads of
-      onyums ran +2, +2, +2, +4 … +6 (2026-10-11, normal CPU; none at 4×
-      throttle). The same 9 px failure hit `check:navigation` once on main's
-      build and once on this run's, of seven runs, so CI can go red on it.
-      Not fonts: waiting on `document.fonts.ready` before the restore made no
-      difference, and the page's block heights are identical before and
-      after; the restore's `scrollTo` itself reports the extra pixels in its
-      first scroll event. Scroll anchoring looked involved: a style of
-      `* { overflow-anchor: none !important }` added at `DOMContentLoaded`
-      took the drift to 0 over 2 × 12 reloads — but setting it only on
-      `<html>` for the second around the fold's `scrollTo` did not (+2 … +10
-      over 12, four pages), and neither did `none` on `html`, `body`,
-      `details` or `.readme *` alone from `DOMContentLoaded` (each still
-      drifted, +6 to +12 over 10) — nor did `* { overflow-anchor: none }`
-      without `!important` (+6 over 10), nor `main *`, `header *, footer *`
-      or the root chain. So anchoring is not shown to be the cause; the two
-      clean runs with `!important` may have been luck. Next: record
-      `scrollY` in every frame between the fold opening and the restore,
-      and whether vue-router's own `scrollTo` lands before or after it.
+- [x] A reload of an unfolded README lands where the reader was, not 2 px
+      past it — and no longer creeps. Two restores ran on every such reload:
+      the fold's own, and Chromium's. Nuxt's router plugin sets
+      `history.scrollRestoration = 'auto'` for the first document (it sets
+      `manual` only at the first client navigation), so the browser still
+      restored the entry itself, after the fold had opened the README and
+      scrolled, and landed 2 px further on; the next reload saved that and
+      added 2 more. Traced frame by frame: the fold's `scrollTo({ top: 4200 })`
+      reported 4200, the first scroll event 4202, and no element on the page
+      moved in between — which is why it never looked like layout or anchoring,
+      and why last night's `overflow-anchor` bisect gave contradictory answers
+      (injecting any style at `DOMContentLoaded`, a no-op included, suppressed
+      it by moving the timing). Chromium settles it in the task in which `auto`
+      is set: `manual` restored in a microtask after Nuxt's write, no drift;
+      in the next task, from a plugin after the router's or once mounted, the
+      drift stays (13 of 28, 16 of 42, 17 of 42). And the entry has to leave
+      the previous document as `manual` too. So the fold sets `manual` when
+      it opens (and hands `auto` back when folded again), and
+      `app/plugins/readme-restore.client.ts` runs before Nuxt's router plugin
+      and holds `manual` through its write — only for a reload or Back/Forward
+      of an entry whose README was open and whose place is stored; every other
+      page keeps the browser's restore. onyums at 390 px: 14 of 42 reloads
+      drifted before, 0 of 42 after, at DPR 1 and at CI's phone profile.
+      Other pages' reloads land as on main's build, side by side. The HTML
+      standard keeps the scroll restoration mode on the session history
+      entry, which fits: the mode the entry leaves with is what counts.
+      <https://html.spec.whatwg.org/multipage/browsing-the-web.html#scroll-restoration-mode>
+- [x] A reload puts the reader back on every page, not only on `/`. A
+      reload of `/projects` at 1,200 px landed at 0, and so did a folded
+      about page, in Chromium and Firefox alike; in Chromium so did Back from
+      another site to `/projects`, `/news` or a blog tab. The home page alone
+      came back. Nuxt's router plugin runs one start-up navigation
+      through the scroll behaviour, from `START_LOCATION`, and with no saved
+      position its answer is the top of the page; that `scrollTo` cancelled the
+      browser's own restore, still under way. `/` was spared only by Nuxt's
+      same-path rule, `START_LOCATION`'s path being `/`. vue-router's saved
+      position cannot step in: it is written on `beforeunload`, and Chromium
+      drops that write (`history.state.scroll` is `false` on every reload).
+      `app/router.options.ts` now leaves the scroll alone on the page's own
+      load when there is neither a saved position nor a hash; a fresh visit is
+      at the top anyway. Before → after, at 390 px: Chromium `/projects` 0 →
+      1,200, folded onyums 0 → 1,500; Firefox the same; Chromium Back from
+      another origin to `/projects`, `/news` and a blog tab 0 → where the
+      reader was (Firefox already restored those from its back-forward cache).
+      `check:navigation` now reloads each folded about page halfway down and
+      expects it to stay there; main's build fails it.
+- [ ] Upstream: report Nuxt's reload-to-top to nuxt/nuxt — **owner's call**,
+      as it speaks for the organization in another project's tracker. Nuxt's
+      router plugin answers its start-up navigation, from `START_LOCATION`
+      with no saved position, with `{ top: 0 }`, which cancels the browser's
+      restore on every path but `/` (fixed here in `app/router.options.ts`,
+      above). nuxt/nuxt#36346, "Scroll is not restored after refresh", was
+      closed on 2026-10-11 as a duplicate of an `@nuxtjs/i18n` issue; this
+      site has no i18n and reproduces it on Nuxt 4.6.1, in Chromium and
+      Firefox. <https://github.com/nuxt/nuxt/issues/36346>
+      <https://github.com/nuxt-modules/i18n/issues/4157>
+- [x] The browser's own restore is a jump, not an animation. A reload of the
+      home page at 1,200 px scrolled from the top to 1,200 over ~550 ms in
+      Chromium (34 scroll events), because the site's `scroll-behavior:
+      smooth` applies to the browser's restore too; Firefox jumps. vue-router's
+      restores were made instant in `app/router.options.ts`, but the browser's
+      cannot be asked. `app/plugins/restore-jump.client.ts` holds
+      `scroll-behavior: auto` on a reload or Back/Forward to a document until
+      scrolling has been still for 300 ms (3 s at most), then hands the
+      smooth scrolling back. Chromium, `/` and `/projects` at 1,200 px: 34
+      scroll events → 1, landing at 1,200 every time; Firefox unchanged (1).
+      A fresh visit, and a page without script, are untouched.
+- [ ] A cold load of `about#<heading>` can land a couple of pixels short of
+      the masthead's edge: once in three `check:navigation` runs in Chromium
+      on 2026-10-12, Nanna at 390 px, `#api-key-invalid` 16,253 px down, its
+      first line 2 px under the pane (the band is 0–200), so CI can go red on
+      it. A fresh `navigate` load, which none of that night's restore changes
+      touch (each returns early unless the load is a reload or Back/Forward).
+      Over six Chromium runs of that build: four passed all 160, one had this
+      miss, and one stalled on the same page (Nanna, phone) until its 15-minute
+      timeout, with the host at load 9 and other agents' browsers running.
+      Main's build: no such miss in three runs, so it is not shown to predate
+      the night. Alone, 25 cold loads of that URL landed at 16 or 12 px, never
+      out of band. Next: the same loop inside the check's own sequence (after
+      the reload and Back cases on that tab), with its frame trace, on both
+      builds, and find out what the stalled run was waiting for.
 - [ ] Look at the masthead in a real Firefox and in Tor Browser, scrolled.
       Headless Firefox drew no blur at all behind it, not even the plain
       `blur()` the CSS gives every other browser, so its screenshots show body

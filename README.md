@@ -252,7 +252,8 @@ headless Firefox, driven over WebDriver BiDi (set `FIREFOX_PATH` if it is not on
 `PATH`): the onion service is reached in Tor Browser, which is Firefox, and the
 two engines do differ. `npm run check:navigation` drives what a visitor's own
 navigation does to each about page's folded README: Back, Forward and a reload
-return a reader to the place they were reading, a visit by link starts folded,
+return a reader to the place they were reading, whether the README is open or
+folded, a visit by link starts folded,
 and a link to a README heading lands on it, below the masthead, at both widths, in Chromium or
 (`--firefox`) Firefox. A reload it fails prints a frame-by-frame trace of
 the page's first seconds — every scroll call, scroll position and page height —

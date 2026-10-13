@@ -1,4 +1,5 @@
 import type { RouterConfig } from 'nuxt/schema'
+import { START_LOCATION } from 'vue-router'
 // Nuxt's own router options, which this file would otherwise replace. Not an
 // export of the package, so it is reached by path: if Nuxt moves it, the
 // build fails here rather than the site quietly losing Nuxt's scrolling.
@@ -26,6 +27,18 @@ import nuxt from '../node_modules/nuxt/dist/pages/runtime/router.options.js'
  */
 export default <RouterConfig>{
 	async scrollBehavior(to, from, saved) {
+		// The page's own load. Nuxt runs one navigation through here as the app
+		// starts, from `START_LOCATION`, and with no saved position its answer
+		// is the top of the page. A fresh visit is already there; a reload, or
+		// Back to the page from another site, is not — the browser is
+		// restoring the reader's place (Nuxt leaves `scrollRestoration` at
+		// `auto` for this document), and the jump to the top cancelled it. So
+		// a reload of `/projects` at 1,200 px landed at 0. Only `/` was spared,
+		// by Nuxt's same-path rule, because `START_LOCATION`'s path is `/`.
+		// vue-router's own saved position never helps here: it is written on
+		// `beforeunload`, and Chromium drops that write (`history.state.scroll`
+		// is `false` on every reload). A hash is still Nuxt's to scroll to.
+		if (from === START_LOCATION && !saved && !to.hash) return false
 		const position = await nuxt.scrollBehavior?.(to, from, saved)
 		return position && saved && position === saved ? { ...saved, behavior: 'instant' } : position
 	},

@@ -52,10 +52,11 @@ export function useReadmeFold(readmeHtml: Readonly<Ref<string | null>>) {
   // while the page unloads — so the position goes to session storage, keyed
   // by the history entry. A convenience: if storage is refused, a reload
   // just lands where it did before.
-  const entry = () => `readme-top:${history.state?.position ?? ''}:${route.path}`
+  const entry = () => readmeTopKey(route.path)
   const remember = () => {
     try {
       if (open.value) sessionStorage.setItem(entry(), String(Math.round(window.scrollY)))
+      else sessionStorage.removeItem(entry())
     }
     catch {}
   }
@@ -86,6 +87,8 @@ export function useReadmeFold(readmeHtml: Readonly<Ref<string | null>>) {
   })
   onBeforeUnmount(() => window.removeEventListener('pagehide', remember))
 
+  let handedOver: ScrollRestoration | null = null
+
   /** The `<details>`'s own `toggle`, from a click or from the binding. */
   function onToggle(event: Event) {
     const now = (event.target as HTMLDetailsElement).open
@@ -93,6 +96,17 @@ export function useReadmeFold(readmeHtml: Readonly<Ref<string | null>>) {
     // vue-router merges `history.state` into the entry when it next writes
     // it, so the key survives navigating away; a new entry starts without it.
     if (history.state?.[KEY] !== now) history.replaceState({ ...history.state, [KEY]: now }, '')
+    // An open fold restores this entry itself, so the entry leaves this
+    // document as `manual`; see `plugins/readme-restore.client.ts`. Folded
+    // again, the browser gets back what the fold took from it.
+    if (now && history.scrollRestoration !== 'manual') {
+      handedOver = history.scrollRestoration
+      history.scrollRestoration = 'manual'
+    }
+    else if (!now && handedOver) {
+      history.scrollRestoration = handedOver
+      handedOver = null
+    }
   }
 
   return { open, onToggle }
@@ -109,6 +123,26 @@ function readmeHeading(hash: string): HTMLElement | null {
   catch {}
   const el = document.getElementById(id)
   return el?.closest('.readme') ? el : null
+}
+
+/** Where the fold keeps the reading position of the current history entry at `path`. */
+function readmeTopKey(path: string): string {
+  return `readme-top:${history.state?.position ?? ''}:${path}`
+}
+
+/**
+ * Whether this document will be put back by the fold rather than by the
+ * browser: a reload, or Back or Forward to it, of an entry whose README was
+ * left open. See `plugins/readme-restore.client.ts`.
+ */
+export function foldWillRestore(): boolean {
+  if (!returning() || history.state?.[KEY] !== true) return false
+  try {
+    return sessionStorage.getItem(readmeTopKey(location.pathname)) !== null
+  }
+  catch {
+    return false
+  }
 }
 
 /** Whether this document is a reload, or Back or Forward to it, rather than a new visit. */
