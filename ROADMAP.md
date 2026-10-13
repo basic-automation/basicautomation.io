@@ -1113,12 +1113,31 @@ record. There is no run log.
       page keeps the browser's restore. onyums at 390 px: 14 of 42 reloads
       drifted before, 0 of 42 after, at DPR 1 and at CI's phone profile.
       Other pages' reloads land as on main's build, side by side.
-- [ ] A reload of `/projects`, or of an about page with its README folded,
-      lands at the top (0–2 px) instead of where the reader was, at 390 px in
-      Chromium — on main's build as on this one; the home page restores (900 →
-      900). Seen while checking the fix above, not yet looked into. Nuxt's
-      initial `scrollTo({ left: 0, top: 0 })`, at ~40 ms, is the first
-      suspect.
+- [x] A reload puts the reader back on every page, not only on `/`. A
+      reload of `/projects` at 1,200 px landed at 0, and so did a folded
+      about page, in Chromium and Firefox alike; in Chromium so did Back from
+      another site to `/projects`, `/news` or a blog tab. The home page alone
+      came back. Nuxt's router plugin runs one start-up navigation
+      through the scroll behaviour, from `START_LOCATION`, and with no saved
+      position its answer is the top of the page; that `scrollTo` cancelled the
+      browser's own restore, still under way. `/` was spared only by Nuxt's
+      same-path rule, `START_LOCATION`'s path being `/`. vue-router's saved
+      position cannot step in: it is written on `beforeunload`, and Chromium
+      drops that write (`history.state.scroll` is `false` on every reload).
+      `app/router.options.ts` now leaves the scroll alone on the page's own
+      load when there is neither a saved position nor a hash; a fresh visit is
+      at the top anyway. Before → after, at 390 px: Chromium `/projects` 0 →
+      1,200, folded onyums 0 → 1,500; Firefox the same; Chromium Back from
+      another origin to `/projects`, `/news` and a blog tab 0 → where the
+      reader was (Firefox already restored those from its back-forward cache).
+      `check:navigation` now reloads each folded about page halfway down and
+      expects it to stay there; main's build fails it.
+- [ ] The browser's own restore animates. A reload of the home page at
+      1,200 px scrolls from the top to 1,200 over ~600 ms in Chromium, because
+      the site's `scroll-behavior: smooth` applies to it; vue-router's restores
+      were made instant (`app/router.options.ts`), the browser's cannot be
+      told so. The page would have to hold `scroll-behavior: auto` until the
+      restore has finished, and when that is is not something the page is told.
 - [ ] Look at the masthead in a real Firefox and in Tor Browser, scrolled.
       Headless Firefox drew no blur at all behind it, not even the plain
       `blur()` the CSS gives every other browser, so its screenshots show body
