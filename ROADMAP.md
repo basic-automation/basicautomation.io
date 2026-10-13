@@ -1089,26 +1089,36 @@ record. There is no run log.
       sufficient technique C43.
       <https://www.w3.org/WAI/WCAG22/Understanding/focus-not-obscured-minimum.html>
       <https://developer.mozilla.org/en-US/docs/Web/CSS/scroll-padding-top>
-- [ ] A reload of an unfolded README lands 2–9 px past the reader's place,
-      now and then, in Chromium at 390 px — and creeps: twelve reloads of
-      onyums ran +2, +2, +2, +4 … +6 (2026-10-11, normal CPU; none at 4×
-      throttle). The same 9 px failure hit `check:navigation` once on main's
-      build and once on this run's, of seven runs, so CI can go red on it.
-      Not fonts: waiting on `document.fonts.ready` before the restore made no
-      difference, and the page's block heights are identical before and
-      after; the restore's `scrollTo` itself reports the extra pixels in its
-      first scroll event. Scroll anchoring looked involved: a style of
-      `* { overflow-anchor: none !important }` added at `DOMContentLoaded`
-      took the drift to 0 over 2 × 12 reloads — but setting it only on
-      `<html>` for the second around the fold's `scrollTo` did not (+2 … +10
-      over 12, four pages), and neither did `none` on `html`, `body`,
-      `details` or `.readme *` alone from `DOMContentLoaded` (each still
-      drifted, +6 to +12 over 10) — nor did `* { overflow-anchor: none }`
-      without `!important` (+6 over 10), nor `main *`, `header *, footer *`
-      or the root chain. So anchoring is not shown to be the cause; the two
-      clean runs with `!important` may have been luck. Next: record
-      `scrollY` in every frame between the fold opening and the restore,
-      and whether vue-router's own `scrollTo` lands before or after it.
+- [x] A reload of an unfolded README lands where the reader was, not 2 px
+      past it — and no longer creeps. Two restores ran on every such reload:
+      the fold's own, and Chromium's. Nuxt's router plugin sets
+      `history.scrollRestoration = 'auto'` for the first document (it sets
+      `manual` only at the first client navigation), so the browser still
+      restored the entry itself, after the fold had opened the README and
+      scrolled, and landed 2 px further on; the next reload saved that and
+      added 2 more. Traced frame by frame: the fold's `scrollTo({ top: 4200 })`
+      reported 4200, the first scroll event 4202, and no element on the page
+      moved in between — which is why it never looked like layout or anchoring,
+      and why last night's `overflow-anchor` bisect gave contradictory answers
+      (injecting any style at `DOMContentLoaded`, a no-op included, suppressed
+      it by moving the timing). Chromium settles it in the task in which `auto`
+      is set: `manual` restored in a microtask after Nuxt's write, no drift;
+      in the next task, from a plugin after the router's or once mounted, the
+      drift stays (13 of 28, 16 of 42, 17 of 42). And the entry has to leave
+      the previous document as `manual` too. So the fold sets `manual` when
+      it opens (and hands `auto` back when folded again), and
+      `app/plugins/readme-restore.client.ts` runs before Nuxt's router plugin
+      and holds `manual` through its write — only for a reload or Back/Forward
+      of an entry whose README was open and whose place is stored; every other
+      page keeps the browser's restore. onyums at 390 px: 14 of 42 reloads
+      drifted before, 0 of 42 after, at DPR 1 and at CI's phone profile.
+      Other pages' reloads land as on main's build, side by side.
+- [ ] A reload of `/projects`, or of an about page with its README folded,
+      lands at the top (0–2 px) instead of where the reader was, at 390 px in
+      Chromium — on main's build as on this one; the home page restores (900 →
+      900). Seen while checking the fix above, not yet looked into. Nuxt's
+      initial `scrollTo({ left: 0, top: 0 })`, at ~40 ms, is the first
+      suspect.
 - [ ] Look at the masthead in a real Firefox and in Tor Browser, scrolled.
       Headless Firefox drew no blur at all behind it, not even the plain
       `blur()` the CSS gives every other browser, so its screenshots show body
