@@ -412,11 +412,20 @@ record. There is no run log.
             itself. From this host's user `tor` on 2026-10-11: through the
             gate on the first try, in 7.0 s and 10.8 s. A made-up address and
             a dead SOCKS port each fail with exit 1; no address to probe, 2.
-      - [ ] …run every six hours: `.github/workflows/onion.yml` (a fresh Tor
+      - [x] …run every six hours: `.github/workflows/onion.yml` (a fresh Tor
             client on a GitHub runner, one tracking issue kept in sync, the
-            shape of `links.yml`). Landed with this slice; tick once its first
-            scheduled runs on `main` have reported, and read a few days of
-            them before weighing C Tor.
+            shape of `links.yml`). Its first scheduled runs on `main` have
+            reported, both green: 2026-10-12 15:25 UTC through the gate in
+            82.6 s on the second try — the first timed out connecting after
+            120 s — and 2026-10-13 00:39 UTC on the first, in 11.1 s.
+      - [ ] Read a few days of those runs before weighing C Tor: how many
+            first tries fail, and how long a reach takes. Each run's tries are
+            in its step summary. The schedule is thinner than it looks: two
+            scheduled runs in the first ~20 h, not three or four, and the
+            first landed three hours after its slot; GitHub documents that
+            `schedule` runs can be delayed under load and, if the load is high
+            enough, dropped. Count the runs that happened, not the slots.
+            <https://docs.github.com/en/actions/reference/workflows-and-actions/events-that-trigger-workflows#schedule>
 - [ ] Move the runtime to distroless — **needs an owner decision, because the
       size case for it is gone.** Measured 2026-09-27: the same build on
       `gcr.io/distroless/nodejs24-debian13:nonroot` is 73.0 MB of image content
@@ -482,6 +491,16 @@ record. There is no run log.
       Golar's ~2.7 s.
       <https://devblogs.microsoft.com/typescript/announcing-typescript-7-0/>
       <https://github.com/vuejs/language-tools/pull/6123>
+- [ ] marked 18.1.1 (published 2026-10-12 12:28 UTC; it renders every README
+      and post). Held a night: it changes output, not just speed — a
+      blockquote ends before a lazy line after a heading, hr or html block;
+      indented and type 3–5 html blocks may interrupt a paragraph; a backslash
+      in a code span no longer hides emphasis; list continuation respects tab
+      stops. Its `walkTokens` fix (quadratic → linear, marked#4120) does not
+      apply here: `shared/markdown/render.ts` registers no `walkTokens`. Take
+      it with a byte diff of all eight READMEs and every post, before and after.
+      <https://github.com/markedjs/marked/releases/tag/v18.1.1>
+      <https://github.com/markedjs/marked/issues/4120>
 - [ ] Move the type checker to TypeScript 7 once 7.1 ships its API and vue-tsc
       adopts it — the 6.0 API is a bridge, not a destination.
       <https://devblogs.microsoft.com/typescript/announcing-typescript-7-0/>
@@ -1112,7 +1131,10 @@ record. There is no run log.
       of an entry whose README was open and whose place is stored; every other
       page keeps the browser's restore. onyums at 390 px: 14 of 42 reloads
       drifted before, 0 of 42 after, at DPR 1 and at CI's phone profile.
-      Other pages' reloads land as on main's build, side by side.
+      Other pages' reloads land as on main's build, side by side. The HTML
+      standard keeps the scroll restoration mode on the session history
+      entry, which fits: the mode the entry leaves with is what counts.
+      <https://html.spec.whatwg.org/multipage/browsing-the-web.html#scroll-restoration-mode>
 - [x] A reload puts the reader back on every page, not only on `/`. A
       reload of `/projects` at 1,200 px landed at 0, and so did a folded
       about page, in Chromium and Firefox alike; in Chromium so did Back from
@@ -1158,9 +1180,15 @@ record. There is no run log.
       on 2026-10-12, Nanna at 390 px, `#api-key-invalid` 16,253 px down, its
       first line 2 px under the pane (the band is 0–200), so CI can go red on
       it. A fresh `navigate` load, which none of that night's restore changes
-      touch (each returns early unless the load is a reload or Back/Forward),
-      and the other two runs passed all 160. Next: run that one case in a loop
-      with the check's frame trace, on main's build and this one.
+      touch (each returns early unless the load is a reload or Back/Forward).
+      Over six Chromium runs of that build: four passed all 160, one had this
+      miss, and one stalled on the same page (Nanna, phone) until its 15-minute
+      timeout, with the host at load 9 and other agents' browsers running.
+      Main's build: no such miss in three runs, so it is not shown to predate
+      the night. Alone, 25 cold loads of that URL landed at 16 or 12 px, never
+      out of band. Next: the same loop inside the check's own sequence (after
+      the reload and Back cases on that tab), with its frame trace, on both
+      builds, and find out what the stalled run was waiting for.
 - [ ] Look at the masthead in a real Firefox and in Tor Browser, scrolled.
       Headless Firefox drew no blur at all behind it, not even the plain
       `blur()` the CSS gives every other browser, so its screenshots show body
