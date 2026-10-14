@@ -737,6 +737,20 @@ record. There is no run log.
       Skidbladnir's first render 0.88–1.04 s on main, 1.02–1.47 s here (three
       runs each); warm renders unchanged at ~9 ms. The server's probe gives up
       after 2 s, so a hanging image host costs a cold render at most that.
+- [x] …and they keep it when a probe misses. A miss is not cached, so the
+      next refresh retries — but until it does the README is served with that
+      image at 0 × 0, and a cold start, which is every deploy, is where misses
+      land. img.shields.io took 3.0 s to answer 1 request in 9 from this host
+      on 2026-10-13, past the server's 2 s budget, and a local server that
+      night was serving splimes with four badges unsized (the badge row
+      rebuilt itself sideways as they loaded; everything below moved 2.3 px).
+      The snapshot already holds every image's last measured size, so a miss
+      now falls back to it: `statedSizes()` (`shared/markdown/image-size.ts`)
+      reads them out of the snapshot's copy of the same README, and
+      `sizeReadmeImages` takes them as `known`. A live answer still wins.
+      Cold-started behind a proxy that refuses img.shields.io: main's build
+      served 18 README images unsized across five about pages (splimes 4,
+      WeftDB 5, ArtiQwest 4, onyums 3, Skidbladnir 2), this one 0.
 - [x] A folded README costs no third-party request. Its images had no `loading`
       attribute, and an eager image inside a closed `<details>` is fetched anyway,
       so every visit to the Skidbladnir page fetched two screenshots from
@@ -1225,8 +1239,10 @@ record. There is no run log.
             The trace shows the fold restoring 4,201 — the position
             `pagehide` saved — so the page had moved by 31 px between the
             check's last reading and the unload. Seen once; not seen on this
-            branch's build in four runs. Next: whether a late README image
-            above the reader can still move it after `arrive` settles.
+            branch's build in four runs. Not the unsized shields.io badges
+            that night's local server served (fixed below): they move the
+            page 2.3 px, not 31. Next: whether anything else above the reader
+            still moves it after `arrive` settles.
 - [ ] Look at the masthead in a real Firefox and in Tor Browser, scrolled.
       Headless Firefox drew no blur at all behind it, not even the plain
       `blur()` the CSS gives every other browser, so its screenshots show body

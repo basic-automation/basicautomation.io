@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { PROBE_BYTES, measureImage, sizeImages, unsizedImages } from '~~/shared/markdown/image-size'
+import { PROBE_BYTES, measureImage, sizeImages, statedSizes, unsizedImages } from '~~/shared/markdown/image-size'
 import { probeImageSize, probeable } from '~~/shared/markdown/image-probe'
 
 const bytes = (...parts: (number[] | string)[]) =>
@@ -146,5 +146,26 @@ describe('probeImageSize', () => {
 		expect(await probeImageSize('https://img.shields.io/x', 1000, fails)).toBeNull()
 		expect(await probeImageSize('https://img.shields.io/x', 1000, refuses)).toBeNull()
 		expect(await probeImageSize('https://example.com/x.png', 1000, never)).toBeNull()
+	})
+})
+
+describe('statedSizes', () => {
+	it('reads every image that states both dimensions, by decoded src', () => {
+		const html = '<img width="102" height="20" src="https://img.shields.io/crates/v/x.svg"><img src="https://x/a.png"><img width="5" src="https://x/b.png"><img width="420" height="173" src="https://x/c.svg?a=1&amp;b=2">'
+		expect([...statedSizes(html)]).toEqual([
+			['https://img.shields.io/crates/v/x.svg', { width: 102, height: 20 }],
+			['https://x/c.svg?a=1&b=2', { width: 420, height: 173 }],
+		])
+	})
+
+	it('skips units, percentages and zeros', () => {
+		expect(statedSizes('<img width="50%" height="20" src="https://x/a"><img width="0" height="20" src="https://x/b"><img width="10px" height="5" src="https://x/c">').size).toBe(0)
+	})
+
+	it('gives back the shape a live render needs, even where the author set the width', () => {
+		// The snapshot's copy of `<img width="420">`, sized by an earlier probe.
+		const known = statedSizes('<img height="173" src="https://x/logo.svg" width="420">')
+		expect(sizeImages('<img src="https://x/logo.svg" width="420">', known)).toBe('<img height="173" src="https://x/logo.svg" width="420">')
+		expect(sizeImages('<img src="https://x/logo.svg">', known)).toBe('<img width="420" height="173" src="https://x/logo.svg">')
 	})
 })

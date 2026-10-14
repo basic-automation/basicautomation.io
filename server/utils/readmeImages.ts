@@ -29,13 +29,21 @@ const cachedImageSize = defineCachedFunction(
  * A rendered README with its images' sizes written in, so the page reserves
  * their space; see `shared/markdown/image-size.ts`. Never fails — an image it
  * cannot measure keeps the markup it had.
+ *
+ * `known` is what an earlier render measured (the snapshot's copy of the same
+ * README), used for any image the probe misses this time. A miss is not rare:
+ * img.shields.io took 3.0 s to answer 1 request in 9 from here on 2026-10-13,
+ * past the 2 s above, and a miss is not cached — so a cold start, which is
+ * every deploy, could serve splimes' README with four of its badges at 0 × 0
+ * until they loaded: the badge row rebuilt itself sideways, and everything
+ * below it moved 2.3 px. A live answer still wins: it is the newer one.
  */
-export async function sizeReadmeImages(html: string): Promise<string> {
+export async function sizeReadmeImages(html: string, known: ReadonlyMap<string, ImageSize> = new Map()): Promise<string> {
   const srcs = unsizedImages(html)
   if (!srcs.length) return html
   const sizes = new Map<string, ImageSize>()
   await Promise.all(srcs.map(async (src) => {
-    const size = await cachedImageSize(src).catch(() => null)
+    const size = await cachedImageSize(src).catch(() => null) ?? known.get(src)
     if (size) sizes.set(src, size)
   }))
   return sizeImages(html, sizes)

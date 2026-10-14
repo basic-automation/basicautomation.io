@@ -109,6 +109,26 @@ export function unsizedImages(html: string): string[] {
 }
 
 /**
+ * The sizes a rendered README already states, by `src`: every `<img>` with a
+ * numeric `width` and `height`. Read from the snapshot's copy of a README, it
+ * is the last size each image was measured at — the shape a live render falls
+ * back to when a probe misses (see `server/utils/readmeImages.ts`). Where an
+ * author gave a width and the probe the height, the pair still has the
+ * image's shape, which is all `sizeImages` takes from it.
+ */
+export function statedSizes(html: string): Map<string, ImageSize> {
+  const out = new Map<string, ImageSize>()
+  for (const [, attrs] of html.matchAll(IMG)) {
+    const a = attrs!
+    const width = Number(/\swidth="(\d+)"/i.exec(a)?.[1])
+    const height = Number(/\sheight="(\d+)"/i.exec(a)?.[1])
+    const src = /\ssrc="([^"]+)"/i.exec(a)?.[1]
+    if (src && width > 0 && height > 0) out.set(decodeEntities(src), { width, height })
+  }
+  return out
+}
+
+/**
  * Write the sizes in. An image with neither dimension gets both; one with only
  * a `width` (a README's `<img width="420">`) gets the `height` that keeps its
  * shape, and the other way round. Images with no known size are left as they

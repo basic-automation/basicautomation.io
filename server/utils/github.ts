@@ -21,6 +21,7 @@ import { ConditionalCache } from '~~/shared/github/conditional'
 import { projects, type Project } from '~~/data/projects'
 import type { DownloadRelease, EnrichedProject, Release, RepoMeta } from '~~/shared/types/project'
 import { absolutize, stripLeadingLogo } from '~~/shared/markdown/readme'
+import { statedSizes } from '~~/shared/markdown/image-size'
 import { normaliseReleases, pickDownload, pickLatest } from '~~/shared/github/releases'
 import { refreshPolicy } from '~~/shared/github/budget'
 import { paced } from '~~/shared/net/pace'
@@ -211,7 +212,7 @@ async function fetchRepo(project: Project): Promise<RepoMeta> {
   if (readme.status === 'fulfilled' && typeof readme.value === 'string') {
     out.readmeHtml = await sizeReadmeImages(await renderMarkdown(
       absolutize(stripLeadingLogo(readme.value), ORG, repo, defaultBranch),
-    ))
+    ), statedSizes(snapshotRepos[repo]?.readmeHtml ?? ''))
   }
   else {
     incomplete.push('readme')
