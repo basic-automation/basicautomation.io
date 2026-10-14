@@ -16,6 +16,7 @@ import { spawn, execFileSync } from 'node:child_process'
 import { mkdtemp, readFile, rm } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
+import { unanswered } from './cdp.mjs'
 
 export function findFirefox() {
 	if (process.env.FIREFOX_PATH) return process.env.FIREFOX_PATH
@@ -78,7 +79,8 @@ async function connect(url) {
 	ws.onmessage = (event) => {
 		const msg = JSON.parse(event.data)
 		if (msg.id !== undefined && pending.has(msg.id)) {
-			const { res, rej } = pending.get(msg.id)
+			const { res, rej, timer } = pending.get(msg.id)
+			clearTimeout(timer)
 			pending.delete(msg.id)
 			if (msg.type === 'error') rej(new Error(`${msg.error}: ${msg.message}`))
 			else res(msg.result)
@@ -90,7 +92,7 @@ async function connect(url) {
 		send(method, params = {}) {
 			const msgId = ++id
 			ws.send(JSON.stringify({ id: msgId, method, params }))
-			return new Promise((res, rej) => pending.set(msgId, { res, rej }))
+			return new Promise((res, rej) => pending.set(msgId, { res, rej, timer: unanswered(pending, msgId, rej, method, params) }))
 		},
 		on(listener) {
 			listeners.add(listener)

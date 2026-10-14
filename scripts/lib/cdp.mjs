@@ -72,6 +72,26 @@ async function launch(chrome, profile) {
 	return { proc, url }
 }
 
+/**
+ * How long one request may go unanswered. Nothing a check asks for takes
+ * this long — an axe run over the longest README is seconds — but a page
+ * whose renderer stops answering used to hold the check until CI's step
+ * timeout, 15 minutes later, with nothing to say what it had been waiting
+ * for (Nanna at 390 px, 2026-10-12). Now it fails, naming the request.
+ */
+export const REQUEST_TIMEOUT_MS = 180_000
+
+/** Reject request `msgId` if it is still pending after `REQUEST_TIMEOUT_MS`. */
+export function unanswered(pending, msgId, rej, method, params) {
+	const timer = setTimeout(() => {
+		if (!pending.delete(msgId)) return
+		const what = params?.expression ?? params?.url ?? ''
+		rej(new Error(`${method} got no answer in ${REQUEST_TIMEOUT_MS / 1000} s${what ? `: ${String(what).replace(/\s+/g, ' ').slice(0, 120)}` : ''}`))
+	}, REQUEST_TIMEOUT_MS)
+	timer.unref?.()
+	return timer
+}
+
 /** The smallest CDP client that works: numbered requests, flat sessions, events by name. */
 async function connect(url) {
 	const ws = new WebSocket(url)
@@ -90,7 +110,8 @@ async function connect(url) {
 		const msg = JSON.parse(data)
 		for (const l of listeners) l(msg)
 		if (msg.id && pending.has(msg.id)) {
-			const { res, rej } = pending.get(msg.id)
+			const { res, rej, timer } = pending.get(msg.id)
+			clearTimeout(timer)
 			pending.delete(msg.id)
 			if (msg.error) rej(new Error(`${msg.error.message} (${msg.error.code})`))
 			else res(msg.result)
@@ -108,7 +129,7 @@ async function connect(url) {
 		send(method, params = {}, sessionId) {
 			const msgId = ++id
 			ws.send(JSON.stringify({ id: msgId, method, params, sessionId }))
-			return new Promise((res, rej) => pending.set(msgId, { res, rej }))
+			return new Promise((res, rej) => pending.set(msgId, { res, rej, timer: unanswered(pending, msgId, rej, method, params) }))
 		},
 		once(method, sessionId, timeout = 30_000) {
 			return new Promise((res, rej) => {

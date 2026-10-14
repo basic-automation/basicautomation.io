@@ -1218,7 +1218,8 @@ record. There is no run log.
             the document loads) before anyone reports it to Chromium —
             reporting is the **owner's call**, as with the Nuxt one above.
       - [ ] Find out what the 2026-10-12 stalled run (Nanna, phone, held until
-            the 15-minute step timeout) was waiting for.
+            the 15-minute step timeout) was waiting for. Every CDP and BiDi
+            request now fails after 180 s, naming itself, so the next stall says.
       - [ ] One reload of splimes' open README at 1280 px landed 31 px past
             the reader (4,170 → 4,201) in that same run against main's build.
             The trace shows the fold restoring 4,201 — the position
