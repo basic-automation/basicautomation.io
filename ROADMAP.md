@@ -1262,7 +1262,7 @@ record. There is no run log.
             request now fails after 180 s, naming itself — and on 2026-10-13
             it did, in 1 of 3 Chromium runs: `arrive`'s evaluate on Nanna at
             1280 px went 180 s unanswered, though its own loop gives up after
-            8 s. Then once more in four runs, with the diagnostics below: on
+            8 s. Then once more in seven, with the diagnostics below: on
             Skidbladnir at 1280 px — the *first* page of the pass, in a fresh
             tab, so not Nanna's length and not an old tab — on `arrive(blog)`
             right after the click on the blog tab, with the renderer **idle**
@@ -1285,7 +1285,7 @@ record. There is no run log.
             The trace shows the fold restoring 4,201 — the position
             `pagehide` saved — so the page had moved by 31 px between the
             check's last reading and the unload. Seen once; not seen on this
-            branch's build in four runs. Not the unsized shields.io badges
+            branch's build in 15 Chromium runs. Not the unsized shields.io badges
             that night's local server served (fixed below): they move the
             page 2.3 px, not 31. Next: whether anything else above the reader
             still moves it after `arrive` settles.
