@@ -1,0 +1,33 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width">
+<title>smooth fragment scroll + instant scrollTo</title>
+<script>if (new URLSearchParams(location.search).get('smooth') === '0') document.documentElement.style.scrollBehavior = 'auto'</script>
+<style>
+  html { scroll-behavior: smooth; scroll-padding-top: 144px }
+  body { margin: 0 20px; font: 16px/1.6 sans-serif }
+  .spacer { height: 16000px }
+</style>
+</head>
+<body>
+<div class="spacer"></div>
+<h2 id="target">Target</h2>
+<div class="spacer"></div>
+<script>
+  // Load this page as index.html?when=ms10#target. The browser scrolls to the
+  // fragment (smoothly, from the top, per scroll-behavior), and this jumps to
+  // the very same place with an instant scrollTo shortly after load — as a
+  // client-side router does for a hash. Expected: #target 144 px from the
+  // top. Seen: 23 or 74 px past it on some loads. ?smooth=0: always on it.
+  const when = new URLSearchParams(location.search).get('when') || 'ms10'
+  const jump = () => {
+    const t = document.getElementById('target')
+    window.scrollTo({ top: t.getBoundingClientRect().top + scrollY - 144, behavior: 'instant' })
+  }
+  const delay = { load: -1, timeout: 0, ms10: 10, ms20: 20 }[when]
+  if (delay !== undefined) addEventListener('load', () => (delay < 0 ? jump() : setTimeout(jump, delay)))
+</script>
+</body>
+</html>

@@ -1240,10 +1240,16 @@ record. There is no run log.
       scroll, which is not what the +4/+18 looks like.
       <https://html.spec.whatwg.org/multipage/browsing-the-web.html#scroll-to-the-fragment-identifier>
       <https://drafts.csswg.org/cssom-view/#perform-a-scroll>
-      - [ ] Make a minimal repro outside this site (a long page, `scroll-behavior:
-            smooth`, a `#fragment`, one instant `scrollTo` to the same target as
-            the document loads) before anyone reports it to Chromium —
-            reporting is the **owner's call**, as with the Nuxt one above.
+      - [x] A minimal repro outside this site:
+            `docs/repro/smooth-fragment-overshoot.html` (1.4 KB, no
+            dependencies): a 16,000 px spacer, `scroll-behavior: smooth`, a
+            `#target`, and one instant `scrollTo` to that same place 10 or
+            20 ms after `load`. Chromium 152.0.7977.82 at 390 px, 30 cold
+            loads each: `?when=ms10` lands 4 or 13 px past the target on 30 of
+            30, `ms20` 13 or 24 px past on 30 of 30; with `&smooth=0`, on it 60
+            of 60; with no `scrollTo` at all, on it 30 of 30.
+      - [ ] Report it to Chromium with that file — **owner's call**, as with
+            the Nuxt one above, since it speaks for the organization.
       - [ ] Find out what the 2026-10-12 stalled run (Nanna, phone, held until
             the 15-minute step timeout) was waiting for. Every CDP and BiDi
             request now fails after 180 s, naming itself, so the next stall says.
