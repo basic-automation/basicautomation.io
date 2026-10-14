@@ -20,7 +20,8 @@
  *   - Forward and Back again: the same
  *   - reload: unfolded, same place
  *   - blog tab, then the about tab by its link: folded, at the top
- *   - a cold load of `about#<heading>`: unfolded, the heading at the top
+ *   - a cold load of `about#<heading>`, CPU slowed 6× in Chromium: unfolded,
+ *     the heading at the top
  *   - a client navigation to `about#<heading>`: the same
  *   - fold it, blog tab, Back: still folded — even with the fragment
  *   - opened before the app hydrates: still open after it has
@@ -47,6 +48,8 @@ const SLACK = 4
  * once passed at 106 px under a 128 px pane.
  */
 const HEADING_BAND = [0, 200]
+/** How far from `scroll-padding-top`'s line a heading may sit: rounding, not a race. */
+const AIM_SLACK = 2
 
 /** The same two widths `check-a11y-browser.mjs` uses. */
 const VIEWPORTS = [
@@ -126,7 +129,24 @@ try {
 				const glass = document.querySelector('header .crt-glass').getBoundingClientRect()
 				return Math.round((line ?? el.getBoundingClientRect()).top - glass.bottom)
 			})()` : 'null'},
+			// The heading's box, which is what a scroll aligns — its text can sit
+			// lower inside it — and where the stylesheet's \`scroll-padding-top\`
+			// puts that box, both from the masthead's edge like \`heading\`; and
+			// whether the page is as far down as it goes.
+			box: ${id ? `Math.round((document.getElementById(${JSON.stringify(id)})?.getBoundingClientRect().top ?? -1e9) - document.querySelector('header .crt-glass').getBoundingClientRect().bottom)` : 'null'},
+			aim: ${id ? `Math.round(parseFloat(getComputedStyle(document.documentElement).scrollPaddingTop) - document.querySelector('header .crt-glass').getBoundingClientRect().bottom)` : 'null'},
+			end: Math.ceil(scrollY + innerHeight) >= document.documentElement.scrollHeight - 1,
 		})`)
+		/**
+		 * A heading scrolled to has its box where `scroll-padding-top` puts it —
+		 * within a pixel or two, not merely with its text somewhere clear of the
+		 * masthead: the race fixed in `app/plugins/restore-jump.client.ts` most
+		 * often landed 4 px past it, which the 0–200 band alone let through.
+		 * Lower is fine only when the page cannot scroll any further.
+		 */
+		const atHeading = (s) => s.open === true
+			&& s.heading >= HEADING_BAND[0] && s.heading <= HEADING_BAND[1]
+			&& (Math.abs(s.box - s.aim) <= AIM_SLACK || (s.end && s.box > s.aim))
 
 		for (const slug of slugs) {
 			const about = `/projects/${slug}/about`
@@ -217,17 +237,24 @@ try {
 
 			const hash = `#${encodeURIComponent(id)}`
 			await page.goto('about:blank')
+			// Slowed, in Chromium: the browser's own scroll to the fragment and
+			// vue-router's met in one frame, and the animation's first step could
+			// land on top of the jump — 4 or 18 px past the heading. At full speed
+			// that was 7 cold loads in 40 and CI red now and then; at 6× it was 14
+			// in 20, so this fails reliably if it comes back.
+			await page.throttle(6)
 			await page.goto(BASE + about + hash)
 			await arrive(about)
+			await page.throttle(1)
 			s = await state(id)
-			expect(`a cold load of ${hash} opens it at the heading`, s.open === true && s.heading >= HEADING_BAND[0] && s.heading <= HEADING_BAND[1], s)
+			expect(`a cold load of ${hash} opens it at the heading`, atHeading(s), s)
 
 			await click(`a[href="${blog}"]`)
 			await arrive(blog)
 			await page.evaluate(`document.querySelector('#__nuxt').__vue_app__.config.globalProperties.$router.push(${JSON.stringify(about + hash)})`)
 			await arrive(about)
 			s = await state(id)
-			expect(`a client navigation to ${hash} opens it at the heading`, s.open === true && s.heading >= HEADING_BAND[0] && s.heading <= HEADING_BAND[1], s)
+			expect(`a client navigation to ${hash} opens it at the heading`, atHeading(s), s)
 
 			await click('details > summary')
 			await sleep(300)

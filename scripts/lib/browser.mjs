@@ -68,6 +68,14 @@ async function chromiumDriver() {
 					const { identifier } = await cdp.send('Page.addScriptToEvaluateOnNewDocument', { source }, sessionId)
 					return () => cdp.send('Page.removeScriptToEvaluateOnNewDocument', { identifier }, sessionId)
 				},
+				/**
+				 * Run the page's CPU `rate` times slower (1 is full speed). A race
+				 * that a fast machine wins every time can lose on a busy CI runner;
+				 * slowed, it loses here too.
+				 */
+				async throttle(rate) {
+					await cdp.send('Emulation.setCPUThrottlingRate', { rate }, sessionId)
+				},
 				async reload() {
 					const loaded = cdp.once('Page.loadEventFired', sessionId)
 					await cdp.send('Page.reload', {}, sessionId)
@@ -134,6 +142,8 @@ async function firefoxDriver() {
 					})
 					return () => bidi.send('script.removePreloadScript', { script })
 				},
+				/** BiDi has no CPU throttling: Firefox runs at full speed. */
+				async throttle() {},
 				async reload() {
 					await bidi.send('browsingContext.reload', { context, wait: 'complete' })
 				},

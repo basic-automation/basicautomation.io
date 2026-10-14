@@ -1188,20 +1188,44 @@ record. There is no run log.
       smooth scrolling back. Chromium, `/` and `/projects` at 1,200 px: 34
       scroll events → 1, landing at 1,200 every time; Firefox unchanged (1).
       A fresh visit, and a page without script, are untouched.
-- [ ] A cold load of `about#<heading>` can land a couple of pixels short of
-      the masthead's edge: once in three `check:navigation` runs in Chromium
-      on 2026-10-12, Nanna at 390 px, `#api-key-invalid` 16,253 px down, its
-      first line 2 px under the pane (the band is 0–200), so CI can go red on
-      it. A fresh `navigate` load, which none of that night's restore changes
-      touch (each returns early unless the load is a reload or Back/Forward).
-      Over six Chromium runs of that build: four passed all 160, one had this
-      miss, and one stalled on the same page (Nanna, phone) until its 15-minute
-      timeout, with the host at load 9 and other agents' browsers running.
-      Main's build: no such miss in three runs, so it is not shown to predate
-      the night. Alone, 25 cold loads of that URL landed at 16 or 12 px, never
-      out of band. Next: the same loop inside the check's own sequence (after
-      the reload and Back cases on that tab), with its frame trace, on both
-      builds, and find out what the stalled run was waiting for.
+- [x] A cold load of `about#<heading>` landed a few pixels past the heading,
+      sometimes far enough to put its first line behind the masthead (Nanna
+      at 390 px, `#api-key-invalid`, 2 px under the pane, once in three
+      `check:navigation` runs in Chromium on 2026-10-12). Two scrolls raced.
+      HTML's "scroll to the fragment" scrolls the target into view with
+      behavior `auto`, so the stylesheet's `scroll-behavior: smooth` made
+      Chromium's own fragment scroll an animation from the top; vue-router
+      jumped to the same heading as the app started, and when the animation's
+      first step came after the jump it was added on top of it. With
+      vue-router's jump held back the browser opened its animation with a step
+      of 4 or 18 px on 12 of 12 loads, and every miss was exactly +4 or +18.
+      `app/plugins/restore-jump.client.ts` now holds `scroll-behavior: auto`
+      on a fresh load with a fragment too, as it already did for reloads and
+      Back/Forward. Uninstrumented, the same URL: before, 4 of 20 cold loads
+      off at full speed and 19 of 20 with the CPU slowed 6× (one 21 px behind
+      the pane); after, 0 of 20 and 0 of 20. The check could not see most of
+      this: a +4 miss leaves the text 12 px clear, inside the 0–200 band. It
+      now also wants the heading's box on `scroll-padding-top`'s line (±2 px,
+      lower only at the end of the page), and takes the cold load with the
+      CPU slowed 6× in Chromium (`page.throttle()`). Main's build fails it on
+      9 cold loads across 5 pages; this one passes 160 of 160 in Chromium
+      and Firefox. CSSOM View says a new scroll aborts any ongoing smooth
+      scroll, which is not what the +4/+18 looks like.
+      <https://html.spec.whatwg.org/multipage/browsing-the-web.html#scroll-to-the-fragment-identifier>
+      <https://drafts.csswg.org/cssom-view/#perform-a-scroll>
+      - [ ] Make a minimal repro outside this site (a long page, `scroll-behavior:
+            smooth`, a `#fragment`, one instant `scrollTo` to the same target as
+            the document loads) before anyone reports it to Chromium —
+            reporting is the **owner's call**, as with the Nuxt one above.
+      - [ ] Find out what the 2026-10-12 stalled run (Nanna, phone, held until
+            the 15-minute step timeout) was waiting for.
+      - [ ] One reload of splimes' open README at 1280 px landed 31 px past
+            the reader (4,170 → 4,201) in that same run against main's build.
+            The trace shows the fold restoring 4,201 — the position
+            `pagehide` saved — so the page had moved by 31 px between the
+            check's last reading and the unload. Seen once; not seen on this
+            branch's build in four runs. Next: whether a late README image
+            above the reader can still move it after `arrive` settles.
 - [ ] Look at the masthead in a real Firefox and in Tor Browser, scrolled.
       Headless Firefox drew no blur at all behind it, not even the plain
       `blur()` the CSS gives every other browser, so its screenshots show body
