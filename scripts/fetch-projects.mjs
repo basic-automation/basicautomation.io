@@ -23,7 +23,7 @@ import { projects } from '../data/projects.ts'
 // page when it takes over. The copied renderer had no highlighter, so it did.
 import { absolutize, stripLeadingLogo } from '../shared/markdown/readme.ts'
 import { renderMarkdown } from '../shared/markdown/render.ts'
-import { sizeImages, unsizedImages } from '../shared/markdown/image-size.ts'
+import { sizeImages, statedSizes, unsizedImages } from '../shared/markdown/image-size.ts'
 import { probeImageSize } from '../shared/markdown/image-probe.ts'
 import { paced } from '../shared/net/pace.ts'
 import { normaliseReleases, pickDownload, pickLatest } from '../shared/github/releases.ts'
@@ -32,14 +32,22 @@ import { carryMissing } from '../shared/github/carry.ts'
 /**
  * The same image sizing the server does (`server/utils/readmeImages.ts`), so a
  * page served from the snapshot reserves its README images' space as a live
- * one does. Uncached: this runs once per sync.
+ * one does. Uncached: this runs once per sync. An image the probe misses keeps
+ * the size the previous snapshot measured (`known`), as on the server: the
+ * snapshot is that fallback, and a miss written into it would take it away.
  */
-async function withImageSizes(html) {
+async function withImageSizes(html, repo, known = new Map()) {
   const sizes = new Map()
+  let kept = 0
   await Promise.all(unsizedImages(html).map(async (src) => {
-    const size = await probeImageSize(src)
+    let size = await probeImageSize(src)
+    if (!size && known.has(src)) {
+      size = known.get(src)
+      kept++
+    }
     if (size) sizes.set(src, size)
   }))
+  if (kept) console.warn(`  · ${repo}: ${kept} image size(s) kept from the previous snapshot`)
   return sizeImages(html, sizes)
 }
 
@@ -112,7 +120,7 @@ async function fetchRepo(project) {
       'application/vnd.github.raw',
     )
     const prepared = absolutize(stripLeadingLogo(md), ORG, repo, out.defaultBranch)
-    out.readmeHtml = await withImageSizes(await renderMarkdown(prepared))
+    out.readmeHtml = await withImageSizes(await renderMarkdown(prepared), repo, statedSizes(snapshot.repos?.[repo]?.readmeHtml ?? ''))
   }
   catch {
     out.readmeHtml = null

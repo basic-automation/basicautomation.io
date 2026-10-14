@@ -751,6 +751,12 @@ record. There is no run log.
       Cold-started behind a proxy that refuses img.shields.io: main's build
       served 18 README images unsized across five about pages (splimes 4,
       WeftDB 5, ArtiQwest 4, onyums 3, Skidbladnir 2), this one 0.
+      `npm run sync` had the same hole one level down, where it matters more:
+      a miss there writes the image into the snapshot unsized, taking the
+      fallback away. It now keeps the previous snapshot's size and says so
+      (`· splimes: 4 image size(s) kept from the previous snapshot`). Behind
+      the same proxy, main's script wrote 22 unsized images into the
+      snapshot; this one wrote 0.
 - [x] A folded README costs no third-party request. Its images had no `loading`
       attribute, and an eager image inside a closed `<details>` is fetched anyway,
       so every visit to the Skidbladnir page fetched two screenshots from
