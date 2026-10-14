@@ -1262,17 +1262,24 @@ record. There is no run log.
             request now fails after 180 s, naming itself — and on 2026-10-13
             it did, in 1 of 3 Chromium runs: `arrive`'s evaluate on Nanna at
             1280 px went 180 s unanswered, though its own loop gives up after
-            8 s. Both stalls were on Nanna — the longest README, 25,000 px at
-            phone width — and both on the last page of their width's pass,
-            where the tab is oldest (~7 min). A stalled page no longer ends
+            8 s. Then once more in four runs, with the diagnostics below: on
+            Skidbladnir at 1280 px — the *first* page of the pass, in a fresh
+            tab, so not Nanna's length and not an old tab — on `arrive(blog)`
+            right after the click on the blog tab, with the renderer **idle**
+            (0.00 CPU s in 1 s). An idle page whose 8-second timers never fire
+            is waiting on something, not computing. A stalled page no longer ends
             the run: it fails with the last four calls made of it and, in
             Chromium, the busiest renderer's CPU time over a second (`busy()`
             in `scripts/lib/browser.mjs`, from `SystemInfo.getProcessInfo`),
             and the run goes on in a fresh tab. Shown on a stand-in page that
             spins after `load`: "renderer busy (0.99 CPU s in 1 s)", and the
-            next page checked. Next: the busy/idle answer from the next real
-            stall — busy points at the page (layout or script over Nanna's
-            README), idle at timers held back in an old tab.
+            next page checked. The report now also says whether a plain
+            evaluate still answers while the stuck one waits (stand-in:
+            spinning, "no answer in 5 s"; idle, "answered: visible, complete,
+            /projects/y/about"). Next: that answer from the next real stall —
+            it answers: the event loop turns and only that promise's timers
+            are held (throttling or a frozen-then-thawed page); it does not:
+            the page is blocked (a dialog, a synchronous wait).
       - [ ] One reload of splimes' open README at 1280 px landed 31 px past
             the reader (4,170 → 4,201) in that same run against main's build.
             The trace shows the fold restoring 4,201 — the position
@@ -1302,6 +1309,10 @@ record. There is no run log.
       other browser without the chain gets (`CSS.supports('-moz-appearance',
       'none')` is true in Firefox 155, false in Chromium 152). Look before
       and after; Tor Browser is Firefox 140 ESR and gets the same answer.
+      Or, so the routine can look for itself: a headless Wayland compositor
+      on the host (`cage` or `sway`, a `pacman` install — **owner**) would
+      let it run a real, composited Firefox off-screen, away from the
+      desktop session.
       <https://bugzilla.mozilla.org/show_bug.cgi?id=1961378>
       <https://bugzilla.mozilla.org/show_bug.cgi?id=1972363>
 - [x] No dead controls without script. Every page is server-rendered and

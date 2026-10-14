@@ -304,7 +304,16 @@ try {
 				// end of the run. Say where it was and whether its renderer was busy
 				// or idle, then carry on in a fresh tab.
 				const busy = await browser.busy().catch(() => null)
-				const where = `${/got no answer/.test(err.message) ? 'stalled' : 'failed'} after ${calls.join(' → ')}${busy === null ? '' : `; renderer ${busy > 0.5 ? 'busy' : 'idle'} (${busy.toFixed(2)} CPU s in 1 s)`}`
+				// Whether the page still runs a plain script while the stuck one
+				// waits: if it does, its event loop turns and only that promise's
+				// timers are held back; if not, the page itself is blocked.
+				const answers = await Promise.race([
+					page.evaluate(`document.visibilityState + ', ' + document.readyState + ', ' + location.pathname`).catch((e) => `error: ${e.message.slice(0, 60)}`),
+					new Promise((r) => setTimeout(() => r(null), 5000)),
+				])
+				const where = `${/got no answer/.test(err.message) ? 'stalled' : 'failed'} after ${calls.join(' → ')}`
+					+ (busy === null ? '' : `; renderer ${busy > 0.5 ? 'busy' : 'idle'} (${busy.toFixed(2)} CPU s in 1 s)`)
+					+ `; a plain evaluate ${answers === null ? 'got no answer in 5 s' : `answered: ${answers}`}`
 				console.log(`  ✗ ${name.padEnd(7)} /projects/${slug}/about`)
 				const message = err.message.split('\n')[0]
 				console.error(`      ${message}\n      ${where}`)
