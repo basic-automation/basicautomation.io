@@ -30,10 +30,26 @@ export async function startDriver(engine) {
 
 async function chromiumDriver() {
 	const { cdp, chrome, stop } = await startBrowser()
+	const cpu = async () => {
+		const { processInfo } = await cdp.send('SystemInfo.getProcessInfo')
+		return new Map(processInfo.filter((p) => p.type === 'renderer').map((p) => [p.id, p.cpuTime]))
+	}
 	return {
 		name: 'Chromium',
 		binary: chrome,
 		stop,
+		/**
+		 * CPU seconds the busiest renderer spent over the next second: about 1
+		 * when a page's main thread is spinning, about 0 when it is idle — say,
+		 * waiting on timers. Asked of the browser, not the page, so it answers
+		 * when the page itself does not.
+		 */
+		async busy() {
+			const before = await cpu()
+			await new Promise((r) => setTimeout(r, 1000))
+			const after = await cpu()
+			return Math.max(0, ...[...after].map(([id, t]) => t - (before.get(id) ?? t)))
+		},
 		async open(viewport) {
 			const { targetId } = await cdp.send('Target.createTarget', { url: 'about:blank' })
 			const { sessionId } = await cdp.send('Target.attachToTarget', { targetId, flatten: true })
@@ -112,6 +128,10 @@ async function firefoxDriver() {
 		name: 'Firefox',
 		binary: firefox,
 		stop,
+		/** BiDi cannot see process CPU time. */
+		async busy() {
+			return null
+		},
 		async open({ width, height, deviceScaleFactor = 1 }) {
 			const { context } = await bidi.send('browsingContext.create', { type: 'tab' })
 			await bidi.send('browsingContext.setViewport', {

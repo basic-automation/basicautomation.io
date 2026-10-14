@@ -426,6 +426,13 @@ record. There is no run log.
             `schedule` runs can be delayed under load and, if the load is high
             enough, dropped. Count the runs that happened, not the slots.
             <https://docs.github.com/en/actions/reference/workflows-and-actions/events-that-trigger-workflows#schedule>
+            So far (read 2026-10-13 23:00 CDT): four scheduled runs in ~31 h
+            against six or seven slots, landing 22 min to 4 h 27 min after
+            theirs. One first try failed — connecting, timed out at 120 s
+            (10-12 15:25 UTC) — and its second reached the site in 82.6 s;
+            the other three reached it on the first try in 11.1, 13.1 and
+            13.2 s, through a difficulty-18 gate solved in 0.2–0.6 s. Too few
+            to weigh C Tor on; read again once there are a dozen.
 - [ ] Move the runtime to distroless — **needs an owner decision, because the
       size case for it is gone.** Measured 2026-09-27: the same build on
       `gcr.io/distroless/nodejs24-debian13:nonroot` is 73.0 MB of image content
@@ -1252,7 +1259,20 @@ record. There is no run log.
             the Nuxt one above, since it speaks for the organization.
       - [ ] Find out what the 2026-10-12 stalled run (Nanna, phone, held until
             the 15-minute step timeout) was waiting for. Every CDP and BiDi
-            request now fails after 180 s, naming itself, so the next stall says.
+            request now fails after 180 s, naming itself — and on 2026-10-13
+            it did, in 1 of 3 Chromium runs: `arrive`'s evaluate on Nanna at
+            1280 px went 180 s unanswered, though its own loop gives up after
+            8 s. Both stalls were on Nanna — the longest README, 25,000 px at
+            phone width — and both on the last page of their width's pass,
+            where the tab is oldest (~7 min). A stalled page no longer ends
+            the run: it fails with the last four calls made of it and, in
+            Chromium, the busiest renderer's CPU time over a second (`busy()`
+            in `scripts/lib/browser.mjs`, from `SystemInfo.getProcessInfo`),
+            and the run goes on in a fresh tab. Shown on a stand-in page that
+            spins after `load`: "renderer busy (0.99 CPU s in 1 s)", and the
+            next page checked. Next: the busy/idle answer from the next real
+            stall — busy points at the page (layout or script over Nanna's
+            README), idle at timers held back in an old tab.
       - [ ] One reload of splimes' open README at 1280 px landed 31 px past
             the reader (4,170 → 4,201) in that same run against main's build.
             The trace shows the fold restoring 4,201 — the position
