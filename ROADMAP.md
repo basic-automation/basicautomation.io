@@ -491,14 +491,19 @@ record. There is no run log.
       Golar's ~2.7 s.
       <https://devblogs.microsoft.com/typescript/announcing-typescript-7-0/>
       <https://github.com/vuejs/language-tools/pull/6123>
-- [ ] marked 18.1.1 (published 2026-10-12 12:28 UTC; it renders every README
-      and post). Held a night: it changes output, not just speed — a
-      blockquote ends before a lazy line after a heading, hr or html block;
-      indented and type 3–5 html blocks may interrupt a paragraph; a backslash
-      in a code span no longer hides emphasis; list continuation respects tab
-      stops. Its `walkTokens` fix (quadratic → linear, marked#4120) does not
-      apply here: `shared/markdown/render.ts` registers no `walkTokens`. Take
-      it with a byte diff of all eight READMEs and every post, before and after.
+- [x] marked 18.1.1 (published 2026-10-12 12:28 UTC; it renders every README
+      and post), landed 2026-10-13 after a night held. It changes output, not
+      just speed — a blockquote ends before a lazy line after a heading, hr or
+      html block; indented and type 3–5 html blocks may interrupt a paragraph;
+      a backslash in a code span no longer hides emphasis; list continuation
+      respects tab stops. So it went in on a byte diff: all 8 READMEs (as
+      `absolutize(stripLeadingLogo())` prepares them) and all 98 posts — the
+      94 on the live content volume and the 4 fixtures — rendered through
+      `renderMarkdown` on 18.1.0 and on 18.1.1 are byte-identical. The diff
+      was shown able to see the change: five of eight probes built from the
+      release notes render differently between the two. Its `walkTokens` fix
+      (quadratic → linear, marked#4120) does not apply here:
+      `shared/markdown/render.ts` registers no `walkTokens`.
       <https://github.com/markedjs/marked/releases/tag/v18.1.1>
       <https://github.com/markedjs/marked/issues/4120>
 - [ ] Move the type checker to TypeScript 7 once 7.1 ships its API and vue-tsc
