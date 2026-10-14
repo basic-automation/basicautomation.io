@@ -1262,12 +1262,28 @@ record. There is no run log.
             that night's local server served (fixed below): they move the
             page 2.3 px, not 31. Next: whether anything else above the reader
             still moves it after `arrive` settles.
-- [ ] Look at the masthead in a real Firefox and in Tor Browser, scrolled.
-      Headless Firefox drew no blur at all behind it, not even the plain
-      `blur()` the CSS gives every other browser, so its screenshots show body
-      text crisp behind the nav links — most likely the headless software
-      compositor, not the site, but no screenshot this routine can take
-      settles it.
+- [ ] Look at the masthead in a real Firefox and in Tor Browser, scrolled —
+      **needs a person with a real Firefox window**, because headless Firefox
+      draws no `backdrop-filter` at all (checked 2026-10-13: not the site's
+      chain, not a plain `blur(2.5px)`, not `blur(8px)`, with or without
+      `gfx.webrender.software`/`gfx.webrender.all`), so no screenshot this
+      routine can take settles it. There is now a specific reason to expect
+      it is broken, not just unseen: Mozilla's open bug 1961378 says
+      `backdrop-filter` is ignored *entirely* when an SVG `url()` filter in it
+      falls back to a blob image, and a duplicate (1972363) names `feImage`
+      and `feDisplacementMap` — exactly what `#crt-warp` and `#glass-refract`
+      use (`app/components/CrtFilter.vue`: 4 `feDisplacementMap`, 2
+      `feImage`). Firefox passes the `@supports (backdrop-filter:
+      url("#crt-warp"))` in `main.css`, so it takes that chain, and the
+      comment there ("Chrome and Firefox can do this") is likely wrong. If a
+      real Firefox shows body text crisp behind the pane, the fix is one
+      condition: `@supports (backdrop-filter: url("#crt-warp")) and (not
+      (-moz-appearance: none))`, which hands Firefox the plain blur every
+      other browser without the chain gets (`CSS.supports('-moz-appearance',
+      'none')` is true in Firefox 155, false in Chromium 152). Look before
+      and after; Tor Browser is Firefox 140 ESR and gets the same answer.
+      <https://bugzilla.mozilla.org/show_bug.cgi?id=1961378>
+      <https://bugzilla.mozilla.org/show_bug.cgi?id=1972363>
 - [x] No dead controls without script. Every page is server-rendered and
       reads fine with script off, which is how Tor Browser's "Safest" level
       serves the onion service — except the `[copy]` buttons, which were shown
