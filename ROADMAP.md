@@ -426,6 +426,13 @@ record. There is no run log.
             `schedule` runs can be delayed under load and, if the load is high
             enough, dropped. Count the runs that happened, not the slots.
             <https://docs.github.com/en/actions/reference/workflows-and-actions/events-that-trigger-workflows#schedule>
+            So far (read 2026-10-13 23:00 CDT): four scheduled runs in ~31 h
+            against six or seven slots, landing 22 min to 4 h 27 min after
+            theirs. One first try failed — connecting, timed out at 120 s
+            (10-12 15:25 UTC) — and its second reached the site in 82.6 s;
+            the other three reached it on the first try in 11.1, 13.1 and
+            13.2 s, through a difficulty-18 gate solved in 0.2–0.6 s. Too few
+            to weigh C Tor on; read again once there are a dozen.
 - [ ] Move the runtime to distroless — **needs an owner decision, because the
       size case for it is gone.** Measured 2026-09-27: the same build on
       `gcr.io/distroless/nodejs24-debian13:nonroot` is 73.0 MB of image content
@@ -491,16 +498,29 @@ record. There is no run log.
       Golar's ~2.7 s.
       <https://devblogs.microsoft.com/typescript/announcing-typescript-7-0/>
       <https://github.com/vuejs/language-tools/pull/6123>
-- [ ] marked 18.1.1 (published 2026-10-12 12:28 UTC; it renders every README
-      and post). Held a night: it changes output, not just speed — a
-      blockquote ends before a lazy line after a heading, hr or html block;
-      indented and type 3–5 html blocks may interrupt a paragraph; a backslash
-      in a code span no longer hides emphasis; list continuation respects tab
-      stops. Its `walkTokens` fix (quadratic → linear, marked#4120) does not
-      apply here: `shared/markdown/render.ts` registers no `walkTokens`. Take
-      it with a byte diff of all eight READMEs and every post, before and after.
+- [x] marked 18.1.1 (published 2026-10-12 12:28 UTC; it renders every README
+      and post), landed 2026-10-13 after a night held. It changes output, not
+      just speed — a blockquote ends before a lazy line after a heading, hr or
+      html block; indented and type 3–5 html blocks may interrupt a paragraph;
+      a backslash in a code span no longer hides emphasis; list continuation
+      respects tab stops. So it went in on a byte diff: all 8 READMEs (as
+      `absolutize(stripLeadingLogo())` prepares them) and all 98 posts — the
+      94 on the live content volume and the 4 fixtures — rendered through
+      `renderMarkdown` on 18.1.0 and on 18.1.1 are byte-identical. The diff
+      was shown able to see the change: five of eight probes built from the
+      release notes render differently between the two. Its `walkTokens` fix
+      (quadratic → linear, marked#4120) does not apply here:
+      `shared/markdown/render.ts` registers no `walkTokens`.
       <https://github.com/markedjs/marked/releases/tag/v18.1.1>
       <https://github.com/markedjs/marked/issues/4120>
+- [ ] Vue 3.5.44 (published 2026-10-13 07:45 UTC). Held a night, as marked
+      18.1.1 was: 24 fixes, several in what this site leans on — SSR
+      (`server-renderer` propagates async setup errors; `ssr` honours falsy
+      vnode content overrides), hydration, and the scheduler ("only flush
+      jobs queued by the root render itself", vuejs/core#15757). Take it with
+      every route's SSR body diffed against 3.5.43's build (same data, same
+      snapshot), then `check`, `a11y:browser` and `check:navigation` in both
+      engines. <https://github.com/vuejs/core/blob/main/CHANGELOG.md>
 - [ ] Move the type checker to TypeScript 7 once 7.1 ships its API and vue-tsc
       adopts it — the 6.0 API is a bridge, not a destination.
       <https://devblogs.microsoft.com/typescript/announcing-typescript-7-0/>
@@ -724,6 +744,33 @@ record. There is no run log.
       Skidbladnir's first render 0.88–1.04 s on main, 1.02–1.47 s here (three
       runs each); warm renders unchanged at ~9 ms. The server's probe gives up
       after 2 s, so a hanging image host costs a cold render at most that.
+- [x] …and they keep it when a probe misses. A miss is not cached, so the
+      next refresh retries — but until it does the README is served with that
+      image at 0 × 0, and a cold start, which is every deploy, is where misses
+      land. img.shields.io took 3.0 s to answer 1 request in 9 from this host
+      on 2026-10-13, past the server's 2 s budget, and a local server that
+      night was serving splimes with four badges unsized (the badge row
+      rebuilt itself sideways as they loaded; everything below moved 2.3 px).
+      The snapshot already holds every image's last measured size, so a miss
+      now falls back to it: `statedSizes()` (`shared/markdown/image-size.ts`)
+      reads them out of the snapshot's copy of the same README, and
+      `sizeReadmeImages` takes them as `known`. A live answer still wins.
+      Cold-started behind a proxy that refuses img.shields.io: main's build
+      served 18 README images unsized across five about pages (splimes 4,
+      WeftDB 5, ArtiQwest 4, onyums 3, Skidbladnir 2), this one 0.
+      `npm run sync` had the same hole one level down, where it matters more:
+      a miss there writes the image into the snapshot unsized, taking the
+      fallback away. It now keeps the previous snapshot's size and says so
+      (`· splimes: 4 image size(s) kept from the previous snapshot`). Behind
+      the same proxy, main's script wrote 22 unsized images into the
+      snapshot; this one wrote 0.
+- [x] …and a miss is counted where an operator looks. `/healthz` and the
+      status page now carry `readmeImages` — one count per README image per
+      render: `measured`, `kept` (the snapshot's size, because the probe
+      missed) and `unsized` (nobody knew; that image moves the page). With
+      img.shields.io refused from cold: 6 measured, 22 kept, 0 unsized;
+      without: 28 measured. Whether production sees misses at all is now a
+      number, not a guess.
 - [x] A folded README costs no third-party request. Its images had no `loading`
       attribute, and an eager image inside a closed `<details>` is fetched anyway,
       so every visit to the Skidbladnir page fetched two screenshots from
@@ -1175,26 +1222,99 @@ record. There is no run log.
       smooth scrolling back. Chromium, `/` and `/projects` at 1,200 px: 34
       scroll events → 1, landing at 1,200 every time; Firefox unchanged (1).
       A fresh visit, and a page without script, are untouched.
-- [ ] A cold load of `about#<heading>` can land a couple of pixels short of
-      the masthead's edge: once in three `check:navigation` runs in Chromium
-      on 2026-10-12, Nanna at 390 px, `#api-key-invalid` 16,253 px down, its
-      first line 2 px under the pane (the band is 0–200), so CI can go red on
-      it. A fresh `navigate` load, which none of that night's restore changes
-      touch (each returns early unless the load is a reload or Back/Forward).
-      Over six Chromium runs of that build: four passed all 160, one had this
-      miss, and one stalled on the same page (Nanna, phone) until its 15-minute
-      timeout, with the host at load 9 and other agents' browsers running.
-      Main's build: no such miss in three runs, so it is not shown to predate
-      the night. Alone, 25 cold loads of that URL landed at 16 or 12 px, never
-      out of band. Next: the same loop inside the check's own sequence (after
-      the reload and Back cases on that tab), with its frame trace, on both
-      builds, and find out what the stalled run was waiting for.
-- [ ] Look at the masthead in a real Firefox and in Tor Browser, scrolled.
-      Headless Firefox drew no blur at all behind it, not even the plain
-      `blur()` the CSS gives every other browser, so its screenshots show body
-      text crisp behind the nav links — most likely the headless software
-      compositor, not the site, but no screenshot this routine can take
-      settles it.
+- [x] A cold load of `about#<heading>` landed a few pixels past the heading,
+      sometimes far enough to put its first line behind the masthead (Nanna
+      at 390 px, `#api-key-invalid`, 2 px under the pane, once in three
+      `check:navigation` runs in Chromium on 2026-10-12). Two scrolls raced.
+      HTML's "scroll to the fragment" scrolls the target into view with
+      behavior `auto`, so the stylesheet's `scroll-behavior: smooth` made
+      Chromium's own fragment scroll an animation from the top; vue-router
+      jumped to the same heading as the app started, and when the animation's
+      first step came after the jump it was added on top of it. With
+      vue-router's jump held back the browser opened its animation with a step
+      of 4 or 18 px on 12 of 12 loads, and every miss was exactly +4 or +18.
+      `app/plugins/restore-jump.client.ts` now holds `scroll-behavior: auto`
+      on a fresh load with a fragment too, as it already did for reloads and
+      Back/Forward. Uninstrumented, the same URL: before, 4 of 20 cold loads
+      off at full speed and 19 of 20 with the CPU slowed 6× (one 21 px behind
+      the pane); after, 0 of 20 and 0 of 20. The check could not see most of
+      this: a +4 miss leaves the text 12 px clear, inside the 0–200 band. It
+      now also wants the heading's box on `scroll-padding-top`'s line (±2 px,
+      lower only at the end of the page), and takes the cold load with the
+      CPU slowed 6× in Chromium (`page.throttle()`). Main's build fails it on
+      9 cold loads across 5 pages; this one passes 160 of 160 in Chromium
+      and Firefox. CSSOM View says a new scroll aborts any ongoing smooth
+      scroll, which is not what the +4/+18 looks like.
+      <https://html.spec.whatwg.org/multipage/browsing-the-web.html#scroll-to-the-fragment-identifier>
+      <https://drafts.csswg.org/cssom-view/#perform-a-scroll>
+      - [x] A minimal repro outside this site:
+            `docs/repro/smooth-fragment-overshoot.html` (1.4 KB, no
+            dependencies): a 16,000 px spacer, `scroll-behavior: smooth`, a
+            `#target`, and one instant `scrollTo` to that same place 10 or
+            20 ms after `load`. Chromium 152.0.7977.82 at 390 px, 30 cold
+            loads each: `?when=ms10` lands 4 or 13 px past the target on 30 of
+            30, `ms20` 13 or 24 px past on 30 of 30; with `&smooth=0`, on it 60
+            of 60; with no `scrollTo` at all, on it 30 of 30.
+      - [ ] Report it to Chromium with that file — **owner's call**, as with
+            the Nuxt one above, since it speaks for the organization.
+      - [ ] Find out what the 2026-10-12 stalled run (Nanna, phone, held until
+            the 15-minute step timeout) was waiting for. Every CDP and BiDi
+            request now fails after 180 s, naming itself — and on 2026-10-13
+            it did, in 1 of 3 Chromium runs: `arrive`'s evaluate on Nanna at
+            1280 px went 180 s unanswered, though its own loop gives up after
+            8 s. Then once more in seven, with the diagnostics below: on
+            Skidbladnir at 1280 px — the *first* page of the pass, in a fresh
+            tab, so not Nanna's length and not an old tab — on `arrive(blog)`
+            right after the click on the blog tab, with the renderer **idle**
+            (0.00 CPU s in 1 s). An idle page whose 8-second timers never fire
+            is waiting on something, not computing. A stalled page no longer ends
+            the run: it fails with the last four calls made of it and, in
+            Chromium, the busiest renderer's CPU time over a second (`busy()`
+            in `scripts/lib/browser.mjs`, from `SystemInfo.getProcessInfo`),
+            and the run goes on in a fresh tab. Shown on a stand-in page that
+            spins after `load`: "renderer busy (0.99 CPU s in 1 s)", and the
+            next page checked. The report now also says whether a plain
+            evaluate still answers while the stuck one waits (stand-in:
+            spinning, "no answer in 5 s"; idle, "answered: visible, complete,
+            /projects/y/about"). Next: that answer from the next real stall —
+            it answers: the event loop turns and only that promise's timers
+            are held (throttling or a frozen-then-thawed page); it does not:
+            the page is blocked (a dialog, a synchronous wait).
+      - [ ] One reload of splimes' open README at 1280 px landed 31 px past
+            the reader (4,170 → 4,201) in that same run against main's build.
+            The trace shows the fold restoring 4,201 — the position
+            `pagehide` saved — so the page had moved by 31 px between the
+            check's last reading and the unload. Seen once; not seen on this
+            branch's build in 15 Chromium runs. Not the unsized shields.io badges
+            that night's local server served (fixed below): they move the
+            page 2.3 px, not 31. Next: whether anything else above the reader
+            still moves it after `arrive` settles.
+- [ ] Look at the masthead in a real Firefox and in Tor Browser, scrolled —
+      **needs a person with a real Firefox window**, because headless Firefox
+      draws no `backdrop-filter` at all (checked 2026-10-13: not the site's
+      chain, not a plain `blur(2.5px)`, not `blur(8px)`, with or without
+      `gfx.webrender.software`/`gfx.webrender.all`), so no screenshot this
+      routine can take settles it. There is now a specific reason to expect
+      it is broken, not just unseen: Mozilla's open bug 1961378 says
+      `backdrop-filter` is ignored *entirely* when an SVG `url()` filter in it
+      falls back to a blob image, and a duplicate (1972363) names `feImage`
+      and `feDisplacementMap` — exactly what `#crt-warp` and `#glass-refract`
+      use (`app/components/CrtFilter.vue`: 4 `feDisplacementMap`, 2
+      `feImage`). Firefox passes the `@supports (backdrop-filter:
+      url("#crt-warp"))` in `main.css`, so it takes that chain, and the
+      comment there ("Chrome and Firefox can do this") is likely wrong. If a
+      real Firefox shows body text crisp behind the pane, the fix is one
+      condition: `@supports (backdrop-filter: url("#crt-warp")) and (not
+      (-moz-appearance: none))`, which hands Firefox the plain blur every
+      other browser without the chain gets (`CSS.supports('-moz-appearance',
+      'none')` is true in Firefox 155, false in Chromium 152). Look before
+      and after; Tor Browser is Firefox 140 ESR and gets the same answer.
+      Or, so the routine can look for itself: a headless Wayland compositor
+      on the host (`cage` or `sway`, a `pacman` install — **owner**) would
+      let it run a real, composited Firefox off-screen, away from the
+      desktop session.
+      <https://bugzilla.mozilla.org/show_bug.cgi?id=1961378>
+      <https://bugzilla.mozilla.org/show_bug.cgi?id=1972363>
 - [x] No dead controls without script. Every page is server-rendered and
       reads fine with script off, which is how Tor Browser's "Safest" level
       serves the onion service — except the `[copy]` buttons, which were shown

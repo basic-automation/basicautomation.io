@@ -58,6 +58,18 @@ export interface Health {
     notModified: number
   }
   /**
+   * README images sized since this process started, one per image per render:
+   * `measured` by a probe of the file (or the day's cached answer), `kept` at
+   * the size the snapshot last measured because the probe missed, `unsized`
+   * when neither knew — that image is a 0 × 0 box until it loads, and moves
+   * the page when it does. See `server/utils/readmeImages.ts`.
+   */
+  readmeImages: {
+    measured: number
+    kept: number
+    unsized: number
+  }
+  /**
    * The onion service, judged by the gateway's own self-fetch over Tor.
    * `off` where no gateway runs (outside the image, or `ONION_ENABLED=0`);
    * `starting` until it has an address; `launched` until the first fetch over

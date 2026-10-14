@@ -20,12 +20,16 @@
  *   - Forward and Back again: the same
  *   - reload: unfolded, same place
  *   - blog tab, then the about tab by its link: folded, at the top
- *   - a cold load of `about#<heading>`: unfolded, the heading at the top
+ *   - a cold load of `about#<heading>`, CPU slowed 6× in Chromium: unfolded,
+ *     the heading at the top
  *   - a client navigation to `about#<heading>`: the same
  *   - fold it, blog tab, Back: still folded — even with the fragment
  *   - opened before the app hydrates: still open after it has
  *
- * And, as in `check-a11y-browser.mjs`, any console error fails it.
+ * And, as in `check-a11y-browser.mjs`, any console error fails it. A page
+ * that stops answering fails too, after 180 s, naming the last calls made of
+ * it and — in Chromium — whether its renderer was busy or idle; the run then
+ * carries on with the next page in a fresh tab.
  */
 
 import { sitePages } from './lib/pages.mjs'
@@ -47,6 +51,8 @@ const SLACK = 4
  * once passed at 106 px under a 128 px pane.
  */
 const HEADING_BAND = [0, 200]
+/** How far from `scroll-padding-top`'s line a heading may sit: rounding, not a race. */
+const AIM_SLACK = 2
 
 /** The same two widths `check-a11y-browser.mjs` uses. */
 const VIEWPORTS = [
@@ -89,7 +95,20 @@ let checked = 0
 
 try {
 	for (const { name, ...viewport } of VIEWPORTS) {
-		const page = await browser.open(viewport)
+		// The last few things asked of the page, so a stall can say where it was.
+		const calls = []
+		const traced = (raw) => new Proxy(raw, {
+			get(target, key) {
+				const value = target[key]
+				if (typeof value !== 'function') return value
+				return (...args) => {
+					calls.push(`${String(key)}(${args.map((a) => JSON.stringify(typeof a === 'string' ? a.replace(/\s+/g, ' ') : a)?.slice(0, 70)).join(', ')})`)
+					if (calls.length > 4) calls.shift()
+					return value.apply(target, args)
+				}
+			},
+		})
+		let page = traced(await browser.open(viewport))
 		const sleep = (ms) => page.evaluate(`new Promise((r) => setTimeout(r, ${ms}))`)
 		/**
 		 * Wait for the router to arrive at `path`, then for the page to stop
@@ -126,133 +145,182 @@ try {
 				const glass = document.querySelector('header .crt-glass').getBoundingClientRect()
 				return Math.round((line ?? el.getBoundingClientRect()).top - glass.bottom)
 			})()` : 'null'},
+			// The heading's box, which is what a scroll aligns — its text can sit
+			// lower inside it — and where the stylesheet's \`scroll-padding-top\`
+			// puts that box, both from the masthead's edge like \`heading\`; and
+			// whether the page is as far down as it goes.
+			box: ${id ? `Math.round((document.getElementById(${JSON.stringify(id)})?.getBoundingClientRect().top ?? -1e9) - document.querySelector('header .crt-glass').getBoundingClientRect().bottom)` : 'null'},
+			aim: ${id ? `Math.round(parseFloat(getComputedStyle(document.documentElement).scrollPaddingTop) - document.querySelector('header .crt-glass').getBoundingClientRect().bottom)` : 'null'},
+			end: Math.ceil(scrollY + innerHeight) >= document.documentElement.scrollHeight - 1,
 		})`)
+		/**
+		 * A heading scrolled to has its box where `scroll-padding-top` puts it —
+		 * within a pixel or two, not merely with its text somewhere clear of the
+		 * masthead: the race fixed in `app/plugins/restore-jump.client.ts` most
+		 * often landed 4 px past it, which the 0–200 band alone let through.
+		 * Lower is fine only when the page cannot scroll any further.
+		 */
+		const atHeading = (s) => s.open === true
+			&& s.heading >= HEADING_BAND[0] && s.heading <= HEADING_BAND[1]
+			&& (Math.abs(s.box - s.aim) <= AIM_SLACK || (s.end && s.box > s.aim))
 
 		for (const slug of slugs) {
-			const about = `/projects/${slug}/about`
-			const blog = `/projects/${slug}/blog`
-			const problems = []
-			const expect = (what, ok, got) => {
-				checked++
-				if (!ok) problems.push(`${what} — got ${JSON.stringify(got)}`)
-			}
+			try {
+				const about = `/projects/${slug}/about`
+				const blog = `/projects/${slug}/blog`
+				const problems = []
+				const expect = (what, ok, got) => {
+					checked++
+					if (!ok) problems.push(`${what} — got ${JSON.stringify(got)}`)
+				}
 
+				await page.goto('about:blank')
+				await page.goto(BASE + about)
+				await arrive(about)
+				page.takeErrors()
+				// A heading from the middle of the README: deep enough that folding
+				// hides it, and the kind of link a contents list makes.
+				const id = await page.evaluate(`(() => {
+					const ids = [...document.querySelectorAll('.readme [id]')].map((e) => e.id)
+					return ids[Math.floor(ids.length / 2)] ?? null
+				})()`)
+				if (!id) {
+					console.log(`  - ${name.padEnd(7)} ${about}: no README heading, skipped`)
+					continue
+				}
+
+				let s = await state()
+				expect('a first visit starts folded, at the top', s.open === false && s.y === 0, s)
+
+				// Unfold and read down past where the folded page ends, so a page that
+				// came back folded could not land there.
+				const foldedBottom = await page.evaluate('document.documentElement.scrollHeight - innerHeight')
+
+				// The browser's own restore, on a page the fold leaves alone. Nuxt's
+				// start-up scroll to the top used to cancel it on every page but `/`
+				// (see app/router.options.ts), so this landed at 0 in both engines.
+				const halfway = Math.round(foldedBottom / 2)
+				await page.evaluate(`scrollTo({ top: ${halfway}, behavior: 'instant' })`)
+				await arrive(about)
+				const read = (await state()).y
+				await page.reload()
+				await arrive(about)
+				s = await state()
+				expect(`a reload of the folded page stays at y ${read}`, s.open === false && Math.abs(s.y - read) <= SLACK, s)
+				await page.evaluate(`scrollTo({ top: 0, behavior: 'instant' })`)
+				await arrive(about)
+
+				await click('details > summary')
+				await sleep(300)
+				const target = await page.evaluate(`Math.min(${foldedBottom} + 1500, document.documentElement.scrollHeight - innerHeight - 10)`)
+				await page.evaluate(`scrollTo({ top: ${target}, behavior: 'instant' })`)
+				// Where the reader is once the README's lazy images around them have
+				// loaded and moved things, not where they were sent.
+				await arrive(about)
+				const left = (await state()).y
+				const deep = left > foldedBottom + 100
+				const near = (y) => !deep || Math.abs(y - left) <= SLACK
+
+				await click(`a[href="${blog}"]`)
+				await arrive(blog)
+				await page.evaluate('history.back()')
+				await arrive(about)
+				s = await state()
+				expect(`Back reopens the README at y ${left}`, s.open === true && near(s.y), s)
+
+				await page.evaluate('history.forward()')
+				await arrive(blog)
+				await page.evaluate('history.back()')
+				await arrive(about)
+				s = await state()
+				expect(`Forward and Back again, at y ${left}`, s.open === true && near(s.y), s)
+
+				// What the page did on its way back, frame by frame — only read when
+				// the check fails, so a CI failure says where the pixels went.
+				const untrace = await page.preload(TRACE)
+				await page.reload()
+				await arrive(about)
+				await untrace()
+				s = await state()
+				const reloaded = s.open === true && near(s.y)
+				expect(`a reload reopens it at y ${left}`, reloaded, reloaded ? s : { ...s, trace: await page.evaluate('window.__trace ?? null') })
+
+				await click(`a[href="${blog}"]`)
+				await arrive(blog)
+				await click(`a[href="${about}"]`)
+				await arrive(about)
+				s = await state()
+				expect('a visit by link starts folded, at the top', s.open === false && s.y <= 1, s)
+
+				const hash = `#${encodeURIComponent(id)}`
+				await page.goto('about:blank')
+				// Slowed, in Chromium: the browser's own scroll to the fragment and
+				// vue-router's met in one frame, and the animation's first step could
+				// land on top of the jump — 4 or 18 px past the heading. At full speed
+				// that was 7 cold loads in 40 and CI red now and then; at 6× it was 14
+				// in 20, so this fails reliably if it comes back.
+				await page.throttle(6)
+				await page.goto(BASE + about + hash)
+				await arrive(about)
+				await page.throttle(1)
+				s = await state(id)
+				expect(`a cold load of ${hash} opens it at the heading`, atHeading(s), s)
+
+				await click(`a[href="${blog}"]`)
+				await arrive(blog)
+				await page.evaluate(`document.querySelector('#__nuxt').__vue_app__.config.globalProperties.$router.push(${JSON.stringify(about + hash)})`)
+				await arrive(about)
+				s = await state(id)
+				expect(`a client navigation to ${hash} opens it at the heading`, atHeading(s), s)
+
+				await click('details > summary')
+				await sleep(300)
+				await click(`a[href="${blog}"]`)
+				await arrive(blog)
+				await page.evaluate('history.back()')
+				await arrive(about)
+				s = await state()
+				expect('folded by the visitor, it stays folded on Back', s.open === false, s)
+
+				// A reader on a slow line opens the fold before the app has hydrated:
+			// it must stay open. Hydration once wrote the bound `false` over it.
+			const undo = await page.preload(`document.addEventListener('DOMContentLoaded', () => { document.querySelector('.readme')?.closest('details')?.setAttribute('open', '') })`)
 			await page.goto('about:blank')
 			await page.goto(BASE + about)
 			await arrive(about)
-			page.takeErrors()
-			// A heading from the middle of the README: deep enough that folding
-			// hides it, and the kind of link a contents list makes.
-			const id = await page.evaluate(`(() => {
-				const ids = [...document.querySelectorAll('.readme [id]')].map((e) => e.id)
-				return ids[Math.floor(ids.length / 2)] ?? null
-			})()`)
-			if (!id) {
-				console.log(`  - ${name.padEnd(7)} ${about}: no README heading, skipped`)
-				continue
+			await sleep(1500)
+			await undo()
+			s = await state()
+			expect('opened before hydration, it stays open', s.open === true, s)
+
+			for (const { text } of page.takeErrors()) problems.push(`console: ${text}`)
+				console.log(`  ${problems.length ? '✗' : '·'} ${name.padEnd(7)} ${about}${deep ? '' : ' (README too short to test the scroll position)'}`)
+				for (const p of problems) console.error(`      ${p}`)
+				failures.push(...problems.map((p) => `${name} ${about}: ${p}`))
 			}
-
-			let s = await state()
-			expect('a first visit starts folded, at the top', s.open === false && s.y === 0, s)
-
-			// Unfold and read down past where the folded page ends, so a page that
-			// came back folded could not land there.
-			const foldedBottom = await page.evaluate('document.documentElement.scrollHeight - innerHeight')
-
-			// The browser's own restore, on a page the fold leaves alone. Nuxt's
-			// start-up scroll to the top used to cancel it on every page but `/`
-			// (see app/router.options.ts), so this landed at 0 in both engines.
-			const halfway = Math.round(foldedBottom / 2)
-			await page.evaluate(`scrollTo({ top: ${halfway}, behavior: 'instant' })`)
-			await arrive(about)
-			const read = (await state()).y
-			await page.reload()
-			await arrive(about)
-			s = await state()
-			expect(`a reload of the folded page stays at y ${read}`, s.open === false && Math.abs(s.y - read) <= SLACK, s)
-			await page.evaluate(`scrollTo({ top: 0, behavior: 'instant' })`)
-			await arrive(about)
-
-			await click('details > summary')
-			await sleep(300)
-			const target = await page.evaluate(`Math.min(${foldedBottom} + 1500, document.documentElement.scrollHeight - innerHeight - 10)`)
-			await page.evaluate(`scrollTo({ top: ${target}, behavior: 'instant' })`)
-			// Where the reader is once the README's lazy images around them have
-			// loaded and moved things, not where they were sent.
-			await arrive(about)
-			const left = (await state()).y
-			const deep = left > foldedBottom + 100
-			const near = (y) => !deep || Math.abs(y - left) <= SLACK
-
-			await click(`a[href="${blog}"]`)
-			await arrive(blog)
-			await page.evaluate('history.back()')
-			await arrive(about)
-			s = await state()
-			expect(`Back reopens the README at y ${left}`, s.open === true && near(s.y), s)
-
-			await page.evaluate('history.forward()')
-			await arrive(blog)
-			await page.evaluate('history.back()')
-			await arrive(about)
-			s = await state()
-			expect(`Forward and Back again, at y ${left}`, s.open === true && near(s.y), s)
-
-			// What the page did on its way back, frame by frame — only read when
-			// the check fails, so a CI failure says where the pixels went.
-			const untrace = await page.preload(TRACE)
-			await page.reload()
-			await arrive(about)
-			await untrace()
-			s = await state()
-			const reloaded = s.open === true && near(s.y)
-			expect(`a reload reopens it at y ${left}`, reloaded, reloaded ? s : { ...s, trace: await page.evaluate('window.__trace ?? null') })
-
-			await click(`a[href="${blog}"]`)
-			await arrive(blog)
-			await click(`a[href="${about}"]`)
-			await arrive(about)
-			s = await state()
-			expect('a visit by link starts folded, at the top', s.open === false && s.y <= 1, s)
-
-			const hash = `#${encodeURIComponent(id)}`
-			await page.goto('about:blank')
-			await page.goto(BASE + about + hash)
-			await arrive(about)
-			s = await state(id)
-			expect(`a cold load of ${hash} opens it at the heading`, s.open === true && s.heading >= HEADING_BAND[0] && s.heading <= HEADING_BAND[1], s)
-
-			await click(`a[href="${blog}"]`)
-			await arrive(blog)
-			await page.evaluate(`document.querySelector('#__nuxt').__vue_app__.config.globalProperties.$router.push(${JSON.stringify(about + hash)})`)
-			await arrive(about)
-			s = await state(id)
-			expect(`a client navigation to ${hash} opens it at the heading`, s.open === true && s.heading >= HEADING_BAND[0] && s.heading <= HEADING_BAND[1], s)
-
-			await click('details > summary')
-			await sleep(300)
-			await click(`a[href="${blog}"]`)
-			await arrive(blog)
-			await page.evaluate('history.back()')
-			await arrive(about)
-			s = await state()
-			expect('folded by the visitor, it stays folded on Back', s.open === false, s)
-
-			// A reader on a slow line opens the fold before the app has hydrated:
-		// it must stay open. Hydration once wrote the bound `false` over it.
-		const undo = await page.preload(`document.addEventListener('DOMContentLoaded', () => { document.querySelector('.readme')?.closest('details')?.setAttribute('open', '') })`)
-		await page.goto('about:blank')
-		await page.goto(BASE + about)
-		await arrive(about)
-		await sleep(1500)
-		await undo()
-		s = await state()
-		expect('opened before hydration, it stays open', s.open === true, s)
-
-		for (const { text } of page.takeErrors()) problems.push(`console: ${text}`)
-			console.log(`  ${problems.length ? '✗' : '·'} ${name.padEnd(7)} ${about}${deep ? '' : ' (README too short to test the scroll position)'}`)
-			for (const p of problems) console.error(`      ${p}`)
-			failures.push(...problems.map((p) => `${name} ${about}: ${p}`))
+			catch (err) {
+				// A page that stops answering — CDP and BiDi requests give up after
+				// 180 s (`scripts/lib/cdp.mjs`) — is a failure of this page, not the
+				// end of the run. Say where it was and whether its renderer was busy
+				// or idle, then carry on in a fresh tab.
+				const busy = await browser.busy().catch(() => null)
+				// Whether the page still runs a plain script while the stuck one
+				// waits: if it does, its event loop turns and only that promise's
+				// timers are held back; if not, the page itself is blocked.
+				const answers = await Promise.race([
+					page.evaluate(`document.visibilityState + ', ' + document.readyState + ', ' + location.pathname`).catch((e) => `error: ${e.message.slice(0, 60)}`),
+					new Promise((r) => setTimeout(() => r(null), 5000)),
+				])
+				const where = `${/got no answer/.test(err.message) ? 'stalled' : 'failed'} after ${calls.join(' → ')}`
+					+ (busy === null ? '' : `; renderer ${busy > 0.5 ? 'busy' : 'idle'} (${busy.toFixed(2)} CPU s in 1 s)`)
+					+ `; a plain evaluate ${answers === null ? 'got no answer in 5 s' : `answered: ${answers}`}`
+				console.log(`  ✗ ${name.padEnd(7)} /projects/${slug}/about`)
+				const message = err.message.split('\n')[0]
+				console.error(`      ${message}\n      ${where}`)
+				failures.push(`${name} /projects/${slug}/about: ${message} — ${where}`)
+				await Promise.race([page.close(), new Promise((r) => setTimeout(r, 5000))]).catch(() => {})
+				page = traced(await browser.open(viewport))
+			}
 		}
 		await page.close()
 	}
