@@ -506,6 +506,14 @@ record. There is no run log.
       `shared/markdown/render.ts` registers no `walkTokens`.
       <https://github.com/markedjs/marked/releases/tag/v18.1.1>
       <https://github.com/markedjs/marked/issues/4120>
+- [ ] Vue 3.5.44 (published 2026-10-13 07:45 UTC). Held a night, as marked
+      18.1.1 was: 24 fixes, several in what this site leans on — SSR
+      (`server-renderer` propagates async setup errors; `ssr` honours falsy
+      vnode content overrides), hydration, and the scheduler ("only flush
+      jobs queued by the root render itself", vuejs/core#15757). Take it with
+      every route's SSR body diffed against 3.5.43's build (same data, same
+      snapshot), then `check`, `a11y:browser` and `check:navigation` in both
+      engines. <https://github.com/vuejs/core/blob/main/CHANGELOG.md>
 - [ ] Move the type checker to TypeScript 7 once 7.1 ships its API and vue-tsc
       adopts it — the 6.0 API is a bridge, not a destination.
       <https://devblogs.microsoft.com/typescript/announcing-typescript-7-0/>
