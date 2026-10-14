@@ -83,6 +83,13 @@ const rows = computed(() => {
       label: 'github calls',
       value: `${h.githubCalls.made} since start, ${h.githubCalls.notModified} unchanged (304, free)`,
     },
+    // A README image nobody could measure is a 0 × 0 box until it loads, and
+    // moves the page when it does; `kept` is a probe that missed, covered by
+    // the size the snapshot last measured.
+    {
+      label: 'readme images',
+      value: `${h.readmeImages.measured} measured, ${h.readmeImages.kept} kept from the snapshot, ${h.readmeImages.unsized} unsized`,
+    },
     { label: 'onion', value: onionLine(h.onion) },
     {
       label: 'refresh',

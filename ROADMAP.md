@@ -757,6 +757,13 @@ record. There is no run log.
       (`· splimes: 4 image size(s) kept from the previous snapshot`). Behind
       the same proxy, main's script wrote 22 unsized images into the
       snapshot; this one wrote 0.
+- [x] …and a miss is counted where an operator looks. `/healthz` and the
+      status page now carry `readmeImages` — one count per README image per
+      render: `measured`, `kept` (the snapshot's size, because the probe
+      missed) and `unsized` (nobody knew; that image moves the page). With
+      img.shields.io refused from cold: 6 measured, 22 kept, 0 unsized;
+      without: 28 measured. Whether production sees misses at all is now a
+      number, not a guess.
 - [x] A folded README costs no third-party request. Its images had no `loading`
       attribute, and an eager image inside a closed `<details>` is fetched anyway,
       so every visit to the Skidbladnir page fetched two screenshots from

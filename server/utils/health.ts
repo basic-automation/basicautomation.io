@@ -83,6 +83,13 @@ export function recordGithubCall(notModified: boolean): void {
   if (notModified) githubNotModified++
 }
 
+const readmeImages = { measured: 0, kept: 0, unsized: 0 }
+
+/** Called once per README image per render, by `sizeReadmeImages`. */
+export function recordReadmeImage(outcome: keyof typeof readmeImages): void {
+  readmeImages[outcome]++
+}
+
 /** Called once per resolved repo, by the cached fetch in `github.ts`. */
 export function recordSource(source: 'live' | 'stale' | 'snapshot'): void {
   if (source === 'live') {
@@ -210,6 +217,7 @@ export async function health(): Promise<Health> {
       observedAt: new Date(rateLimit.at).toISOString(),
     },
     githubCalls: { made: githubCalls, notModified: githubNotModified },
+    readmeImages: { ...readmeImages },
     onion,
     authenticated: githubRefresh.authenticated,
     refreshSeconds: githubRefresh.ttl,

@@ -43,7 +43,9 @@ export async function sizeReadmeImages(html: string, known: ReadonlyMap<string, 
   if (!srcs.length) return html
   const sizes = new Map<string, ImageSize>()
   await Promise.all(srcs.map(async (src) => {
-    const size = await cachedImageSize(src).catch(() => null) ?? known.get(src)
+    const measured = await cachedImageSize(src).catch(() => null)
+    const size = measured ?? known.get(src)
+    recordReadmeImage(measured ? 'measured' : size ? 'kept' : 'unsized')
     if (size) sizes.set(src, size)
   }))
   return sizeImages(html, sizes)

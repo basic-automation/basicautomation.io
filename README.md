@@ -36,7 +36,7 @@ Links to a heading, and keyboard focus, always stop below it.
 | `/robots.txt` | Allows everything, points at the sitemap |
 | `/api/projects` | Card-level JSON for every project |
 | `/api/projects/<slug>` | One project, README and release history included |
-| `/healthz` | Liveness for the container healthcheck, plus the data source, the onion service's state and uptime |
+| `/healthz` | Liveness for the container healthcheck, plus the data source, the onion service's state, uptime, and how many README images were measured, kept at the snapshot's size, or left unsized |
 
 Each project page also carries `SoftwareSourceCode` JSON-LD and its own Open
 Graph card, so a link to it previews as itself rather than as the organization.
