@@ -342,6 +342,15 @@ record. There is no run log.
       healthcheck's 30-second polling, the shape of `upstream.stale`. Proved on
       the built server with a stand-in gateway and a 40-minute-old snapshot:
       five polls, one line; a fresh snapshot, one `onion.recovered`.
+- [x] The gateway's rustls off four advisories filed the day they were found.
+      On 2026-10-14 RUSTSEC-2026-0346 to -0349 (ECH-rejection buffering, an
+      unbounded brotli certificate allocation, a ServerHello downgrade, TLS
+      secrets in `Debug`; all rated low) landed against rustls 0.23.45 and
+      turned CI's `cargo audit --deny yanked --deny unsound` red on every
+      branch. All four are fixed in 0.23.46: a lockfile-only
+      `cargo update -p rustls --precise 0.23.46` (`onion/Cargo.lock`, four
+      lines); `cargo audit` exits 0 with only the two known unmaintained
+      warnings. <https://rustsec.org/advisories/RUSTSEC-2026-0347>
 - [ ] Arti 0.47 under the gateway (Arti 2.7.0, 2026-10-01), whose
       announcement says it fixes "low- to high-severity security issues"; the
       gateway is the site's Tor-facing binary and is on 0.46. Blocked on
@@ -433,6 +442,13 @@ record. There is no run log.
             the other three reached it on the first try in 11.1, 13.1 and
             13.2 s, through a difficulty-18 gate solved in 0.2–0.6 s. Too few
             to weigh C Tor on; read again once there are a dozen.
+            Read again 2026-10-14 21:36 CDT: eight scheduled runs since the
+            first (10-12 15:25 UTC to 10-14 21:41 UTC), all green. Seven
+            reached the site on the first try, in 11.1–17.7 s (11.1, 13.1,
+            13.2, 14.3, 11.2, 13.9, 17.7; the last at difficulty 18, `reachedMs`
+            5.4–7.7 s); one needed two (82.6 s). Still one failed first try in
+            eight; no run has failed outright. Nothing so far argues for C Tor;
+            read again at a dozen.
 - [ ] Move the runtime to distroless — **needs an owner decision, because the
       size case for it is gone.** Measured 2026-09-27: the same build on
       `gcr.io/distroless/nodejs24-debian13:nonroot` is 73.0 MB of image content
@@ -513,14 +529,20 @@ record. There is no run log.
       `shared/markdown/render.ts` registers no `walkTokens`.
       <https://github.com/markedjs/marked/releases/tag/v18.1.1>
       <https://github.com/markedjs/marked/issues/4120>
-- [ ] Vue 3.5.44 (published 2026-10-13 07:45 UTC). Held a night, as marked
-      18.1.1 was: 24 fixes, several in what this site leans on — SSR
-      (`server-renderer` propagates async setup errors; `ssr` honours falsy
-      vnode content overrides), hydration, and the scheduler ("only flush
-      jobs queued by the root render itself", vuejs/core#15757). Take it with
-      every route's SSR body diffed against 3.5.43's build (same data, same
-      snapshot), then `check`, `a11y:browser` and `check:navigation` in both
-      engines. <https://github.com/vuejs/core/blob/main/CHANGELOG.md>
+- [x] Vue 3.5.44 (published 2026-10-13 07:45 UTC; it renders every page),
+      landed 2026-10-14 after a night held. 24 fixes, several in what this
+      site leans on: SSR (`server-renderer` propagates async setup errors;
+      `ssr` honours falsy vnode content overrides), hydration, and the
+      scheduler ("only flush jobs queued by the root render itself",
+      vuejs/core#15757). Taken on a body diff: all 23 pages the snapshot
+      serves (sitemap, `/healthz`, three 404s) fetched from 3.5.43's build and
+      from 3.5.44's, same snapshot (bad token), after masking nonces, asset
+      hashes, build ids, UUIDs and clocks: byte-identical but for the two 404
+      pages, which differ the same way between two runs of 3.5.43 itself
+      (byte 50), and the same total size. Typecheck, 279 tests,
+      `audit:runtime`, `check`, `a11y`, `a11y:browser` and `a11y:firefox`
+      (23 pages × 3 widths) and `check:navigation` in both engines (160 each)
+      clean; all routes answer as before. <https://github.com/vuejs/core/blob/main/CHANGELOG.md>
 - [ ] Move the type checker to TypeScript 7 once 7.1 ships its API and vue-tsc
       adopts it — the 6.0 API is a bridge, not a destination.
       <https://devblogs.microsoft.com/typescript/announcing-typescript-7-0/>
@@ -1313,6 +1335,8 @@ record. There is no run log.
       on the host (`cage` or `sway`, a `pacman` install — **owner**) would
       let it run a real, composited Firefox off-screen, away from the
       desktop session.
+      Bugzilla, read 2026-10-14: 1961378 is still NEW (last changed
+      2025-10-19), 1972363 RESOLVED as a duplicate of it — no fix to wait for.
       <https://bugzilla.mozilla.org/show_bug.cgi?id=1961378>
       <https://bugzilla.mozilla.org/show_bug.cgi?id=1972363>
 - [x] No dead controls without script. Every page is server-rendered and
