@@ -433,6 +433,13 @@ record. There is no run log.
             the other three reached it on the first try in 11.1, 13.1 and
             13.2 s, through a difficulty-18 gate solved in 0.2–0.6 s. Too few
             to weigh C Tor on; read again once there are a dozen.
+            Read again 2026-10-14 21:36 CDT: eight scheduled runs since the
+            first (10-12 15:25 UTC to 10-14 21:41 UTC), all green. Seven
+            reached the site on the first try, in 11.1–17.7 s (11.1, 13.1,
+            13.2, 14.3, 11.2, 13.9, 17.7; the last at difficulty 18, `reachedMs`
+            5.4–7.7 s); one needed two (82.6 s). Still one failed first try in
+            eight; no run has failed outright. Nothing so far argues for C Tor;
+            read again at a dozen.
 - [ ] Move the runtime to distroless — **needs an owner decision, because the
       size case for it is gone.** Measured 2026-09-27: the same build on
       `gcr.io/distroless/nodejs24-debian13:nonroot` is 73.0 MB of image content
