@@ -513,14 +513,20 @@ record. There is no run log.
       `shared/markdown/render.ts` registers no `walkTokens`.
       <https://github.com/markedjs/marked/releases/tag/v18.1.1>
       <https://github.com/markedjs/marked/issues/4120>
-- [ ] Vue 3.5.44 (published 2026-10-13 07:45 UTC). Held a night, as marked
-      18.1.1 was: 24 fixes, several in what this site leans on — SSR
-      (`server-renderer` propagates async setup errors; `ssr` honours falsy
-      vnode content overrides), hydration, and the scheduler ("only flush
-      jobs queued by the root render itself", vuejs/core#15757). Take it with
-      every route's SSR body diffed against 3.5.43's build (same data, same
-      snapshot), then `check`, `a11y:browser` and `check:navigation` in both
-      engines. <https://github.com/vuejs/core/blob/main/CHANGELOG.md>
+- [x] Vue 3.5.44 (published 2026-10-13 07:45 UTC; it renders every page),
+      landed 2026-10-14 after a night held. 24 fixes, several in what this
+      site leans on: SSR (`server-renderer` propagates async setup errors;
+      `ssr` honours falsy vnode content overrides), hydration, and the
+      scheduler ("only flush jobs queued by the root render itself",
+      vuejs/core#15757). Taken on a body diff: all 23 pages the snapshot
+      serves (sitemap, `/healthz`, three 404s) fetched from 3.5.43's build and
+      from 3.5.44's, same snapshot (bad token), after masking nonces, asset
+      hashes, build ids, UUIDs and clocks: byte-identical but for the two 404
+      pages, which differ the same way between two runs of 3.5.43 itself
+      (byte 50), and the same total size. Typecheck, 279 tests,
+      `audit:runtime`, `check`, `a11y`, `a11y:browser` and `a11y:firefox`
+      (23 pages × 3 widths) and `check:navigation` in both engines (160 each)
+      clean; all routes answer as before. <https://github.com/vuejs/core/blob/main/CHANGELOG.md>
 - [ ] Move the type checker to TypeScript 7 once 7.1 ships its API and vue-tsc
       adopts it — the 6.0 API is a bridge, not a destination.
       <https://devblogs.microsoft.com/typescript/announcing-typescript-7-0/>
