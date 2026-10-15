@@ -1326,6 +1326,8 @@ record. There is no run log.
       on the host (`cage` or `sway`, a `pacman` install — **owner**) would
       let it run a real, composited Firefox off-screen, away from the
       desktop session.
+      Bugzilla, read 2026-10-14: 1961378 is still NEW (last changed
+      2025-10-19), 1972363 RESOLVED as a duplicate of it — no fix to wait for.
       <https://bugzilla.mozilla.org/show_bug.cgi?id=1961378>
       <https://bugzilla.mozilla.org/show_bug.cgi?id=1972363>
 - [x] No dead controls without script. Every page is server-rendered and
