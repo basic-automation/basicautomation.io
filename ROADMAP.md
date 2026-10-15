@@ -342,6 +342,15 @@ record. There is no run log.
       healthcheck's 30-second polling, the shape of `upstream.stale`. Proved on
       the built server with a stand-in gateway and a 40-minute-old snapshot:
       five polls, one line; a fresh snapshot, one `onion.recovered`.
+- [x] The gateway's rustls off four advisories filed the day they were found.
+      On 2026-10-14 RUSTSEC-2026-0346 to -0349 (ECH-rejection buffering, an
+      unbounded brotli certificate allocation, a ServerHello downgrade, TLS
+      secrets in `Debug`; all rated low) landed against rustls 0.23.45 and
+      turned CI's `cargo audit --deny yanked --deny unsound` red on every
+      branch. All four are fixed in 0.23.46: a lockfile-only
+      `cargo update -p rustls --precise 0.23.46` (`onion/Cargo.lock`, four
+      lines); `cargo audit` exits 0 with only the two known unmaintained
+      warnings. <https://rustsec.org/advisories/RUSTSEC-2026-0347>
 - [ ] Arti 0.47 under the gateway (Arti 2.7.0, 2026-10-01), whose
       announcement says it fixes "low- to high-severity security issues"; the
       gateway is the site's Tor-facing binary and is on 0.46. Blocked on
