@@ -537,7 +537,7 @@ record. There is no run log.
       Vue projects keep the 6.0 API until 7.1 ships a new one. vue-tsc 3.3.8
       supports exactly that install (vuejs/language-tools#6123), which earlier
       re-checks never tried: `typescript` is `npm:@typescript/typescript6`
-      (6.0.3), and `golar`, `@golar/vue` and `golar.config.ts` are gone.
+      (6.0.2), and `golar`, `@golar/vue` and `golar.config.ts` are gone.
       `nuxt typecheck` is clean, and it still catches a planted error in a
       `.vue` template and in a `.ts` file. It costs time: ~11.6 s against
       Golar's ~2.7 s.
@@ -1342,7 +1342,15 @@ record. There is no run log.
             it answers: the event loop turns and only that promise's timers
             are held (throttling or a frozen-then-thawed page); it does not:
             the page is blocked (a dialog, a synchronous wait).
-      - [ ] One reload of splimes' open README at 1280 px landed 31 px past
+            2026-10-15: twelve more Chromium runs against one build, back to
+            back (1,920 checks): no stall. Ten passed 160 of 160; the other two
+            failed on one console line each, `net::ERR_NETWORK_CHANGED`, and
+            each time the host journal shows another project's container
+            taking a veth up or down on `docker0` inside that run (21:59:29,
+            22:04:03). Chromium aborts in-flight loads on any interface
+            change, so on this host a local run can go red for that alone;
+            CI's runners do not churn. Still waiting on a real stall.
+      - [x] One reload of splimes' open README at 1280 px landed 31 px past
             the reader (4,170 → 4,201) in that same run against main's build.
             The trace shows the fold restoring 4,201 — the position
             `pagehide` saved — so the page had moved by 31 px between the
@@ -1351,6 +1359,16 @@ record. There is no run log.
             that night's local server served (fixed below): they move the
             page 2.3 px, not 31. Next: whether anything else above the reader
             still moves it after `arrive` settles.
+            Answered 2026-10-15, and nothing does. The check's sequence for
+            splimes at 1280 px (unfold, read 1,500 px down, blog tab, Back,
+            Forward, Back), replayed 21 times — 3 at full speed and 12 with the
+            CPU slowed 6× on today's build, 6 slowed on main's build of
+            2026-10-12 — then watched for 4 s instead of reloading: no layout
+            shift, no scroll and no height change, once. All seven README
+            images on the page carry their size. And 12 `check:navigation`
+            runs (each reloading this page) never failed its reload. Not
+            reproduced in 33 tries since the one; `check:navigation` remains
+            the tripwire if it comes back.
 - [ ] Look at the masthead in a real Firefox and in Tor Browser, scrolled —
       **needs a person with a real Firefox window**, because headless Firefox
       draws no `backdrop-filter` at all (checked 2026-10-13: not the site's
