@@ -4,6 +4,7 @@
  *   tor --SocksPort 9050 &            # any Tor client, bootstrapped
  *   npm run probe:onion                               # address from basicautomation.io
  *   npm run probe:onion -- --address=<name>.onion --socks=127.0.0.1:19050
+ *   npm run probe:onion -- --origin=http://<name>.onion --expect='Tor Project'
  *
  * The site already fetches itself over Tor (`onion/src/snapshot.rs`), and the
  * health it reports comes from that. But that fetch runs in the gateway's own
@@ -26,6 +27,12 @@
  * `-k` because the gateway's certificate is self-signed; the `.onion` name is
  * itself the service's key, which is what authenticates it.
  *
+ * `--origin` and `--expect` point it at another onion service, as a control:
+ * a first try that times out here and there means little until the same
+ * client, on the same network, is seen reaching a service that is not this
+ * one. Any page whose title matches `--expect` counts; a gate it does not
+ * know is reported as `stage: 'gate'`, the same as ours changing shape.
+ *
  * Tries up to `--tries` times (default 3) — one failed circuit is Tor, three in
  * a row is the service. Prints one JSON line per attempt and exits 1 if none
  * reached the site, 2 if it could not even ask (no address to probe).
@@ -47,7 +54,8 @@ const SOCKS = opt('socks', process.env.TOR_SOCKS ?? '127.0.0.1:9050')
 const TRIES = Number(opt('tries', 3))
 const TIMEOUT_S = Number(opt('timeout', 120))
 /** What the site's pages are titled; the gate's page is "Checking your connection…". */
-const SITE_TITLE = /Basic Automation|basic automation/
+const SITE_TITLE = new RegExp(opt('expect', 'Basic Automation|basic automation'))
+const ORIGIN = opt('origin', null)?.replace(/\/$/, '') ?? null
 
 /** Tor Browser 15's `Accept` for a document — what a real visitor sends. */
 const ACCEPT = 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8'
@@ -125,13 +133,13 @@ async function attempt(origin) {
 
 async function main() {
 	let address = opt('address', null)
-	if (!address) {
+	if (!address && !ORIGIN) {
 		const res = await fetch(`${SITE}/api/onion`)
 		if (!res.ok) throw new Error(`${SITE}/api/onion answered ${res.status}`)
 		address = (await res.json()).address
 		if (!address) throw new Error(`${SITE}/api/onion names no address`)
 	}
-	const origin = `https://${address}`
+	const origin = ORIGIN ?? `https://${address}`
 	console.log(`Probing ${origin} through SOCKS ${SOCKS}, up to ${TRIES} tries`)
 	for (let i = 1; i <= TRIES; i++) {
 		const result = await attempt(origin)
