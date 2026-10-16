@@ -427,7 +427,7 @@ record. There is no run log.
             reported, both green: 2026-10-12 15:25 UTC through the gate in
             82.6 s on the second try — the first timed out connecting after
             120 s — and 2026-10-13 00:39 UTC on the first, in 11.1 s.
-      - [ ] Read a few days of those runs before weighing C Tor: how many
+      - [x] Read a few days of those runs before weighing C Tor: how many
             first tries fail, and how long a reach takes. Each run's tries are
             in its step summary. The schedule is thinner than it looks: two
             scheduled runs in the first ~20 h, not three or four, and the
@@ -449,6 +449,35 @@ record. There is no run log.
             5.4–7.7 s); one needed two (82.6 s). Still one failed first try in
             eight; no run has failed outright. Nothing so far argues for C Tor;
             read again at a dozen.
+            The dozen, read 2026-10-15 21:30 CDT: twelve scheduled runs from
+            10-12 15:25 to 10-15 21:22 UTC (~78 h, about thirteen slots), all
+            green — no run failed to reach the site. Ten reached it on the
+            first try: nine in 8.3–17.7 s, one in 76.6 s (10-15 21:22 UTC,
+            `reachedMs` 71.2 s — slow to connect, not to solve). Two first
+            tries failed the same way, `curl` timing out at 120 s at the
+            *connect* stage (10-12 15:25 and 10-15 11:28 UTC), and both second
+            tries got through (82.6 s; 57.6 s). So one first try in six times
+            out before reaching the service, and the probe's retry has always
+            covered it. A failed connect stage is the descriptor or
+            introduction failing — the symptom the arti issues above
+            describe — but twelve runs from GitHub's network cannot say
+            whether a C-Tor-hosted service would do better from the same
+            client. The verdict for the owner: a visitor sometimes waits, no
+            visitor has been turned away; no case for a second runtime yet.
+      - [x] A control for that one-in-six: every run now also probes the Tor
+            Project's own onion site (the address its `Onion-Location` header
+            names) from the same client, in the same step, with
+            `--origin`/`--expect` on the same script. Which goes first
+            alternates by run number, so neither always meets a cold client.
+            The control is reported in the step summary and the issue body,
+            and decides nothing. Locally on 2026-10-15, both orders: ours
+            through the gate in 7.9 s and 6.4 s, the control in 3.0 s and
+            0.7 s; a wrong `--expect` fails it at `stage: 'gate'`, a dead SOCKS
+            port at `connect`, each exit 1.
+      - [ ] Read the control beside the service at a dozen runs: a first try
+            that times out on ours and not on the control's, run after run,
+            is the service (or arti); timing out on both is the client's
+            network.
 - [ ] Move the runtime to distroless — **needs an owner decision, because the
       size case for it is gone.** Measured 2026-09-27: the same build on
       `gcr.io/distroless/nodejs24-debian13:nonroot` is 73.0 MB of image content
@@ -508,7 +537,7 @@ record. There is no run log.
       Vue projects keep the 6.0 API until 7.1 ships a new one. vue-tsc 3.3.8
       supports exactly that install (vuejs/language-tools#6123), which earlier
       re-checks never tried: `typescript` is `npm:@typescript/typescript6`
-      (6.0.3), and `golar`, `@golar/vue` and `golar.config.ts` are gone.
+      (6.0.2), and `golar`, `@golar/vue` and `golar.config.ts` are gone.
       `nuxt typecheck` is clean, and it still catches a planted error in a
       `.vue` template and in a `.ts` file. It costs time: ~11.6 s against
       Golar's ~2.7 s.
@@ -543,6 +572,17 @@ record. There is no run log.
       `audit:runtime`, `check`, `a11y`, `a11y:browser` and `a11y:firefox`
       (23 pages × 3 widths) and `check:navigation` in both engines (160 each)
       clean; all routes answer as before. <https://github.com/vuejs/core/blob/main/CHANGELOG.md>
+- [ ] `@nuxt/ui` 4.12.0 (published 2026-10-15 13:01 UTC), held a night like
+      every release that reaches a visitor. A minor, not a patch: it changes
+      how the client is cut into chunks ("a page no longer loads the code of
+      components only other pages use", overlays lazy-loaded; their own table
+      says 871.6 → 549.6 kB of JS), and the site renders four of its
+      components on public pages (`UButton` for every `[copy]`, `USeparator`,
+      `UBadge`) plus the editor at `/admin`. So it goes in on the same body
+      diff Vue 3.5.44 did, plus the client-chunk sizes and
+      `check:navigation` in both engines, and a look at `/admin`. vitest
+      5.0.5 and jsdom 30.1.3 (same day, dev only) go with it.
+      <https://github.com/nuxt/ui/releases/tag/v4.12.0>
 - [ ] Move the type checker to TypeScript 7 once 7.1 ships its API and vue-tsc
       adopts it — the 6.0 API is a bridge, not a destination.
       <https://devblogs.microsoft.com/typescript/announcing-typescript-7-0/>
@@ -1302,7 +1342,17 @@ record. There is no run log.
             it answers: the event loop turns and only that promise's timers
             are held (throttling or a frozen-then-thawed page); it does not:
             the page is blocked (a dialog, a synchronous wait).
-      - [ ] One reload of splimes' open README at 1280 px landed 31 px past
+            2026-10-15: twelve more Chromium runs against one build, back to
+            back (1,920 checks): no stall. Ten passed 160 of 160; the other two
+            failed on one console line each, `net::ERR_NETWORK_CHANGED`, and
+            each time the host journal shows another project's container
+            taking a veth up or down on `docker0` inside that run (21:59:29,
+            22:04:03). Chromium aborts in-flight loads on any interface
+            change, so on this host a local run can go red for that alone;
+            CI's runners do not churn. Twelve more straight after, 160 of
+            160 each. 24 runs, 3,840 checks, no stall: still waiting on a
+            real one.
+      - [x] One reload of splimes' open README at 1280 px landed 31 px past
             the reader (4,170 → 4,201) in that same run against main's build.
             The trace shows the fold restoring 4,201 — the position
             `pagehide` saved — so the page had moved by 31 px between the
@@ -1311,6 +1361,16 @@ record. There is no run log.
             that night's local server served (fixed below): they move the
             page 2.3 px, not 31. Next: whether anything else above the reader
             still moves it after `arrive` settles.
+            Answered 2026-10-15, and nothing does. The check's sequence for
+            splimes at 1280 px (unfold, read 1,500 px down, blog tab, Back,
+            Forward, Back), replayed 21 times — 3 at full speed and 12 with the
+            CPU slowed 6× on today's build, 6 slowed on main's build of
+            2026-10-12 — then watched for 4 s instead of reloading: no layout
+            shift, no scroll and no height change, once. All seven README
+            images on the page carry their size. And 12 `check:navigation`
+            runs (each reloading this page) never failed its reload. Not
+            reproduced in 33 tries since the one; `check:navigation` remains
+            the tripwire if it comes back.
 - [ ] Look at the masthead in a real Firefox and in Tor Browser, scrolled —
       **needs a person with a real Firefox window**, because headless Firefox
       draws no `backdrop-filter` at all (checked 2026-10-13: not the site's

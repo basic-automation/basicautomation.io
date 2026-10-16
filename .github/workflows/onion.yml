@@ -12,6 +12,10 @@
 # Every six hours, because a descriptor that stops being found is an outage
 # hours long (2026-10-08 was four and a half), and weekly would miss it.
 #
+# Each run also probes one onion service that is not this one, as a control
+# (`CONTROL_ORIGIN` below): an occasional first try that times out means
+# little until the same client is seen doing the same to someone else's.
+#
 # It also runs on a pull request that changes the probe or this file, so a
 # broken probe is caught before it starts reporting outages that aren't.
 
@@ -36,6 +40,12 @@ concurrency:
 
 env:
   ISSUE_TITLE: "Onion service: not reachable from outside"
+  # The control: the Tor Project's own site, as its Onion-Location header
+  # names it (read 2026-10-15). A long-lived service that is not this one, so
+  # a first try that fails on both points at the client's network, not at
+  # this gateway. http, as that header gives it.
+  CONTROL_ORIGIN: http://2gzyxa5ihm7nsggfxnu52rck2vv4rvmdlkiu3zzui5du4xyclen53wid.onion
+  CONTROL_TITLE: Tor Project
 
 jobs:
   probe:
@@ -68,19 +78,43 @@ jobs:
       # `set +e`: an unreachable service is the thing being reported, so its
       # exit code must not end a scheduled job before the issue is kept in sync.
       # On a pull request there is no issue to keep, and it fails the run.
+      #
+      # The control is probed in the same step, on the same client, and never
+      # decides anything: its exit code is reported, not acted on. Which of the
+      # two goes first alternates by run number, so neither always gets the
+      # client cold, while its first circuits are still being built.
       - name: Probe
         id: probe
         run: |
           set +e
-          node scripts/probe-onion.mjs --socks=127.0.0.1:19050 --tries=4 2>&1 | tee probe.log
-          status=${PIPESTATUS[0]}
+          ours() {
+            node scripts/probe-onion.mjs --socks=127.0.0.1:19050 --tries=4 > probe.log 2>&1
+            status=$?
+          }
+          control() {
+            node scripts/probe-onion.mjs --socks=127.0.0.1:19050 --tries=2 \
+              --origin="$CONTROL_ORIGIN" --expect="$CONTROL_TITLE" > control.log 2>&1
+            echo "exit $?" >> control.log
+          }
+          if [ $((GITHUB_RUN_NUMBER % 2)) = 0 ]; then ours; control; first=this; else control; ours; first=control; fi
           set -e
+          # Both into the job log as well as the summary: `gh run view --log` is
+          # how these runs are read afterwards, and it cannot see the summary.
+          cat probe.log
+          echo "--- control ($first first)"
+          cat control.log
           echo "status=$status" >> "$GITHUB_OUTPUT"
           {
             echo "## Onion service"
             echo
             echo '```'
             cat probe.log
+            echo '```'
+            echo
+            echo "### Control (probed $([ "$first" = control ] && echo first || echo second))"
+            echo
+            echo '```'
+            cat control.log
             echo '```'
           } | tee report.md >> "$GITHUB_STEP_SUMMARY"
           if [ "$status" != 0 ] && [ "${{ github.event_name }}" = pull_request ]; then exit "$status"; fi
