@@ -464,11 +464,20 @@ record. There is no run log.
             whether a C-Tor-hosted service would do better from the same
             client. The verdict for the owner: a visitor sometimes waits, no
             visitor has been turned away; no case for a second runtime yet.
-      - [ ] A control for that one-in-six: the same probe, from the same
-            runner, against a long-lived onion service hosted on C Tor, so a
-            failed first try can be laid at the service's door or the client
-            network's. Without it the C Tor question cannot be settled from
-            these numbers.
+      - [x] A control for that one-in-six: every run now also probes the Tor
+            Project's own onion site (the address its `Onion-Location` header
+            names) from the same client, in the same step, with
+            `--origin`/`--expect` on the same script. Which goes first
+            alternates by run number, so neither always meets a cold client.
+            The control is reported in the step summary and the issue body,
+            and decides nothing. Locally on 2026-10-15, both orders: ours
+            through the gate in 7.9 s and 6.4 s, the control in 3.0 s and
+            0.7 s; a wrong `--expect` fails it at `stage: 'gate'`, a dead SOCKS
+            port at `connect`, each exit 1.
+      - [ ] Read the control beside the service at a dozen runs: a first try
+            that times out on ours and not on the control's, run after run,
+            is the service (or arti); timing out on both is the client's
+            network.
 - [ ] Move the runtime to distroless — **needs an owner decision, because the
       size case for it is gone.** Measured 2026-09-27: the same build on
       `gcr.io/distroless/nodejs24-debian13:nonroot` is 73.0 MB of image content
@@ -563,6 +572,17 @@ record. There is no run log.
       `audit:runtime`, `check`, `a11y`, `a11y:browser` and `a11y:firefox`
       (23 pages × 3 widths) and `check:navigation` in both engines (160 each)
       clean; all routes answer as before. <https://github.com/vuejs/core/blob/main/CHANGELOG.md>
+- [ ] `@nuxt/ui` 4.12.0 (published 2026-10-15 13:01 UTC), held a night like
+      every release that reaches a visitor. A minor, not a patch: it changes
+      how the client is cut into chunks ("a page no longer loads the code of
+      components only other pages use", overlays lazy-loaded; their own table
+      says 871.6 → 549.6 kB of JS), and the site renders four of its
+      components on public pages (`UButton` for every `[copy]`, `USeparator`,
+      `UBadge`) plus the editor at `/admin`. So it goes in on the same body
+      diff Vue 3.5.44 did, plus the client-chunk sizes and
+      `check:navigation` in both engines, and a look at `/admin`. vitest
+      5.0.5 and jsdom 30.1.3 (same day, dev only) go with it.
+      <https://github.com/nuxt/ui/releases/tag/v4.12.0>
 - [ ] Move the type checker to TypeScript 7 once 7.1 ships its API and vue-tsc
       adopts it — the 6.0 API is a bridge, not a destination.
       <https://devblogs.microsoft.com/typescript/announcing-typescript-7-0/>
