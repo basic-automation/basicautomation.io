@@ -348,7 +348,10 @@ outside view: through any bootstrapped Tor client (`--socks=host:port`, default
 headers, solves the abuse gate's proof-of-work and checks the site's `<title>`
 is behind it. `.github/workflows/onion.yml` runs it every six hours from a
 fresh Tor client on a GitHub runner and keeps one issue in sync — open while the
-service cannot be reached from outside, closed the first run it can.
+service cannot be reached from outside, closed the first run it can. Each run
+also probes the Tor Project's own onion site from the same client
+(`--origin=… --expect=…`), as a control: a slow or failed try that happens to
+both is the network, not this service. The control is reported, never acted on.
 
 `docs/onion.md` is the design note: why a forwarding `Router` rather than a raw
 TCP tunnel, and what each slice actually answered.
