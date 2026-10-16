@@ -427,7 +427,7 @@ record. There is no run log.
             reported, both green: 2026-10-12 15:25 UTC through the gate in
             82.6 s on the second try — the first timed out connecting after
             120 s — and 2026-10-13 00:39 UTC on the first, in 11.1 s.
-      - [ ] Read a few days of those runs before weighing C Tor: how many
+      - [x] Read a few days of those runs before weighing C Tor: how many
             first tries fail, and how long a reach takes. Each run's tries are
             in its step summary. The schedule is thinner than it looks: two
             scheduled runs in the first ~20 h, not three or four, and the
@@ -449,6 +449,26 @@ record. There is no run log.
             5.4–7.7 s); one needed two (82.6 s). Still one failed first try in
             eight; no run has failed outright. Nothing so far argues for C Tor;
             read again at a dozen.
+            The dozen, read 2026-10-15 21:30 CDT: twelve scheduled runs from
+            10-12 15:25 to 10-15 21:22 UTC (~78 h, about thirteen slots), all
+            green — no run failed to reach the site. Ten reached it on the
+            first try: nine in 8.3–17.7 s, one in 76.6 s (10-15 21:22 UTC,
+            `reachedMs` 71.2 s — slow to connect, not to solve). Two first
+            tries failed the same way, `curl` timing out at 120 s at the
+            *connect* stage (10-12 15:25 and 10-15 11:28 UTC), and both second
+            tries got through (82.6 s; 57.6 s). So one first try in six times
+            out before reaching the service, and the probe's retry has always
+            covered it. A failed connect stage is the descriptor or
+            introduction failing — the symptom the arti issues above
+            describe — but twelve runs from GitHub's network cannot say
+            whether a C-Tor-hosted service would do better from the same
+            client. The verdict for the owner: a visitor sometimes waits, no
+            visitor has been turned away; no case for a second runtime yet.
+      - [ ] A control for that one-in-six: the same probe, from the same
+            runner, against a long-lived onion service hosted on C Tor, so a
+            failed first try can be laid at the service's door or the client
+            network's. Without it the C Tor question cannot be settled from
+            these numbers.
 - [ ] Move the runtime to distroless — **needs an owner decision, because the
       size case for it is gone.** Measured 2026-09-27: the same build on
       `gcr.io/distroless/nodejs24-debian13:nonroot` is 73.0 MB of image content
