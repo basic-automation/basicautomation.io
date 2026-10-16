@@ -1349,7 +1349,9 @@ record. There is no run log.
             taking a veth up or down on `docker0` inside that run (21:59:29,
             22:04:03). Chromium aborts in-flight loads on any interface
             change, so on this host a local run can go red for that alone;
-            CI's runners do not churn. Still waiting on a real stall.
+            CI's runners do not churn. Twelve more straight after, 160 of
+            160 each. 24 runs, 3,840 checks, no stall: still waiting on a
+            real one.
       - [x] One reload of splimes' open README at 1280 px landed 31 px past
             the reader (4,170 → 4,201) in that same run against main's build.
             The trace shows the fold restoring 4,201 — the position
