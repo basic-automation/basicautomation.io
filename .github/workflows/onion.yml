@@ -98,7 +98,11 @@ jobs:
           }
           if [ $((GITHUB_RUN_NUMBER % 2)) = 0 ]; then ours; control; first=this; else control; ours; first=control; fi
           set -e
+          # Both into the job log as well as the summary: `gh run view --log` is
+          # how these runs are read afterwards, and it cannot see the summary.
           cat probe.log
+          echo "--- control ($first first)"
+          cat control.log
           echo "status=$status" >> "$GITHUB_OUTPUT"
           {
             echo "## Onion service"
