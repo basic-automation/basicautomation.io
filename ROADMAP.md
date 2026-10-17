@@ -478,6 +478,12 @@ record. There is no run log.
             that times out on ours and not on the control's, run after run,
             is the service (or arti); timing out on both is the client's
             network.
+            So far, four runs with a control (the two on PR 26, then the
+            scheduled 10-16 16:39 and 21:08 UTC): ours missed its first try
+            in three (a 120 s connect timeout, SOCKS error 6, a 120 s connect
+            timeout; the second try landed in 11–12 s, 3 s), the control in one
+            (SOCKS error 6 at 119 s, 16:39; its second try landed in 1.6 s).
+            Too few to say which side it is.
 - [ ] Move the runtime to distroless — **needs an owner decision, because the
       size case for it is gone.** Measured 2026-09-27: the same build on
       `gcr.io/distroless/nodejs24-debian13:nonroot` is 73.0 MB of image content
@@ -572,7 +578,7 @@ record. There is no run log.
       `audit:runtime`, `check`, `a11y`, `a11y:browser` and `a11y:firefox`
       (23 pages × 3 widths) and `check:navigation` in both engines (160 each)
       clean; all routes answer as before. <https://github.com/vuejs/core/blob/main/CHANGELOG.md>
-- [ ] `@nuxt/ui` 4.12.0 (published 2026-10-15 13:01 UTC), held a night like
+- [x] `@nuxt/ui` 4.12.0 (published 2026-10-15 13:01 UTC), held a night like
       every release that reaches a visitor. A minor, not a patch: it changes
       how the client is cut into chunks ("a page no longer loads the code of
       components only other pages use", overlays lazy-loaded; their own table
@@ -583,6 +589,33 @@ record. There is no run log.
       `check:navigation` in both engines, and a look at `/admin`. vitest
       5.0.5 and jsdom 30.1.3 (same day, dev only) go with it.
       <https://github.com/nuxt/ui/releases/tag/v4.12.0>
+      Landed 2026-10-16 (Nuxt held at 4.6.1, see below): all 42 routes
+      `verify` exercises answer as before, and the only markup difference on
+      the 26 pages whose bodies differ is `USeparator` no longer emitting the
+      no-op class `align-center` (plus the build id and live data). The
+      client is *not* smaller here: `_nuxt/` is 1,051,864 → 1,062,868 bytes
+      (73 files either way) — the cut the release's table promises is for
+      apps with overlays and more components than four. Typecheck, 279 tests,
+      `audit:runtime`, `check`, `a11y`, `a11y:browser` and `a11y:firefox`, and
+      `check:navigation` in Chromium (160) clean. `/admin` is 404 without its
+      credentials, as ever; its chunk builds. Firefox's `check:navigation`
+      failed 2 runs of 3 on one check, which is not this bump — see the
+      Firefox item under the stall hunt.
+- [ ] Nuxt 4.6.2 (published 2026-10-16 17:21 UTC), held a night like every
+      release that reaches a visitor — it was four hours old when this ran. A
+      patch of ~30 fixes; the ones this site could feel: server route rules
+      now match case-insensitively unless routing is sensitive, router params
+      read from the path h3 matched, "fix scroll offset for IDs starting with
+      numbers" (the `#heading` landing), and "preserve error state on aborted
+      or cancelled navigation". It also brings `@nuxt/devtools` 3.4.3, which
+      drops `simple-git` from the tree (the upstream item under the
+      supply-chain section resolves with it). Same body diff as above, plus
+      `/ADMIN` and `/admin` probes (the case rule) and `check:navigation` in
+      both engines. Tried on a scratch tree 2026-10-16: typecheck, 279 tests,
+      build, all 42 routes, `audit:runtime`, `check`, `a11y`, Chromium and
+      Firefox a11y and Chromium navigation were clean; only the Firefox
+      flake below.
+      <https://github.com/nuxt/nuxt/releases/tag/v4.6.2>
 - [ ] Move the type checker to TypeScript 7 once 7.1 ships its API and vue-tsc
       adopts it — the 6.0 API is a bridge, not a destination.
       <https://devblogs.microsoft.com/typescript/announcing-typescript-7-0/>
@@ -1319,6 +1352,16 @@ record. There is no run log.
             of 60; with no `scrollTo` at all, on it 30 of 30.
       - [ ] Report it to Chromium with that file — **owner's call**, as with
             the Nuxt one above, since it speaks for the organization.
+      - [ ] Firefox `check:navigation`, Nanna's page at 390 px: "a client
+            navigation to #api-key-invalid opens it at the heading" lands the
+            heading 5–6 px above its aim (`heading` 10–11 against `aim` 16,
+            `y` 16,671, not at the end) — and it failed 2 runs of 3 on
+            2026-10-16 on *both* a build of `main` (Nuxt 4.6.0, `@nuxt/ui`
+            4.11.3) and the bump's, passing the third. Earlier that day,
+            Firefox passed 160/160 twice. A flake or a drift in Firefox's
+            smooth scroll on the longest page, not the dependency bump; look
+            at whether the page is still settling (lazy images above the
+            heading) when the check reads.
       - [ ] Find out what the 2026-10-12 stalled run (Nanna, phone, held until
             the 15-minute step timeout) was waiting for. Every CDP and BiDi
             request now fails after 180 s, naming itself — and on 2026-10-13
