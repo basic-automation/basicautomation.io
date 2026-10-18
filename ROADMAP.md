@@ -615,6 +615,21 @@ record. There is no run log.
       build, all 42 routes, `audit:runtime`, `check`, `a11y`, Chromium and
       Firefox a11y and Chromium navigation were clean; only the Firefox
       flake below.
+      **Held again 2026-10-17 on a real regression.** On a 4.6.2 build,
+      Chromium's `check:navigation` failed 3 runs of 3 on the same check — "a
+      client navigation to #api-key-invalid opens it at the heading" on
+      Nanna's phone page: heading at 10 px, aim 16 (`y` 16235) — while a
+      build of `main` (4.6.1) passed 160/160 on both of 2 runs. Everything
+      else was clean on 4.6.2: typecheck, 279 tests, build, 31 routes with
+      status codes identical to `main`'s, page bodies identical bar the build
+      id, `audit:runtime`, `check`, `a11y`, Chromium and Firefox a11y. So the
+      Firefox "flake" below may be the same 6 px, seen intermittently. The
+      suspect is the 4.6.2 `router.options.js` hash path (`top:
+      _getHashElementScrollMarginTop`, `behavior` instant for a same-page
+      move); `app/router.options.ts` wraps it. Next angle: diff
+      `router.options.js` between 4.6.1 and 4.6.2 and trace the landing frame
+      by frame (the check's `TRACE`) before deciding whether `atHeading`'s aim
+      or our wrapper must move; take the bump only with the check green.
       <https://github.com/nuxt/nuxt/releases/tag/v4.6.2>
 - [ ] Move the type checker to TypeScript 7 once 7.1 ships its API and vue-tsc
       adopts it — the 6.0 API is a bridge, not a destination.
