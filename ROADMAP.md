@@ -647,6 +647,14 @@ record. There is no run log.
       one unread failure leaves open that 4.6.2 is slightly worse; CI's
       navigation job is the gate, and a red one reverts the bump.
       <https://github.com/nuxt/nuxt/releases/tag/v4.6.2>
+- [ ] Try Nuxt 5's defaults early on a scratch build with
+      `future.compatibilityVersion: 5` — the 4.6.0 notes say most remaining v5
+      defaults can be opted into now and that server code written against
+      `nuxt/server` on 4.6 runs unchanged on Nitro 3 / h3 v2, so the cost of
+      the real move can be read before it ships. Never on `main`; report what
+      breaks (the router options wrapper reaches into `nuxt/dist` by path, the
+      likeliest casualty). No release date is given.
+      <https://github.com/nuxt/nuxt/releases/tag/v4.6.0>
 - [ ] Move the type checker to TypeScript 7 once 7.1 ships its API and vue-tsc
       adopts it — the 6.0 API is a bridge, not a destination.
       <https://devblogs.microsoft.com/typescript/announcing-typescript-7-0/>
