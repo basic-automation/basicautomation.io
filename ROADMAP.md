@@ -654,6 +654,14 @@ record. There is no run log.
       the real move can be read before it ships. Never on `main`; report what
       breaks (the router options wrapper reaches into `nuxt/dist` by path, the
       likeliest casualty). No release date is given.
+      First read 2026-10-18 (scratch edit, reverted): the build is green, but
+      `nuxt typecheck` fails — the v5 default is `moduleResolution: node16`
+      style resolution, so `nuxt.config.ts`'s relative imports want `.js`
+      extensions, and the server files lose their auto-imports in the type
+      program (`useRuntimeConfig`, `defineCachedFunction` unresolved). Not
+      run past the build: no server or browser pass on it. Next slice: add
+      the explicit imports (`nitropack/runtime`-style) on 4.6.2 first, which
+      is valid either way, then retry.
       <https://github.com/nuxt/nuxt/releases/tag/v4.6.0>
 - [ ] Move the type checker to TypeScript 7 once 7.1 ships its API and vue-tsc
       adopts it — the 6.0 API is a bridge, not a destination.
