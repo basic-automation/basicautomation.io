@@ -601,7 +601,7 @@ record. There is no run log.
       credentials, as ever; its chunk builds. Firefox's `check:navigation`
       failed 2 runs of 3 on one check, which is not this bump — see the
       Firefox item under the stall hunt.
-- [ ] Nuxt 4.6.2 (published 2026-10-16 17:21 UTC), held a night like every
+- [x] Nuxt 4.6.2 (published 2026-10-16 17:21 UTC), held a night like every
       release that reaches a visitor — it was four hours old when this ran. A
       patch of ~30 fixes; the ones this site could feel: server route rules
       now match case-insensitively unless routing is sensitive, router params
@@ -630,6 +630,22 @@ record. There is no run log.
       `router.options.js` between 4.6.1 and 4.6.2 and trace the landing frame
       by frame (the check's `TRACE`) before deciding whether `atHeading`'s aim
       or our wrapper must move; take the bump only with the check green.
+      **Landed 2026-10-18, with the 10-17 failure not reproduced.** The diff
+      of `router.options.js` is one function: `_getHashElementScrollMarginTop`
+      takes the hash and uses `getElementById(hash.slice(1))` where 4.6.1
+      called `querySelector` — the same element, the same margin; nothing in
+      the scroll maths moved. The other change on that path is `page.js`
+      starting a page transition only once a page has resolved. On a 4.6.2
+      build, Chromium's `check:navigation` passed 10 of 12 runs (160/160), one
+      failed on `net::ERR_NETWORK_CHANGED` (a docker veth coming up, not the
+      site) and one failed on something its output tail did not keep. `main`'s
+      build passed 6 of 6. A focused loop of exactly that step — Nanna at
+      390 px, blog tab then `router.push` to `#api-key-invalid`, after a
+      6×-slowed cold load of the same hash — missed 0 of 25 on both builds,
+      at full speed, and with the CPU still at 6×. Firefox `check:navigation`
+      160/160. So the cause of 10-17's three failures is unexplained, and the
+      one unread failure leaves open that 4.6.2 is slightly worse; CI's
+      navigation job is the gate, and a red one reverts the bump.
       <https://github.com/nuxt/nuxt/releases/tag/v4.6.2>
 - [ ] Move the type checker to TypeScript 7 once 7.1 ships its API and vue-tsc
       adopts it — the 6.0 API is a bridge, not a destination.
@@ -1559,12 +1575,14 @@ record. There is no run log.
       `@nuxt/icon`, `@nuxtjs/color-mode`…). It fails on a planted
       `marked@4.0.9`, on a missing inventory and on an empty one. Also learned:
       `@tiptap/markdown`'s `marked@17` never reaches a browser.
-- [ ] Upstream: `@nuxt/devtools` 3.4.2 pins `simple-git ^3.36.0`, and
+- [x] Upstream: `@nuxt/devtools` 3.4.2 pins `simple-git ^3.36.0`, and
       `npm audit` reports four advisories against it (two critical, command
       execution through git options), patched only in `simple-git` 4. Not
       reachable here — `devtools: { enabled: false }`, and nothing of it
-      ships — and Nuxt 4.6 still resolves the same versions. Moves when
-      devtools does. <https://github.com/advisories/GHSA-858h-whjf-mvg5>
+      ships — and Nuxt 4.6 still resolves the same versions. Resolved
+      2026-10-18 by Nuxt 4.6.2, which brings devtools 3.4.4: `simple-git` is
+      no longer in `node_modules`, and `npm audit` is 12 (braces, esbuild,
+      node-forge and what hangs off them — all build or dev time). <https://github.com/advisories/GHSA-858h-whjf-mvg5>
       Devtools' `launch-editor` also brought `shell-quote` 1.10.0 (critical,
       command injection in `quote()`); 1.12.0 is in range and the lockfile
       takes it since 2026-10-08. <https://github.com/advisories/GHSA-pqg4-j6r4-53mv>
