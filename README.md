@@ -197,6 +197,7 @@ npm run dev          # http://localhost:3000
 npm run build        # .output/ — a self-contained Nitro node server
 npm run start        # serve the build
 npm run typecheck    # vue-tsc on the TypeScript 6.0 API, as TS 7.0 advises for Vue
+NUXT_TRY_V5=1 npm run typecheck  # …again under Nuxt 5's defaults, as CI does
 npm test             # unit tests over the pure helpers in shared/
 npm run sync         # refresh data/projects.generated.json
 npm run og           # re-render the per-project social cards (needs Chromium)
