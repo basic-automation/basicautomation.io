@@ -721,7 +721,7 @@ record. There is no run log.
       - [x] A first server pass on a v5-flagged build (2026-10-19, scratch
             only): all 45 routes answer with the same status codes as main's
             build, GET and HEAD, and every page body matches but for the
-            stylesheet's hash. Three differences to settle before the real
+            stylesheet's hash and the clocks (uptime, "6 days ago"). Three differences to settle before the real
             move: (1) a page 404 (`/nope`, `/projects/nope`, `/news/nope`,
             `/admin`) answers a client that did not ask for HTML with the
             19 KB HTML error page, under the full page CSP, where v4 sends a
@@ -731,11 +731,16 @@ record. There is no run log.
             (3) Nuxt warns `NUXT_B5023`: under v5 it loads `nuxt.config.ts`
             natively first, and the `.js` imports the v5 typecheck wants
             resolve to no file, so it falls back to jiti.
-      - [ ] Next: settle those three — whether the HTML 404 is wanted (it is
-            what a browser already gets), whether the CSS difference is a
-            Tailwind/Lightning CSS setting v5 changes, and an import form
-            both the native loader and the v5 types accept — then a browser
-            pass on a v5 build.
+      - [x] (3) settled: `nuxt.config.ts` imports its three local modules as
+            `.ts` (the generated node tsconfig has
+            `allowImportingTsExtensions`), which both typechecks pass and
+            which the v5 build loads natively, without `NUXT_B5023`; the
+            shipped build is unchanged (45 routes against main's: clocks
+            only).
+      - [ ] Next: settle (1) and (2) — whether the HTML 404 is wanted (it
+            is what a browser already gets), whether the CSS difference is a
+            Tailwind/Lightning CSS setting v5 changes — then a browser pass on
+            a v5 build.
 - [ ] Move the type checker to TypeScript 7 once 7.1 ships its API and vue-tsc
       adopts it — the 6.0 API is a bridge, not a destination.
       <https://devblogs.microsoft.com/typescript/announcing-typescript-7-0/>

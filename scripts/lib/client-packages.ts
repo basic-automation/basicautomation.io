@@ -18,7 +18,7 @@
 import { readFileSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
 import type { Plugin } from 'vite'
-import { packageFromPath } from '../../shared/security/advisories.js'
+import { packageFromPath } from '../../shared/security/advisories.ts'
 
 export const CLIENT_PACKAGES_FILE = 'client-packages.json'
 
