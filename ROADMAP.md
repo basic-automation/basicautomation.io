@@ -464,6 +464,7 @@ record. There is no run log.
             whether a C-Tor-hosted service would do better from the same
             client. The verdict for the owner: a visitor sometimes waits, no
             visitor has been turned away; no case for a second runtime yet.
+            (Overturned 2026-10-19 by the control, below.)
       - [x] A control for that one-in-six: every run now also probes the Tor
             Project's own onion site (the address its `Onion-Location` header
             names) from the same client, in the same step, with
@@ -474,16 +475,39 @@ record. There is no run log.
             through the gate in 7.9 s and 6.4 s, the control in 3.0 s and
             0.7 s; a wrong `--expect` fails it at `stage: 'gate'`, a dead SOCKS
             port at `connect`, each exit 1.
-      - [ ] Read the control beside the service at a dozen runs: a first try
+      - [x] Read the control beside the service at a dozen runs: a first try
             that times out on ours and not on the control's, run after run,
             is the service (or arti); timing out on both is the client's
             network.
-            So far, four runs with a control (the two on PR 26, then the
-            scheduled 10-16 16:39 and 21:08 UTC): ours missed its first try
-            in three (a 120 s connect timeout, SOCKS error 6, a 120 s connect
-            timeout; the second try landed in 11–12 s, 3 s), the control in one
-            (SOCKS error 6 at 119 s, 16:39; its second try landed in 1.6 s).
-            Too few to say which side it is.
+            Read 2026-10-19 21:30 CDT: fifteen runs with a control (the two
+            on PR 26, then thirteen scheduled, 10-16 16:39 to 10-19 22:21
+            UTC), all green. **Ours missed its first try in 7 of 15, the
+            control in 2.** Ours alone 6 times, the control alone once, both
+            once (10-17 04:25, the client's network). Order does not explain
+            it: of ours' five scheduled misses, three were probed first and
+            two second. The misses
+            are all at the connect stage (SOCKS error 6, or curl's 120 s
+            timeout), and on 10-17 10:44 ours took four tries and ~7.7 min,
+            one of them a transfer cut off after 212 s. So it is the service
+            or arti, not GitHub's network. The control's first tries landed
+            in 1.8–28 s; ours, when they landed, in 7–63 s.
+            The gateway's own log says the same from inside. From the
+            2026-10-15 03:19 UTC deploy to 10-20 02:00 UTC (~95 h) its
+            self-fetch over Tor went unanswered eight times for longer than
+            the 30-minute alarm: 37, 102, 68, 63, 102, 47, 39 and 42 minutes
+            (10-16 ×4, 10-17 ×3, 10-19 ×1), ~500 minutes in all, about 9 % of
+            the time, each ended 7–72 min after the in-place restart. The
+            10-16 21:08 probe miss falls inside one of them; the other misses
+            fall between self-fetches, which run every 10 minutes and only
+            report a 30-minute gap. 1,040 descriptor-upload failures in the
+            first 21 h after the 10-10 deploy have become 5,646 in this
+            container's ~95 h, with 4,082 "too many preemptive circuits".
+            The 2026-10-15 verdict, "no visitor has been turned away", no
+            longer holds: a visitor arriving in one of those windows is.
+      - [ ] Put the numbers above to the owner: arti 0.47 (blocked on an
+            onyums release, see the Arti item) or C Tor beside the site (a
+            second runtime in the image) — **owner decision**. Until then the
+            probe and the self-fetch keep counting.
 - [ ] Move the runtime to distroless — **needs an owner decision, because the
       size case for it is gone.** Measured 2026-09-27: the same build on
       `gcr.io/distroless/nodejs24-debian13:nonroot` is 73.0 MB of image content
