@@ -19,17 +19,20 @@ import { bySlug } from '~~/data/projects'
 definePageMeta({
   middleware: [
     (to) => {
+      // Narrowed, not read off blind: with Nuxt 5's typed routes `to.params` is
+      // the union of every route's params, and most have no `slug`.
+      const slug = 'slug' in to.params ? String(to.params.slug) : ''
       // Only a project that exists has an about tab to go to. Redirecting an
       // unknown slug too sent a crawler on a 301 to learn it had found a 404,
       // and told it "moved permanently" about something that never existed.
-      if (!bySlug(String(to.params.slug))) {
+      if (!bySlug(slug)) {
         return abortNavigation(createError({ statusCode: 404, statusMessage: 'No such project', fatal: import.meta.client }))
       }
       // The query goes along: a link from a campaign carries its `utm_*` tags
       // on this address, and a redirect that dropped them would erase where
       // the visit came from. The canonical link on the target stays query-free
       // either way (`useCanonical`).
-      return navigateTo({ path: `/projects/${to.params.slug}/about`, query: to.query }, { redirectCode: 301 })
+      return navigateTo({ path: `/projects/${slug}/about`, query: to.query }, { redirectCode: 301 })
     },
   ],
 })

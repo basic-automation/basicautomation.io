@@ -11,6 +11,7 @@
  * releases feed makes the same trade.
  */
 
+import { defineEventHandler } from 'nuxt/server'
 import { bySlug } from '~~/data/projects'
 import { SITE_BLOG_PATH, blogIndexPath, isSiteSection, postPath } from '~~/shared/posts/section'
 import { xmlEscape } from '~~/shared/xml/escape'
@@ -44,8 +45,8 @@ export default defineEventHandler(async (event) => {
   </entry>`
   })
 
-  setResponseHeader(event, 'content-type', 'application/atom+xml; charset=utf-8')
-  setResponseHeader(event, 'cache-control', 'public, max-age=900')
+  event.res.headers.set('content-type', 'application/atom+xml; charset=utf-8')
+  event.res.headers.set('cache-control', 'public, max-age=900')
 
   return `<?xml version="1.0" encoding="UTF-8"?>
 <feed xmlns="http://www.w3.org/2005/Atom">

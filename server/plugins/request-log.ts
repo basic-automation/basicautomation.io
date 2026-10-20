@@ -11,6 +11,8 @@
  * a log that is 90% noise does not get read.
  */
 
+import { H3Event, getRequestHeader, getResponseStatus } from 'h3'
+import { defineNitroPlugin } from 'nitropack/runtime'
 import { clientAddress } from '~~/shared/log/client'
 import { VIA_ONION, cameOverOnion } from '~~/shared/onion/via'
 

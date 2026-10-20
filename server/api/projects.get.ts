@@ -1,3 +1,5 @@
+import { defineEventHandler } from 'nuxt/server'
+
 export default defineEventHandler(async () => {
   const items = await getProjects()
   return {

@@ -22,6 +22,10 @@
  * whole contract. Only the method h3 ROUTES on is changed; the original is kept
  * in the context so the request log still records what was actually asked.
  */
+// h3's own handler, not `nuxt/server`'s: this rewrites the node request's
+// method before h3 routes on it, which only means anything on h3 itself.
+import { defineEventHandler } from 'h3'
+
 declare module 'h3' {
 	interface H3EventContext {
 		/** Set here when a HEAD was routed as a GET. Read by the request log. */

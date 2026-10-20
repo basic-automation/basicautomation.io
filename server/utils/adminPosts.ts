@@ -22,6 +22,7 @@
  */
 import { mkdir, readFile, rename, unlink, writeFile } from 'node:fs/promises'
 import { dirname } from 'node:path'
+import { createError } from 'nuxt/server'
 
 import { SLUG, invalidatePosts, postPath } from './posts'
 
@@ -108,7 +109,7 @@ export function serialise(post: PostInput): string {
  */
 export async function writePost(post: PostInput): Promise<void> {
   const path = postPath(post.project, post.slug)
-  if (!path) throw createError({ statusCode: 400, statusMessage: 'unknown project or slug' })
+  if (!path) throw createError({ status: 400, statusText: 'unknown project or slug' })
 
   await mkdir(dirname(path), { recursive: true })
   const tmp = `${path}.tmp`

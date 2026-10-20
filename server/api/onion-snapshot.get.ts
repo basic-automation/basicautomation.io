@@ -1,3 +1,5 @@
+import { defineEventHandler } from 'nuxt/server'
+
 /**
  * What the last Tor fetch measured — without the document itself.
  *

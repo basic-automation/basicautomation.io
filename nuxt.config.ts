@@ -1,6 +1,6 @@
-import { contentSecurityPolicy } from './shared/security/csp'
-import { projects } from './data/projects'
-import { clientPackages } from './scripts/lib/client-packages'
+import { contentSecurityPolicy } from './shared/security/csp.js'
+import { projects } from './data/projects.js'
+import { clientPackages } from './scripts/lib/client-packages.js'
 
 // Which packages the client bundle is made of, for `npm run audit:runtime`.
 const shippedToBrowsers = clientPackages()

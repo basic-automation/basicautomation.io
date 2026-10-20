@@ -1,3 +1,5 @@
+import { defineEventHandler } from 'nuxt/server'
+
 /**
  * Liveness, for the container healthcheck — and enough detail beside it to
  * answer "is it serving real data right now?" without opening a shell.
@@ -9,6 +11,6 @@
  */
 
 export default defineEventHandler((event) => {
-  setResponseHeader(event, 'cache-control', 'no-store')
+  event.res.headers.set('cache-control', 'no-store')
   return health()
 })

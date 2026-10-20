@@ -1,3 +1,5 @@
+import { createError, defineEventHandler, readBody } from 'nuxt/server'
+
 /**
  * Create or replace a post.
  *
@@ -9,7 +11,7 @@ export default defineEventHandler(async (event) => {
   await requireEditor(event)
 
   const parsed = parsePost(await readBody(event))
-  if (!parsed.ok) throw createError({ statusCode: 400, statusMessage: parsed.reason })
+  if (!parsed.ok) throw createError({ status: 400, statusText: parsed.reason })
 
   await writePost(parsed.post)
   return { ok: true, project: parsed.post.project, slug: parsed.post.slug }

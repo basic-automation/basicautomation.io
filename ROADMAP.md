@@ -687,6 +687,34 @@ record. There is no run log.
       the explicit imports (`nitropack/runtime`-style) on 4.6.2 first, which
       is valid either way, then retry.
       <https://github.com/nuxt/nuxt/releases/tag/v4.6.0>
+      - [x] Explicit server imports, landed 2026-10-19 on 4.6.2, as Nuxt's
+            upgrade guide asks of 4.6 code: every handler under `server/api`,
+            `server/routes` and the site-origin middleware imports
+            `defineEventHandler` and its helpers from `nuxt/server`, and sets
+            headers through the portable `event.res.headers` (there is no
+            portable `setResponseHeader`); `createError` takes `status` /
+            `statusText`; `useRuntimeConfig()` loses its event. The Nitro
+            plugins and the HEAD middleware, which see raw h3 events, import
+            from `h3` and `nitropack/runtime` by name, as does
+            `defineCachedFunction` — runtime-pinned, to revisit on Nuxt 5. The
+            one route-param read the v5 typed routes reject is narrowed, and
+            `nuxt.config.ts` imports with `.js`. With
+            `future.compatibilityVersion: 5` on a scratch edit, `nuxt typecheck`
+            went from 174 errors to 0 and the build stays green. On the
+            shipped 4.x config: typecheck, 279 tests, build, `check`, `a11y`,
+            `a11y:browser`, `audit:runtime` clean; 45 routes (sitemap, feeds,
+            APIs, 404s, the 301s) fetched GET and HEAD from main's build and
+            this one in snapshot mode came back with identical statuses,
+            headers and bodies bar the uptime clock, and the editor's whole
+            authenticated round trip (401 with its challenge, 204, the onion
+            404, list, 400s, write, read, delete, 404 on a second delete)
+            matched too. Chromium `check:navigation` was not a usable signal
+            that night: the host's load average was ~148 and main's own build
+            failed 34 checks, this one 6; CI's navigation job is the gate.
+            <https://nuxt.com/docs/4.x/getting-started/upgrade>
+      - [ ] Next: no server or browser pass has run on a v5-flagged build
+            yet — run the server suite on one (still never on `main`), and
+            keep the tree from drifting back (a v5 typecheck in CI).
 - [ ] Move the type checker to TypeScript 7 once 7.1 ships its API and vue-tsc
       adopts it — the 6.0 API is a bridge, not a destination.
       <https://devblogs.microsoft.com/typescript/announcing-typescript-7-0/>
