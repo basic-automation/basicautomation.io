@@ -671,6 +671,25 @@ record. There is no run log.
       one unread failure leaves open that 4.6.2 is slightly worse; CI's
       navigation job is the gate, and a red one reverts the bump.
       <https://github.com/nuxt/nuxt/releases/tag/v4.6.2>
+- [x] nitropack 2.13.5 (published 2026-10-19 03:25 UTC, after the 10-18 run
+      began, so held a night), a lockfile-only bump under Nuxt 4.6.2's
+      `^2.13.4`, landed 2026-10-19. It brings rollup 4.63.5 → 4.64.10 and
+      unstorage 1.17.5 → 1.17.6, the cache storage behind every
+      `defineCachedFunction`, which now throws on an empty or dot-segment key.
+      What touches a `node-server` build: the SWR handler respects h3's
+      decoded path (nitrojs/nitro#4386), a public asset missing on disk is a
+      404 not a 500 (#4787), and server sourcemaps keep the mappings for user
+      chunks (#4450: `.output/server`'s maps 0.15 → 1.22 MB, in the image).
+      No issue filed against the release by the time it was taken. On it:
+      typecheck (and the v5 one), 279 tests, build, `audit:runtime` (the same
+      80 packages); 49 routes GET and HEAD against main's build in snapshot
+      mode, clocks only; the client bundle byte-for-byte the previous
+      commit's (same chunk names), the server differing only in `nitro.mjs`;
+      and live, with a token, all eight about pages measured all 28 README
+      images (none kept, none unsized) on both builds, no warning in either
+      log — Nitro escapes cache keys before unstorage sees them.
+      <https://github.com/nitrojs/nitro/releases/tag/v2.13.5>
+      <https://github.com/unjs/unstorage/releases/tag/v1.17.6>
 - [ ] Try Nuxt 5's defaults early on a scratch build with
       `future.compatibilityVersion: 5` — the 4.6.0 notes say most remaining v5
       defaults can be opted into now and that server code written against
