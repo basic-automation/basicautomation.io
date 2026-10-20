@@ -737,10 +737,27 @@ record. There is no run log.
             which the v5 build loads natively, without `NUXT_B5023`; the
             shipped build is unchanged (45 routes against main's: clocks
             only).
-      - [ ] Next: settle (1) and (2) — whether the HTML 404 is wanted (it
-            is what a browser already gets), whether the CSS difference is a
-            Tailwind/Lightning CSS setting v5 changes — then a browser pass on
-            a v5 build.
+      - [x] (1) and (2) explained from `@nuxt/schema` 4.6.2's v5 defaults.
+            The HTML 404 is `experimental.inlineErrorRendering`: page errors
+            render the error page in process, server routes keep JSON — so a
+            browser sees nothing new, and an API client asking a page URL
+            gets HTML. The stylesheet is `postcss.plugins.cssnano` *and*
+            `autoprefixer` defaulting to off; the prefixes lost are only
+            `-moz-column-gap`/`-moz-columns` (17 declarations), which no
+            Firefox this site meets needs, so it is bytes, not breakage. Left
+            to the real move. The same schema turned up a fourth difference
+            the route list had not probed: v5 makes routing case-sensitive,
+            so `/PROJECTS`, `/News` and `/Projects/onyums/About` went from
+            200 (with the canonical address) to 404. `nuxt.config.ts` now
+            says `router.options.sensitive: false` — v4's default, so the
+            shipped build is unchanged (49 routes against main's: clocks
+            only) — and the v5 build answers them 200 again. With that, a
+            v5-flagged build passes `npm run check` (22 pages, 79 URLs) and
+            `npm run a11y` (23 pages).
+      - [ ] Next: the browser passes (`a11y:browser`, `a11y:firefox`,
+            `check:navigation`) on a v5-flagged build, on a quiet host —
+            `inlineErrorRendering`, `payloadExtraction: 'client'` and the
+            other client-side v5 defaults are only visible there.
 - [ ] Move the type checker to TypeScript 7 once 7.1 ships its API and vue-tsc
       adopts it — the 6.0 API is a bridge, not a destination.
       <https://devblogs.microsoft.com/typescript/announcing-typescript-7-0/>

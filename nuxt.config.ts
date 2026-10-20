@@ -32,6 +32,12 @@ export default defineNuxtConfig({
   // so the HTML is always fresh even though upstream is only polled occasionally.
   ssr: true,
 
+  // Routing ignores case, said out loud: `/PROJECTS` renders `/projects` and
+  // names it as its canonical address (`npm run check` holds that). It is v4's
+  // default; Nuxt 5 makes routing case-sensitive, which would turn every such
+  // link into a 404 (seen on a `NUXT_TRY_V5` build, 2026-10-19).
+  router: { options: { sensitive: false } },
+
   css: ['~/assets/css/main.css'],
 
   runtimeConfig: {
