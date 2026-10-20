@@ -36,6 +36,11 @@ jobs:
         run: npm ci
       - name: Typecheck
         run: npx nuxt typecheck
+      # …and again under Nuxt 5's defaults (`NUXT_TRY_V5` in nuxt.config.ts),
+      # so the tree does not drift back onto anything v5 turns off. Only the
+      # types: what ships is still built on v4's defaults.
+      - name: Typecheck with Nuxt 5's defaults
+        run: NUXT_TRY_V5=1 npx nuxt typecheck
       # Unit tests over the pure helpers in `shared/` only. What a running
       # server proves, `npm run check` proves further down; these cover the
       # awkward input no README on the site happens to contain today.

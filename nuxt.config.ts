@@ -20,6 +20,11 @@ export default defineNuxtConfig({
   },
 
   compatibilityDate: '2026-09-24',
+  // Nuxt 5's defaults, on request only — never what ships. CI typechecks the
+  // tree this way too, so code that only works with Nitro's auto-imports, or
+  // with any other v4-only default, fails a pull request rather than the
+  // eventual move. https://nuxt.com/docs/4.x/getting-started/upgrade
+  ...(process.env.NUXT_TRY_V5 === '1' ? { future: { compatibilityVersion: 5 as const } } : {}),
   devtools: { enabled: false },
 
   // Every page is rendered on the server, per request. The GitHub and
