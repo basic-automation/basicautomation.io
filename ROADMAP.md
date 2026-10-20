@@ -1769,12 +1769,20 @@ record. There is no run log.
       repo itself is there: `…/x265_git/src` answers 200, so pointing the link
       at that path fixes it. The fix belongs in Skidbladnir's README; this
       page folds it in as-is.
-- [ ] Upstream: the onyums README's table of contents links
+- [x] Upstream: the onyums README's table of contents links
       `#multiple-services-on-one-tor-client`, an anchor no heading in it produces.
-- [ ] Upstream: three dead links in the WeftDB README, found by the weekly
+      Fixed upstream (basic-automation/onyums#52, merged 2026-10-09): it links
+      `#multiple-services-on-one-bootstrap`, and the live onyums page renders
+      both that link and the heading's `id` (checked 2026-10-19).
+- [x] Upstream: three dead links in the WeftDB README, found by the weekly
       external-link check on 2026-10-08 (issue #16). A docs.rs badge points at
       `https://docs.rs/weftdb`, a 404 because the README itself says its library
       crates are "Not published yet"; and two links to
       `database/benches/{downsample_range,backup_cost}.rs` 404 because those
       files now live under `weftdb/benches/`. All three belong in WeftDB's
       README; this page folds it in as-is.
+      Fixed upstream by 2026-10-19: the live WeftDB page has no `docs.rs/weftdb`
+      link and no `database/benches/` path, and its `weftdb/benches/` links to
+      `downsample_range.rs` and `backup_cost.rs` answer 200. Issue #16 closes
+      itself at the next weekly run if nothing else is dead — it will not:
+      the Skidbladnir link above still answers 404.
