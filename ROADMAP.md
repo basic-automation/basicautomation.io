@@ -351,6 +351,14 @@ record. There is no run log.
       `cargo update -p rustls --precise 0.23.46` (`onion/Cargo.lock`, four
       lines); `cargo audit` exits 0 with only the two known unmaintained
       warnings. <https://rustsec.org/advisories/RUSTSEC-2026-0347>
+- [x] …and rustls-webpki off RUSTSEC-2026-0382, filed 2026-10-20: 0.103.15
+      "may accept certificate paths containing distrusted emSign intermediate
+      public keys" when the trust anchors allow such paths. It turned CI's
+      `cargo audit` red on this PR's first run, so on every branch. Fixed in
+      0.103.16: a lockfile-only `cargo update -p rustls-webpki --precise
+      0.103.16` (`onion/Cargo.lock`, two lines). `cargo audit` exits 0 on
+      the new lockfile, 1 on the old, and `cargo test --locked` passes.
+      <https://rustsec.org/advisories/RUSTSEC-2026-0382>
 - [ ] Arti 0.47 under the gateway (Arti 2.7.0, 2026-10-01), whose
       announcement says it fixes "low- to high-severity security issues"; the
       gateway is the site's Tor-facing binary and is on 0.46. Blocked on
