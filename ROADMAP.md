@@ -773,10 +773,25 @@ record. There is no run log.
             only) — and the v5 build answers them 200 again. With that, a
             v5-flagged build passes `npm run check` (22 pages, 79 URLs) and
             `npm run a11y` (23 pages).
-      - [ ] Next: the browser passes (`a11y:browser`, `a11y:firefox`,
-            `check:navigation`) on a v5-flagged build, on a quiet host —
-            `inlineErrorRendering`, `payloadExtraction: 'client'` and the
-            other client-side v5 defaults are only visible there.
+      - [x] The browser passes on a v5-flagged build (2026-10-20, scratch
+            only), each beside a v4 build of the same commit as its control:
+            `check` (22 pages, 79 URLs), `a11y` (23 pages), `a11y:browser`
+            and `a11y:firefox` (23 pages × 1280/390/320 px), and
+            `check:navigation` in Chromium and Firefox (160 each) — green on
+            both builds, every one. A probe the checks lack, run in both
+            engines on both builds: a router push to `/projects/nope` and to
+            `/news/nope` renders the same 404 page, and client navigations to
+            an about page, a blog tab and `/news` fetch the same `/api/*`
+            calls, with no `_payload.json` on either side.
+            `payloadExtraction: 'client'` changes nothing here, because its
+            payload files are written only for prerendered routes and this
+            site prerenders none (0 HTML files in `.output/public` on both).
+      - [ ] Next: the move itself, once Nuxt 5 is released — drop
+            `NUXT_TRY_V5` and the flag for the real major, decide (1) and (2)
+            above (keep `inlineErrorRendering`, accept the CSS bytes or set
+            `postcss.plugins.cssnano` back on), and move `defineCachedFunction`
+            and the raw-h3 plugins off their v4 runtime imports. Nothing more
+            to learn from the flag before then.
 - [ ] Move the type checker to TypeScript 7 once 7.1 ships its API and vue-tsc
       adopts it — the 6.0 API is a bridge, not a destination.
       <https://devblogs.microsoft.com/typescript/announcing-typescript-7-0/>
