@@ -807,6 +807,15 @@ record. There is no run log.
 - [ ] Move the type checker to TypeScript 7 once 7.1 ships its API and vue-tsc
       adopts it — the 6.0 API is a bridge, not a destination.
       <https://devblogs.microsoft.com/typescript/announcing-typescript-7-0/>
+- [ ] Vue 3.6 once it is a stable release — on its `minor` branch it reached
+      3.6.0-rc.12 on 2026-10-16 (rc.2 was 2026-07-22). Its
+      changelog is almost all Vapor mode, which this site does not opt into,
+      but it also changes the reactivity core every page renders through
+      (rc.12: "preserve watcher cleanups until callback reruns",
+      vuejs/core#15766). Hold it a night like every release that reaches a
+      visitor, then take it on the body diff Vue 3.5.44 went in on, plus
+      `check:navigation` in both engines; only once Nuxt's own range admits it.
+      <https://github.com/vuejs/core/blob/minor/CHANGELOG.md>
 - [x] Nuxt 4.6, landed 2026-10-08 after two and a half days in the wild.
       Its security section is why it matters here: the internal error route
       reachable from outside, unhandled error data handed to the error page,
