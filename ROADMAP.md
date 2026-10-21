@@ -504,6 +504,18 @@ record. There is no run log.
             container's ~95 h, with 4,082 "too many preemptive circuits".
             The 2026-10-15 verdict, "no visitor has been turned away", no
             longer holds: a visitor arriving in one of those windows is.
+            Four more scheduled runs read 2026-10-20 23:15 CDT (10-20 04:51 to
+            21:37 UTC), so nineteen with a control: ours missed its first try
+            in 8, the control in 3. The new miss (21:37) is a `connect`
+            timeout on ours whose second try landed in 67.2 s, in the same
+            run where the control failed both its tries — counted as both,
+            the client's network, by the rule above. Ours' first tries that
+            landed took 35–78 s (`reachedMs` 28–67 s), the control's 4.5–86 s.
+            Inside, from the gateway's restart with the host at 10-20 03:48
+            UTC to 10-21 04:09 UTC (~24 h): no `onion.unreachable`, and 535
+            descriptor-upload failures and 740 "too many preemptive circuits"
+            — about 22 and 30 an hour, against 59 and 43 in the 95 h before.
+            One quiet day is not a trend; the counting goes on.
       - [ ] Put the numbers above to the owner: arti 0.47 (blocked on an
             onyums release, see the Arti item) or C Tor beside the site (a
             second runtime in the image) — **owner decision**. Until then the
