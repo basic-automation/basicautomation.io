@@ -33,6 +33,7 @@
  */
 
 import { spawn, type ChildProcess } from 'node:child_process'
+import { defineNitroPlugin } from 'nitropack/runtime'
 import { logEvent } from '~~/shared/log/event'
 
 /** How long a gateway gets to stop on SIGTERM before it is killed. */

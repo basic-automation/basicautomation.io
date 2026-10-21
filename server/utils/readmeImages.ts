@@ -1,3 +1,4 @@
+import { defineCachedFunction } from 'nitropack/runtime'
 import { probeImageSize } from '~~/shared/markdown/image-probe'
 import { sizeImages, unsizedImages, type ImageSize } from '~~/shared/markdown/image-size'
 

@@ -1,6 +1,7 @@
 import { createHash, timingSafeEqual } from 'node:crypto'
 import bcrypt from 'bcryptjs'
-import type { H3Event } from 'h3'
+import { createError, getRequestHeader, useRuntimeConfig } from 'nuxt/server'
+import type { RequestEvent } from 'nuxt/server'
 
 import { EDITOR_CHALLENGE, parseBasicAuth } from '~~/shared/admin/basicAuth'
 import { VIA_ONION, cameOverOnion } from '~~/shared/onion/via'
@@ -18,9 +19,9 @@ import { VIA_ONION, cameOverOnion } from '~~/shared/onion/via'
  *
  * 404 rather than 403: over Tor the editor does not exist.
  */
-export function refuseOverOnion(event: H3Event): void {
-  if (cameOverOnion(event.node.req.headers[VIA_ONION])) {
-    throw createError({ statusCode: 404, statusMessage: 'Not Found' })
+export function refuseOverOnion(event: RequestEvent): void {
+  if (cameOverOnion(event.req.headers.get(VIA_ONION))) {
+    throw createError({ status: 404, statusText: 'Not Found' })
   }
 }
 
@@ -40,21 +41,21 @@ export function refuseOverOnion(event: H3Event): void {
  * the editor does not exist (404) — fail closed — except under `nuxt dev`.
  * Both are required: a hash with no user would accept an empty user name.
  */
-export async function requireEditor(event: H3Event): Promise<void> {
+export async function requireEditor(event: RequestEvent): Promise<void> {
   refuseOverOnion(event)
 
-  const { adminUser, adminPasswordHash } = useRuntimeConfig(event)
+  const { adminUser, adminPasswordHash } = useRuntimeConfig()
   if (!adminPasswordHash || !adminUser) {
     if (import.meta.dev) return
     warnUnconfiguredOnce()
-    throw createError({ statusCode: 404, statusMessage: 'Not Found' })
+    throw createError({ status: 404, statusText: 'Not Found' })
   }
 
   const header = getRequestHeader(event, 'authorization')
   if (header && await accepted(header, adminUser, adminPasswordHash)) return
 
-  setResponseHeader(event, 'WWW-Authenticate', EDITOR_CHALLENGE)
-  throw createError({ statusCode: 401, statusMessage: 'Unauthorized' })
+  event.res.headers.set('WWW-Authenticate', EDITOR_CHALLENGE)
+  throw createError({ status: 401, statusText: 'Unauthorized' })
 }
 
 /**

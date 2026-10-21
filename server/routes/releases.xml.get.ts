@@ -11,6 +11,7 @@
  * else when GitHub is unreachable.
  */
 
+import { defineEventHandler } from 'nuxt/server'
 import { xmlEscape } from '~~/shared/xml/escape'
 
 /** How many entries the feed carries. A reader wants recent, not complete. */
@@ -61,8 +62,8 @@ export default defineEventHandler(async (event) => {
   </entry>`
   })
 
-  setResponseHeader(event, 'content-type', 'application/atom+xml; charset=utf-8')
-  setResponseHeader(event, 'cache-control', 'public, max-age=900')
+  event.res.headers.set('content-type', 'application/atom+xml; charset=utf-8')
+  event.res.headers.set('cache-control', 'public, max-age=900')
 
   return `<?xml version="1.0" encoding="UTF-8"?>
 <feed xmlns="http://www.w3.org/2005/Atom">

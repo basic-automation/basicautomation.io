@@ -1,3 +1,5 @@
+import { createError, defineEventHandler, getRouterParam } from 'nuxt/server'
+
 /** Editorial code samples never change at runtime — highlight each one once. */
 const examples = new Map<string, string>()
 
@@ -5,13 +7,13 @@ export default defineEventHandler(async (event) => {
   const slug = getRouterParam(event, 'slug')
 
   if (!slug) {
-    throw createError({ statusCode: 400, statusMessage: 'Missing slug' })
+    throw createError({ status: 400, statusText: 'Missing slug' })
   }
 
   const project = await getProject(slug)
 
   if (!project) {
-    throw createError({ statusCode: 404, statusMessage: 'No such project' })
+    throw createError({ status: 404, statusText: 'No such project' })
   }
 
   let exampleHtml: string | null = null

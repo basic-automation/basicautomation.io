@@ -1,6 +1,6 @@
-import { contentSecurityPolicy } from './shared/security/csp'
-import { projects } from './data/projects'
-import { clientPackages } from './scripts/lib/client-packages'
+import { contentSecurityPolicy } from './shared/security/csp.ts'
+import { projects } from './data/projects.ts'
+import { clientPackages } from './scripts/lib/client-packages.ts'
 
 // Which packages the client bundle is made of, for `npm run audit:runtime`.
 const shippedToBrowsers = clientPackages()
@@ -20,12 +20,23 @@ export default defineNuxtConfig({
   },
 
   compatibilityDate: '2026-09-24',
+  // Nuxt 5's defaults, on request only — never what ships. CI typechecks the
+  // tree this way too, so code that only works with Nitro's auto-imports, or
+  // with any other v4-only default, fails a pull request rather than the
+  // eventual move. https://nuxt.com/docs/4.x/getting-started/upgrade
+  ...(process.env.NUXT_TRY_V5 === '1' ? { future: { compatibilityVersion: 5 as const } } : {}),
   devtools: { enabled: false },
 
   // Every page is rendered on the server, per request. The GitHub and
   // crates.io calls behind that rendering are cached (see server/utils/github.ts),
   // so the HTML is always fresh even though upstream is only polled occasionally.
   ssr: true,
+
+  // Routing ignores case, said out loud: `/PROJECTS` renders `/projects` and
+  // names it as its canonical address (`npm run check` holds that). It is v4's
+  // default; Nuxt 5 makes routing case-sensitive, which would turn every such
+  // link into a 404 (seen on a `NUXT_TRY_V5` build, 2026-10-19).
+  router: { options: { sensitive: false } },
 
   css: ['~/assets/css/main.css'],
 

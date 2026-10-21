@@ -16,6 +16,8 @@
  */
 
 import { randomBytes } from 'node:crypto'
+import { setResponseHeader } from 'h3'
+import { defineNitroPlugin } from 'nitropack/runtime'
 import { contentSecurityPolicy, stampNonce } from '~~/shared/security/csp'
 
 declare module 'h3' {

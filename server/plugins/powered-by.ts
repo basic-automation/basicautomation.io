@@ -8,6 +8,8 @@
  * removed in `beforeResponse`, which runs after any handler has set its own.
  * `npm run check` fails a response that still carries it.
  */
+import { defineNitroPlugin } from 'nitropack/runtime'
+
 export default defineNitroPlugin((nitroApp) => {
   nitroApp.hooks.hook('beforeResponse', (event) => {
     event.node.res.removeHeader('x-powered-by')

@@ -1,3 +1,5 @@
+import { defineEventHandler, setResponseStatus } from 'nuxt/server'
+
 /**
  * Whether this request may use the editor: 204 if so, otherwise whatever
  * `requireEditor` refuses it with (404 over Tor or when unconfigured, 401

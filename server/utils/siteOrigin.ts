@@ -1,4 +1,5 @@
-import type { H3Event } from 'h3'
+import { useRuntimeConfig } from 'nuxt/server'
+import type { RequestEvent } from 'nuxt/server'
 
 /**
  * The origin to use when this response has to name itself.
@@ -16,6 +17,10 @@ import type { H3Event } from 'h3'
  * site-origin.ts`; this is the accessor, so that a caller cannot accidentally
  * make it again from a header.
  */
-export function siteOrigin(event: H3Event): string {
-	return event.context.siteOrigin ?? useRuntimeConfig(event).public.siteUrl.replace(/\/$/, '')
+export function siteOrigin(event: RequestEvent): string {
+	// The portable event's context is h3's own object, but typed as Nuxt's
+	// `RequestEventContext`, which cannot be augmented from here; the middleware
+	// is the only writer, and writes a string.
+	const decided = event.context.siteOrigin as string | undefined
+	return decided ?? useRuntimeConfig().public.siteUrl.replace(/\/$/, '')
 }

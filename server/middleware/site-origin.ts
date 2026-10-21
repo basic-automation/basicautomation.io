@@ -1,3 +1,5 @@
+import { defineEventHandler, getRequestHeader } from 'nuxt/server'
+
 /**
  * Decide, once per request, which of its two names the site is answering under.
  *

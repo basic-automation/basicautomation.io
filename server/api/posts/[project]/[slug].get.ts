@@ -1,3 +1,5 @@
+import { createError, defineEventHandler, getRouterParam } from 'nuxt/server'
+
 /**
  * One post, rendered.
  *
@@ -9,7 +11,7 @@ export default defineEventHandler(async (event) => {
   const slug = getRouterParam(event, 'slug') ?? ''
 
   const post = await onePost(project, slug)
-  if (!post) throw createError({ statusCode: 404, statusMessage: 'No such post' })
+  if (!post) throw createError({ status: 404, statusText: 'No such post' })
 
   const { body, ...meta } = post
   return { ...meta, html: await renderMarkdown(body, 'post') }

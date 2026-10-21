@@ -11,8 +11,9 @@
  * which is minutes after the site starts and long after its environment is
  * fixed. The file appears when it appears.
  */
-import type { H3Event } from 'h3'
 import { readFile } from 'node:fs/promises'
+import { useRuntimeConfig } from 'nuxt/server'
+import type { RequestEvent } from 'nuxt/server'
 import { logEvent } from '~~/shared/log/event'
 
 const SNAPSHOT_FILE = process.env.ONION_SNAPSHOT_FILE || '/run/onion/snapshot.json'
@@ -85,12 +86,12 @@ function parse(raw: string): OnionSnapshot | null {
  * Everything that shows the frame goes through here rather than `onionSnapshot`
  * directly, so the check cannot be forgotten in one of the two places.
  */
-export async function renderableSnapshot(event: H3Event): Promise<OnionSnapshot | null> {
+export async function renderableSnapshot(event: RequestEvent): Promise<OnionSnapshot | null> {
   const snapshot = await onionSnapshot()
   if (!snapshot) return null
 
   const captured = buildIdOf(snapshot.html)
-  const current = useRuntimeConfig(event).app?.buildId
+  const current = useRuntimeConfig().app?.buildId
   if (captured && current && captured !== current) {
     // Normal for a few minutes after a deploy, and permanent in dev, where the
     // snapshot necessarily comes from somewhere else.

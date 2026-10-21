@@ -351,6 +351,14 @@ record. There is no run log.
       `cargo update -p rustls --precise 0.23.46` (`onion/Cargo.lock`, four
       lines); `cargo audit` exits 0 with only the two known unmaintained
       warnings. <https://rustsec.org/advisories/RUSTSEC-2026-0347>
+- [x] …and rustls-webpki off RUSTSEC-2026-0382, filed 2026-10-20: 0.103.15
+      "may accept certificate paths containing distrusted emSign intermediate
+      public keys" when the trust anchors allow such paths. It turned CI's
+      `cargo audit` red on this PR's first run, so on every branch. Fixed in
+      0.103.16: a lockfile-only `cargo update -p rustls-webpki --precise
+      0.103.16` (`onion/Cargo.lock`, two lines). `cargo audit` exits 0 on
+      the new lockfile, 1 on the old, and `cargo test --locked` passes.
+      <https://rustsec.org/advisories/RUSTSEC-2026-0382>
 - [ ] Arti 0.47 under the gateway (Arti 2.7.0, 2026-10-01), whose
       announcement says it fixes "low- to high-severity security issues"; the
       gateway is the site's Tor-facing binary and is on 0.46. Blocked on
@@ -464,6 +472,7 @@ record. There is no run log.
             whether a C-Tor-hosted service would do better from the same
             client. The verdict for the owner: a visitor sometimes waits, no
             visitor has been turned away; no case for a second runtime yet.
+            (Overturned 2026-10-19 by the control, below.)
       - [x] A control for that one-in-six: every run now also probes the Tor
             Project's own onion site (the address its `Onion-Location` header
             names) from the same client, in the same step, with
@@ -474,16 +483,51 @@ record. There is no run log.
             through the gate in 7.9 s and 6.4 s, the control in 3.0 s and
             0.7 s; a wrong `--expect` fails it at `stage: 'gate'`, a dead SOCKS
             port at `connect`, each exit 1.
-      - [ ] Read the control beside the service at a dozen runs: a first try
+      - [x] Read the control beside the service at a dozen runs: a first try
             that times out on ours and not on the control's, run after run,
             is the service (or arti); timing out on both is the client's
             network.
-            So far, four runs with a control (the two on PR 26, then the
-            scheduled 10-16 16:39 and 21:08 UTC): ours missed its first try
-            in three (a 120 s connect timeout, SOCKS error 6, a 120 s connect
-            timeout; the second try landed in 11–12 s, 3 s), the control in one
-            (SOCKS error 6 at 119 s, 16:39; its second try landed in 1.6 s).
-            Too few to say which side it is.
+            Read 2026-10-19 21:30 CDT: fifteen runs with a control (the two
+            on PR 26, then thirteen scheduled, 10-16 16:39 to 10-19 22:21
+            UTC), all green. **Ours missed its first try in 7 of 15, the
+            control in 2.** Ours alone 6 times, the control alone once, both
+            once (10-17 04:25, the client's network). Order does not explain
+            it: of ours' five scheduled misses, three were probed first and
+            two second. The misses
+            are all at the connect stage (SOCKS error 6, or curl's 120 s
+            timeout), and on 10-17 10:44 ours took four tries and ~7.7 min,
+            one of them a transfer cut off after 212 s. So it is the service
+            or arti, not GitHub's network. The control's first tries landed
+            in 1.8–28 s; ours, when they landed, in 7–63 s.
+            The gateway's own log says the same from inside. From the
+            2026-10-15 03:19 UTC deploy to 10-20 02:00 UTC (~95 h) its
+            self-fetch over Tor went unanswered eight times for longer than
+            the 30-minute alarm: 37, 102, 68, 63, 102, 47, 39 and 42 minutes
+            (10-16 ×4, 10-17 ×3, 10-19 ×1), ~500 minutes in all, about 9 % of
+            the time, each ended 7–72 min after the in-place restart. The
+            10-16 21:08 probe miss falls inside one of them; the other misses
+            fall between self-fetches, which run every 10 minutes and only
+            report a 30-minute gap. 1,040 descriptor-upload failures in the
+            first 21 h after the 10-10 deploy have become 5,646 in this
+            container's ~95 h, with 4,082 "too many preemptive circuits".
+            The 2026-10-15 verdict, "no visitor has been turned away", no
+            longer holds: a visitor arriving in one of those windows is.
+            Four more scheduled runs read 2026-10-20 23:15 CDT (10-20 04:51 to
+            21:37 UTC), so nineteen with a control: ours missed its first try
+            in 8, the control in 3. The new miss (21:37) is a `connect`
+            timeout on ours whose second try landed in 67.2 s, in the same
+            run where the control failed both its tries — counted as both,
+            the client's network, by the rule above. Ours' first tries that
+            landed took 35–78 s (`reachedMs` 28–67 s), the control's 4.5–86 s.
+            Inside, from the gateway's restart with the host at 10-20 03:48
+            UTC to 10-21 04:09 UTC (~24 h): no `onion.unreachable`, and 535
+            descriptor-upload failures and 740 "too many preemptive circuits"
+            — about 22 and 30 an hour, against 59 and 43 in the 95 h before.
+            One quiet day is not a trend; the counting goes on.
+      - [ ] Put the numbers above to the owner: arti 0.47 (blocked on an
+            onyums release, see the Arti item) or C Tor beside the site (a
+            second runtime in the image) — **owner decision**. Until then the
+            probe and the self-fetch keep counting.
 - [ ] Move the runtime to distroless — **needs an owner decision, because the
       size case for it is gone.** Measured 2026-09-27: the same build on
       `gcr.io/distroless/nodejs24-debian13:nonroot` is 73.0 MB of image content
@@ -647,6 +691,25 @@ record. There is no run log.
       one unread failure leaves open that 4.6.2 is slightly worse; CI's
       navigation job is the gate, and a red one reverts the bump.
       <https://github.com/nuxt/nuxt/releases/tag/v4.6.2>
+- [x] nitropack 2.13.5 (published 2026-10-19 03:25 UTC, after the 10-18 run
+      began, so held a night), a lockfile-only bump under Nuxt 4.6.2's
+      `^2.13.4`, landed 2026-10-19. It brings rollup 4.63.5 → 4.64.10 and
+      unstorage 1.17.5 → 1.17.6, the cache storage behind every
+      `defineCachedFunction`, which now throws on an empty or dot-segment key.
+      What touches a `node-server` build: the SWR handler respects h3's
+      decoded path (nitrojs/nitro#4386), a public asset missing on disk is a
+      404 not a 500 (#4787), and server sourcemaps keep the mappings for user
+      chunks (#4450: `.output/server`'s maps 0.15 → 1.22 MB, in the image).
+      No issue filed against the release by the time it was taken. On it:
+      typecheck (and the v5 one), 279 tests, build, `audit:runtime` (the same
+      80 packages); 49 routes GET and HEAD against main's build in snapshot
+      mode, clocks only; the client bundle byte-for-byte the previous
+      commit's (same chunk names), the server differing only in `nitro.mjs`;
+      and live, with a token, all eight about pages measured all 28 README
+      images (none kept, none unsized) on both builds, no warning in either
+      log — Nitro escapes cache keys before unstorage sees them.
+      <https://github.com/nitrojs/nitro/releases/tag/v2.13.5>
+      <https://github.com/unjs/unstorage/releases/tag/v1.17.6>
 - [ ] Try Nuxt 5's defaults early on a scratch build with
       `future.compatibilityVersion: 5` — the 4.6.0 notes say most remaining v5
       defaults can be opted into now and that server code written against
@@ -663,9 +726,104 @@ record. There is no run log.
       the explicit imports (`nitropack/runtime`-style) on 4.6.2 first, which
       is valid either way, then retry.
       <https://github.com/nuxt/nuxt/releases/tag/v4.6.0>
+      - [x] Explicit server imports, landed 2026-10-19 on 4.6.2, as Nuxt's
+            upgrade guide asks of 4.6 code: every handler under `server/api`,
+            `server/routes` and the site-origin middleware imports
+            `defineEventHandler` and its helpers from `nuxt/server`, and sets
+            headers through the portable `event.res.headers` (there is no
+            portable `setResponseHeader`); `createError` takes `status` /
+            `statusText`; `useRuntimeConfig()` loses its event. The Nitro
+            plugins and the HEAD middleware, which see raw h3 events, import
+            from `h3` and `nitropack/runtime` by name, as does
+            `defineCachedFunction` — runtime-pinned, to revisit on Nuxt 5. The
+            one route-param read the v5 typed routes reject is narrowed, and
+            `nuxt.config.ts` imports with `.js`. With
+            `future.compatibilityVersion: 5` on a scratch edit, `nuxt typecheck`
+            went from 174 errors to 0 and the build stays green. On the
+            shipped 4.x config: typecheck, 279 tests, build, `check`, `a11y`,
+            `a11y:browser`, `audit:runtime` clean; 45 routes (sitemap, feeds,
+            APIs, 404s, the 301s) fetched GET and HEAD from main's build and
+            this one in snapshot mode came back with identical statuses,
+            headers and bodies bar the uptime clock, and the editor's whole
+            authenticated round trip (401 with its challenge, 204, the onion
+            404, list, 400s, write, read, delete, 404 on a second delete)
+            matched too. Chromium `check:navigation` was not a usable signal
+            that night: the host's load average was ~148 and main's own build
+            failed 34 checks, this one 6; CI's navigation job is the gate.
+            <https://nuxt.com/docs/4.x/getting-started/upgrade>
+      - [x] The tree cannot drift back: `NUXT_TRY_V5=1` turns on
+            `future.compatibilityVersion: 5` in `nuxt.config.ts` (unset, the
+            config is exactly what ships), and CI's build job typechecks the
+            tree a second time with it. Proved on a planted handler using
+            auto-imported `defineEventHandler`/`setResponseHeader`: the plain
+            typecheck passes it, the v5 one fails it.
+      - [x] A first server pass on a v5-flagged build (2026-10-19, scratch
+            only): all 45 routes answer with the same status codes as main's
+            build, GET and HEAD, and every page body matches but for the
+            stylesheet's hash and the clocks (uptime, "6 days ago"). Three differences to settle before the real
+            move: (1) a page 404 (`/nope`, `/projects/nope`, `/news/nope`,
+            `/admin`) answers a client that did not ask for HTML with the
+            19 KB HTML error page, under the full page CSP, where v4 sends a
+            138-byte JSON body with `script-src 'none'` — API 404s are
+            unchanged; (2) the stylesheet is the same rules minified less
+            (selector order and `calc()` kept as written), 220.6 → 227.8 KB;
+            (3) Nuxt warns `NUXT_B5023`: under v5 it loads `nuxt.config.ts`
+            natively first, and the `.js` imports the v5 typecheck wants
+            resolve to no file, so it falls back to jiti.
+      - [x] (3) settled: `nuxt.config.ts` imports its three local modules as
+            `.ts` (the generated node tsconfig has
+            `allowImportingTsExtensions`), which both typechecks pass and
+            which the v5 build loads natively, without `NUXT_B5023`; the
+            shipped build is unchanged (45 routes against main's: clocks
+            only).
+      - [x] (1) and (2) explained from `@nuxt/schema` 4.6.2's v5 defaults.
+            The HTML 404 is `experimental.inlineErrorRendering`: page errors
+            render the error page in process, server routes keep JSON — so a
+            browser sees nothing new, and an API client asking a page URL
+            gets HTML. The stylesheet is `postcss.plugins.cssnano` *and*
+            `autoprefixer` defaulting to off; the prefixes lost are only
+            `-moz-column-gap`/`-moz-columns` (17 declarations), which no
+            Firefox this site meets needs, so it is bytes, not breakage. Left
+            to the real move. The same schema turned up a fourth difference
+            the route list had not probed: v5 makes routing case-sensitive,
+            so `/PROJECTS`, `/News` and `/Projects/onyums/About` went from
+            200 (with the canonical address) to 404. `nuxt.config.ts` now
+            says `router.options.sensitive: false` — v4's default, so the
+            shipped build is unchanged (49 routes against main's: clocks
+            only) — and the v5 build answers them 200 again. With that, a
+            v5-flagged build passes `npm run check` (22 pages, 79 URLs) and
+            `npm run a11y` (23 pages).
+      - [x] The browser passes on a v5-flagged build (2026-10-20, scratch
+            only), each beside a v4 build of the same commit as its control:
+            `check` (22 pages, 79 URLs), `a11y` (23 pages), `a11y:browser`
+            and `a11y:firefox` (23 pages × 1280/390/320 px), and
+            `check:navigation` in Chromium and Firefox (160 each) — green on
+            both builds, every one. A probe the checks lack, run in both
+            engines on both builds: a router push to `/projects/nope` and to
+            `/news/nope` renders the same 404 page, and client navigations to
+            an about page, a blog tab and `/news` fetch the same `/api/*`
+            calls, with no `_payload.json` on either side.
+            `payloadExtraction: 'client'` changes nothing here, because its
+            payload files are written only for prerendered routes and this
+            site prerenders none (0 HTML files in `.output/public` on both).
+      - [ ] Next: the move itself, once Nuxt 5 is released — drop
+            `NUXT_TRY_V5` and the flag for the real major, decide (1) and (2)
+            above (keep `inlineErrorRendering`, accept the CSS bytes or set
+            `postcss.plugins.cssnano` back on), and move `defineCachedFunction`
+            and the raw-h3 plugins off their v4 runtime imports. Nothing more
+            to learn from the flag before then.
 - [ ] Move the type checker to TypeScript 7 once 7.1 ships its API and vue-tsc
       adopts it — the 6.0 API is a bridge, not a destination.
       <https://devblogs.microsoft.com/typescript/announcing-typescript-7-0/>
+- [ ] Vue 3.6 once it is a stable release — on its `minor` branch it reached
+      3.6.0-rc.12 on 2026-10-16 (rc.2 was 2026-07-22). Its
+      changelog is almost all Vapor mode, which this site does not opt into,
+      but it also changes the reactivity core every page renders through
+      (rc.12: "preserve watcher cleanups until callback reruns",
+      vuejs/core#15766). Hold it a night like every release that reaches a
+      visitor, then take it on the body diff Vue 3.5.44 went in on, plus
+      `check:navigation` in both engines; only once Nuxt's own range admits it.
+      <https://github.com/vuejs/core/blob/minor/CHANGELOG.md>
 - [x] Nuxt 4.6, landed 2026-10-08 after two and a half days in the wild.
       Its security section is why it matters here: the internal error route
       reachable from outside, unhandled error data handed to the error page,
@@ -1399,7 +1557,7 @@ record. There is no run log.
             of 60; with no `scrollTo` at all, on it 30 of 30.
       - [ ] Report it to Chromium with that file — **owner's call**, as with
             the Nuxt one above, since it speaks for the organization.
-      - [ ] Firefox `check:navigation`, Nanna's page at 390 px: "a client
+      - [x] Firefox `check:navigation`, Nanna's page at 390 px: "a client
             navigation to #api-key-invalid opens it at the heading" lands the
             heading 5–6 px above its aim (`heading` 10–11 against `aim` 16,
             `y` 16,671, not at the end) — and it failed 2 runs of 3 on
@@ -1409,6 +1567,12 @@ record. There is no run log.
             smooth scroll on the longest page, not the dependency bump; look
             at whether the page is still settling (lazy images above the
             heading) when the check reads.
+            Not reproduced since, on Nuxt 4.6.2: 160/160 on 2026-10-18, then
+            14 runs on 2026-10-20 (2,240 checks) — one each on a v4 and a
+            v5-flagged build, eight back to back on a quiet host (load 1–3),
+            and four with 16 `nice 19` busy loops competing for the CPU (load
+            19–41). `check:navigation` stays the tripwire in CI's Firefox job
+            if it comes back.
       - [ ] Find out what the 2026-10-12 stalled run (Nanna, phone, held until
             the 15-minute step timeout) was waiting for. Every CDP and BiDi
             request now fails after 180 s, naming itself — and on 2026-10-13
@@ -1674,12 +1838,20 @@ record. There is no run log.
       repo itself is there: `…/x265_git/src` answers 200, so pointing the link
       at that path fixes it. The fix belongs in Skidbladnir's README; this
       page folds it in as-is.
-- [ ] Upstream: the onyums README's table of contents links
+- [x] Upstream: the onyums README's table of contents links
       `#multiple-services-on-one-tor-client`, an anchor no heading in it produces.
-- [ ] Upstream: three dead links in the WeftDB README, found by the weekly
+      Fixed upstream (basic-automation/onyums#52, merged 2026-10-09): it links
+      `#multiple-services-on-one-bootstrap`, and the live onyums page renders
+      both that link and the heading's `id` (checked 2026-10-19).
+- [x] Upstream: three dead links in the WeftDB README, found by the weekly
       external-link check on 2026-10-08 (issue #16). A docs.rs badge points at
       `https://docs.rs/weftdb`, a 404 because the README itself says its library
       crates are "Not published yet"; and two links to
       `database/benches/{downsample_range,backup_cost}.rs` 404 because those
       files now live under `weftdb/benches/`. All three belong in WeftDB's
       README; this page folds it in as-is.
+      Fixed upstream by 2026-10-19: the live WeftDB page has no `docs.rs/weftdb`
+      link and no `database/benches/` path, and its `weftdb/benches/` links to
+      `downsample_range.rs` and `backup_cost.rs` answer 200. Issue #16 closes
+      itself at the next weekly run if nothing else is dead — it will not:
+      the Skidbladnir link above still answers 404.

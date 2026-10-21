@@ -17,6 +17,8 @@
 // type-instantiation depth limit. These calls go off-site, so use ofetch
 // directly — it is the same client without the internal-route inference.
 import { ofetch } from 'ofetch'
+import { defineCachedFunction } from 'nitropack/runtime'
+import { useRuntimeConfig } from 'nuxt/server'
 import { ConditionalCache } from '~~/shared/github/conditional'
 import { projects, type Project } from '~~/data/projects'
 import type { DownloadRelease, EnrichedProject, Release, RepoMeta } from '~~/shared/types/project'

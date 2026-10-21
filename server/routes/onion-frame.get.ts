@@ -24,6 +24,7 @@
  * what the onion service served; nothing fetches them.
  */
 
+import { defineEventHandler, setResponseStatus } from 'nuxt/server'
 import { stripScripts } from '~~/shared/html/strip'
 
 export default defineEventHandler(async (event) => {
@@ -35,13 +36,12 @@ export default defineEventHandler(async (event) => {
     // here means the gateway has not completed a fetch — a cold start, or Tor
     // is having a bad day.
     setResponseStatus(event, 503)
-    setResponseHeader(event, 'content-type', 'text/plain; charset=utf-8')
+    event.res.headers.set('content-type', 'text/plain; charset=utf-8')
     return 'No snapshot yet: the gateway has not completed a fetch over Tor.'
   }
 
-  setResponseHeader(event, 'content-type', 'text/html; charset=utf-8')
-  setResponseHeader(
-    event,
+  event.res.headers.set('content-type', 'text/html; charset=utf-8')
+  event.res.headers.set(
     'content-security-policy',
     // `frame-ancestors 'self'` so only this site can frame it; `script-src
     // 'none'` so the stripping above cannot be the only thing standing between
@@ -61,10 +61,10 @@ export default defineEventHandler(async (event) => {
     // the check goes red.
     "default-src 'self'; script-src 'none'; style-src 'self' 'unsafe-inline'; frame-ancestors 'self'; base-uri 'none'; form-action 'none'",
   )
-  setResponseHeader(event, 'x-frame-options', 'SAMEORIGIN')
+  event.res.headers.set('x-frame-options', 'SAMEORIGIN')
   // The snapshot changes every ten minutes and is cheap to re-fetch; let a
   // reload get the current one rather than a stale frame.
-  setResponseHeader(event, 'cache-control', 'no-store')
+  event.res.headers.set('cache-control', 'no-store')
 
   return stripScripts(snapshot.html)
 })

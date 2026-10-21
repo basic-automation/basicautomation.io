@@ -1,3 +1,5 @@
+import { createError, defineEventHandler, getQuery } from 'nuxt/server'
+
 /**
  * One post's raw markdown, front matter and all, for the editor.
  *
@@ -9,11 +11,11 @@ export default defineEventHandler(async (event) => {
 
   const { project, slug } = getQuery(event)
   if (typeof project !== 'string' || typeof slug !== 'string') {
-    throw createError({ statusCode: 400, statusMessage: 'project and slug are required' })
+    throw createError({ status: 400, statusText: 'project and slug are required' })
   }
 
   const raw = await rawPost(project, slug)
-  if (raw === null) throw createError({ statusCode: 404, statusMessage: 'No such post' })
+  if (raw === null) throw createError({ status: 404, statusText: 'No such post' })
 
   return { project, slug, raw }
 })
