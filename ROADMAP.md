@@ -1528,7 +1528,7 @@ record. There is no run log.
             of 60; with no `scrollTo` at all, on it 30 of 30.
       - [ ] Report it to Chromium with that file — **owner's call**, as with
             the Nuxt one above, since it speaks for the organization.
-      - [ ] Firefox `check:navigation`, Nanna's page at 390 px: "a client
+      - [x] Firefox `check:navigation`, Nanna's page at 390 px: "a client
             navigation to #api-key-invalid opens it at the heading" lands the
             heading 5–6 px above its aim (`heading` 10–11 against `aim` 16,
             `y` 16,671, not at the end) — and it failed 2 runs of 3 on
@@ -1538,6 +1538,12 @@ record. There is no run log.
             smooth scroll on the longest page, not the dependency bump; look
             at whether the page is still settling (lazy images above the
             heading) when the check reads.
+            Not reproduced since, on Nuxt 4.6.2: 160/160 on 2026-10-18, then
+            14 runs on 2026-10-20 (2,240 checks) — one each on a v4 and a
+            v5-flagged build, eight back to back on a quiet host (load 1–3),
+            and four with 16 `nice 19` busy loops competing for the CPU (load
+            19–41). `check:navigation` stays the tripwire in CI's Firefox job
+            if it comes back.
       - [ ] Find out what the 2026-10-12 stalled run (Nanna, phone, held until
             the 15-minute step timeout) was waiting for. Every CDP and BiDi
             request now fails after 180 s, naming itself — and on 2026-10-13
