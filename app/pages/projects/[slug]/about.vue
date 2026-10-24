@@ -297,7 +297,7 @@ useSeoMeta({
 
       </nav>
 
-      <ProjectTabs :slug="slug" current="about" />
+      <ProjectTabs :slug="slug" current="about" :docs="project?.docs" />
     </header>
 
     <!-- ── Download ─────────────────────────────────────────────────────── -->

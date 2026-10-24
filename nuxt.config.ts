@@ -98,6 +98,12 @@ export default defineNuxtConfig({
   nitro: {
     preset: 'node-server',
 
+    // The documentation pages ship inside the server bundle: they are reviewed
+    // and edited like code, so they should change only with a build — unlike
+    // posts, which the admin page writes to a volume. See
+    // `server/utils/projectDocs.ts`.
+    serverAssets: [{ baseName: 'projectdocs', dir: './project-docs' }],
+
     // Caddy terminates TLS and proxies in; trust its forwarded headers so
     // request URLs and client IPs are the real ones.
     routeRules: {
