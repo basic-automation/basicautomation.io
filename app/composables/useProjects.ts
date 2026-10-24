@@ -90,7 +90,7 @@ export async function useProjectSummary(slug: MaybeRefOrGetter<string>) {
     () => `/api/projects/${toValue(slug)}`,
     {
       key: () => `project-summary:${toValue(slug)}`,
-      pick: ['slug', 'name', 'hero', 'accent'] as const,
+      pick: ['slug', 'name', 'hero', 'accent', 'docs'] as const,
     },
   )
   return { project: data, error }

@@ -11,6 +11,7 @@
 
 import { defineEventHandler } from 'nuxt/server'
 import { SITE_BLOG_PATH, postPath } from '~~/shared/posts/section'
+import { docPath, docsIndexPath } from '~~/shared/docs/path'
 import { xmlEscape } from '~~/shared/xml/escape'
 
 const STATIC_ROUTES = ['/', '/projects', '/status']
@@ -33,6 +34,13 @@ export default defineEventHandler(async (event) => {
   // newest first. `/news` lists every blog, so every post counts for it.
   const newest = (project?: string) => posts.find((p) => project === undefined || p.project === project)?.date
 
+  // Documentation ships with the build, so it has no `lastmod` of its own to
+  // report honestly; like the static pages, it carries none.
+  const docPages = (await Promise.all(projects.filter((p) => p.docs).map(async (p) => ({
+    index: docsIndexPath(p.slug),
+    pages: (await listDocs(p.slug)).map((d) => docPath(p.slug, d.slug)),
+  })))).flatMap((d) => [d.index, ...d.pages])
+
   const entries = [
     ...STATIC_ROUTES.map((path) => urlEntry(`${base}${path}`)),
     urlEntry(`${base}${SITE_BLOG_PATH}`, newest()),
@@ -45,6 +53,7 @@ export default defineEventHandler(async (event) => {
     // once and the date in its front matter is when the thing it describes
     // happened. `postPath` so the two URL shapes cannot diverge from the links
     // the pages render.
+    ...docPages.map((path) => urlEntry(`${base}${path}`)),
     ...posts.map((p) => urlEntry(`${base}${postPath(p.project, p.slug)}`, p.date)),
   ]
 

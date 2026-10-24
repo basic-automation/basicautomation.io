@@ -82,6 +82,9 @@ export interface Project {
   /** This project serves basicautomation.io itself — show the site's own
    *  onion address on its page, as evidence rather than as a claim */
   servesThisSite?: boolean
+  /** Has a docs tab: `project-docs/<slug>/*.md`, rendered at `/projects/<slug>/docs`.
+   *  Set it only where that directory exists — the tab links to it. */
+  docs?: boolean
   /** Show the live Tor frame and the Tor Browser walkthrough on this page.
    *  Implied by `servesThisSite`; set it directly for a project that is about
    *  reaching a page over Tor rather than about publishing one. */
@@ -378,6 +381,7 @@ assert_eq!(series.kinds()[32], PointKind::Extrapolated);`,
       + 'reconstruction where the data already is, and tells you which numbers it made up.',
     kind: 'Database',
     status: 'alpha',
+    docs: true,
     accent: 'red',
     order: 5,
     features: [

@@ -76,7 +76,7 @@ useSeoMeta({
         is and what it does.
       </p>
 
-      <ProjectTabs :slug="slug" current="blog" />
+      <ProjectTabs :slug="slug" current="blog" :docs="project.docs" />
     </section>
 
     <section class="mt-12 mb-32">

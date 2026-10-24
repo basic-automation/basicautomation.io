@@ -26,6 +26,7 @@ Links to a heading, and keyboard focus, always stop below it.
 | `/` | The pitch, live project stats, and the catalogue |
 | `/projects` | Every public project |
 | `/projects/<slug>/about` | A marketing page per project: hero, why it exists, features, a worked example, the recent releases, and the repo's README folded away underneath — once opened, it stays open for Back, Forward and a reload, at the place the visitor was reading (put back in one jump, as a browser restores a page — the site's smooth scrolling is for following a link, not for returning), and its images arrive with their sizes, so nothing jumps as they load. A desktop app's page also gets a download section: a direct link per platform to the newest release's installers. `/projects/<slug>` redirects here |
+| `/projects/<slug>/docs` | A project's documentation, for the projects that have any (`docs: true` in `data/projects.ts`): an index by group, and `/projects/<slug>/docs/<page>` for one page. The pages are markdown in `project-docs/<slug>/`, bundled into the server at build time — edited and reviewed like code, so unlike posts they change only with a deploy. The tab appears only where there is something behind it |
 | `/projects/<slug>/blog` | That project's news, and `/projects/<slug>/blog/<post>` for one post |
 | `/news` | The organization's own news, for what is about Basic Automation rather than one tool |
 | `/admin` | The post editor — behind a login the app checks itself, and absent over Tor (below) |
