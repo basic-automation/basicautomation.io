@@ -595,6 +595,7 @@ default_low_stock_threshold = 5    # overridable per product in the app
     // badge, the social card (re-render it with `npm run og`) and the
     // "Stable since 1.0." feature below all say so; change them together.
     status: 'stable',
+    docs: true,
     accent: 'green',
     order: 1,
     features: [
