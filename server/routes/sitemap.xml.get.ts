@@ -14,7 +14,7 @@ import { SITE_BLOG_PATH, postPath } from '~~/shared/posts/section'
 import { docPath, docsIndexPath } from '~~/shared/docs/path'
 import { xmlEscape } from '~~/shared/xml/escape'
 
-const STATIC_ROUTES = ['/', '/projects', '/status']
+const STATIC_ROUTES = ['/', '/projects', '/status', '/contact', '/privacy', '/terms']
 
 function urlEntry(loc: string, lastmod?: string | null): string {
   const mod = lastmod ? `\n    <lastmod>${xmlEscape(lastmod.split('T')[0] ?? '')}</lastmod>` : ''
