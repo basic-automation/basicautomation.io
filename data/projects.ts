@@ -526,9 +526,17 @@ assert_eq!(series.kinds()[32], PointKind::Extrapolated);`,
         title: 'Know what actually sells',
         body: 'History and trends per product, so restocking is a decision rather than a guess.',
       },
+      {
+        title: 'Amazon, in detail',
+        body: 'With your own authorization, Nisaba reads your Amazon listings — quantity, price, status and any listing issues — creates listings, and updates quantity and price on them. It uses only the Selling Partner API\'s Listings Items and Sellers APIs, from your own computer. It never reads orders or buyer data, and it requests no restricted roles.',
+      },
+      {
+        title: 'Free and open source',
+        body: 'Nisaba is MIT-licensed and free: no fees, no subscription and no paid tier.',
+      },
     ],
     install: {
-      label: 'no binaries yet — build it from source',
+      label: 'installers are on GitHub (pre-release), or build it from source',
       lang: 'shellscript',
       code: 'cargo tauri build',
     },
@@ -558,7 +566,10 @@ default_low_stock_threshold = 5    # overridable per product in the app
 # Products are not configured here. They live in the catalog on your machine,
 # and you edit them in the app.`,
     },
-    links: [{ label: 'Built with Tauri', href: 'https://v2.tauri.app' }],
+    links: [
+      { label: 'Download (pre-release)', href: 'https://github.com/basic-automation/nisaba/releases' },
+      { label: 'Built with Tauri', href: 'https://v2.tauri.app' },
+    ],
   },
   {
     slug: 'skidbladnir',
