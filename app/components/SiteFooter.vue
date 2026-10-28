@@ -72,6 +72,30 @@ const year = new Date().getFullYear()
               class="inline-block py-1 text-pn-dim transition-colors hover:text-pn-fg-bright"
             >news feed</a>
           </li>
+          <li>
+            <NuxtLink
+              to="/contact"
+              class="inline-block py-1 text-pn-dim transition-colors hover:text-pn-fg-bright"
+            >contact</NuxtLink>
+          </li>
+          <li>
+            <a
+              href="mailto:admin@basicautomation.io"
+              class="inline-block py-1 text-pn-dim transition-colors hover:text-pn-fg-bright"
+            >admin@basicautomation.io</a>
+          </li>
+          <li>
+            <NuxtLink
+              to="/privacy"
+              class="inline-block py-1 text-pn-dim transition-colors hover:text-pn-fg-bright"
+            >privacy</NuxtLink>
+          </li>
+          <li>
+            <NuxtLink
+              to="/terms"
+              class="inline-block py-1 text-pn-dim transition-colors hover:text-pn-fg-bright"
+            >terms</NuxtLink>
+          </li>
         </ul>
       </div>
     </div>
