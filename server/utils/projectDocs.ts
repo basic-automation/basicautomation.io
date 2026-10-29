@@ -16,8 +16,6 @@
  * `data/projects.ts` with `docs: true`; a directory for any other name is not
  * a section and is never listed.
  */
-import { useStorage } from 'nitropack/runtime'
-
 import { projects } from '~~/data/projects'
 import type { Doc, DocSummary } from '~~/shared/types/doc'
 import { SLUG, parseFrontMatter } from './posts'
@@ -58,6 +56,11 @@ let cached: Map<string, Doc[]> | null = null
 async function load(): Promise<Map<string, Doc[]>> {
   if (cached) return cached
 
+  // Imported here rather than at the top: Nuxt 5's typecheck does not
+  // auto-import `useStorage`, and a top-level import would load Nitro's storage
+  // — a virtual module only a Nitro build provides — into the unit tests that
+  // import `toDoc`, which is pure.
+  const { useStorage } = await import('nitropack/runtime')
   const storage = useStorage(MOUNT)
   const byProject = new Map<string, Doc[]>()
 
