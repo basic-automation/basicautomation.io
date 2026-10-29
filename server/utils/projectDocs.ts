@@ -16,6 +16,8 @@
  * `data/projects.ts` with `docs: true`; a directory for any other name is not
  * a section and is never listed.
  */
+import { useStorage } from 'nitropack/runtime'
+
 import { projects } from '~~/data/projects'
 import type { Doc, DocSummary } from '~~/shared/types/doc'
 import { SLUG, parseFrontMatter } from './posts'
