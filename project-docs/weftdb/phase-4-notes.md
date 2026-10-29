@@ -13,7 +13,7 @@ group: Roadmap notes
 interpolation streams from typed arrays; page/segment pruning visible in debug output;
 Weft-Bench shows ingest/scan/compression gains; correctness tests cover late + OOO data.
 
-#### **4.1 Physical numeric encodings**
+## **4.1 Physical numeric encodings**
 
 `weft-physical-type`: all six `PhysicalType`s
 
@@ -24,19 +24,19 @@ Weft-Bench shows ingest/scan/compression gains; correctness tests cover late + O
 
 - **4.2 Timestamp semantics**
 
-#### Fixed-width bit-packing codec
+## Fixed-width bit-packing codec
 
 **realized on disk**: the `.weftseg` timestamp block writes a self-describing codec selector (bit-pack vs varint second differences), so the bytes/point saving is stored, not just estimated (segment format v3, paged v4)
 
-#### Monotonic-order enforcement
+## Monotonic-order enforcement
 
 `first_order_violation` primitive; opt-in `Segment::build_sorted`/`build_nullable_sorted`, `AspectSchema::seal_sorted`/`seal_paged_sorted` (`SegmentError`/`SealError::OutOfOrder`); exposed at the API as `require_sorted` on **all four** ingest formats (JSON/CSV/ILP/Parquet); observability via `SegmentStats::time_sorted` → per-segment index → `unsorted_segments` in aspect/store stats + `time_sorted` on every ingest response
 
-#### Out-of-order **reconciliation** (Phase 4.6)
+## Out-of-order **reconciliation** (Phase 4.6)
 
 enforcement/detection, in-place per-segment reconciliation, threshold + hot/cold background sweeps, and the **cross-segment overlap merge** (newer-wins dedup) all shipped; the split-not-rewrite optimization + composite upsert keys are the residue (see 4.6)
 
-#### **4.3 Columnar segment store**
+## **4.3 Columnar segment store**
 
 in-memory `Segment`/`PagedSegment`; versioned
 
@@ -50,7 +50,7 @@ from the index)
 
 - **4.4 Data skipping**
 
-#### **4.5 Arrow-compatible arrays**
+## **4.5 Arrow-compatible arrays**
 
 `weft-arrow` + `weft-arrow-store`: lossless +
 
@@ -58,27 +58,27 @@ typed-fast-path `RecordBatch` interchange (exact `Decimal128` for scaled ints),
 paged-batch streams, logical-column builders, Arrow IPC stream bytes, Parquet
 import/export; `arrow-*` tree confined to the leaf crates
 
-#### **4.6 Correctness semantics**
+## **4.6 Correctness semantics**
 
 out-of-order/late data, dedup, upsert, idempotent
 
 batch ingest, clock skew, precision, tz parsing, leap seconds, query consistency
 during compaction, read-your-writes, snapshot isolation
 
-#### Out-of-order **detection + enforcement** (shipped in 4.2)
+## Out-of-order **detection + enforcement** (shipped in 4.2)
 
 `require_sorted`
 
 rejects OOO batches; `unsorted_segments` counts segments needing reconciliation
 
-#### Out-of-order **reconciliation — in-place per-segment sort** (first slice):
+## Out-of-order **reconciliation — in-place per-segment sort** (first slice):
 
 `SegmentStore::reconcile_segment`/`reconcile_aspect` stable-sort an out-of-order
 segment's rows by timestamp and re-seal them sorted at the same id/file (frame
 kind preserved), dropping it out of `unsorted_segments` so a point lookup over it
 binary-searches; exposed at the API as `POST /storage/{aspect}/reconcile`
 
-#### Out-of-order **reconciliation — cross-segment merge** (baseline)
+## Out-of-order **reconciliation — cross-segment merge** (baseline)
 
 detect
 
@@ -92,7 +92,7 @@ per-aspect and store-wide reconcile endpoints and as a background daemon sweep
 the designated timestamp" semantics. *(src: last-write-wins dedup on designated
 timestamp + upsert keys — https://questdb.com/docs/concepts/deduplication/)*
 
-#### Out-of-order **reconciliation — split-not-rewrite optimization**
+## Out-of-order **reconciliation — split-not-rewrite optimization**
 
 shipped.
 
@@ -108,7 +108,7 @@ trigger) + `squash_all_over_threshold`, `POST …/{aspect}/squash?max_segments=`
 the `WEFT_RECONCILE_MAX_SPLITS` daemon env fold over-fragmented aspects back to one
 segment. *(src: https://questdb.com/docs/concepts/partitions/)*
 
-#### Out-of-order **reconciliation — configurable upsert keys + skip-identical**:
+## Out-of-order **reconciliation — configurable upsert keys + skip-identical**:
 
 the merge dedups on the timestamp alone (newer wins); add optional composite
 dedup/upsert keys (timestamp + declared columns) and a skip-write when the newer
@@ -116,7 +116,7 @@ row is byte-identical to the older, matching QuestDB's `DEDUP UPSERT KEYS`. Bloc
 on B-tags (per-measurement columns/tags don't exist yet). *(src: composite
 UPSERT KEYS, identical-row skip — https://questdb.com/docs/concepts/deduplication/)*
 
-#### **Threshold-triggered background reconciliation**
+## **Threshold-triggered background reconciliation**
 
 the `unsorted_segments`
 
@@ -127,7 +127,7 @@ reconcile pass (single-aspect `reconcile_aspect_if_unsorted_exceeds` + store-wid
 a timer daemon (`WEFT_RECONCILE_INTERVAL_SECS`/`WEFT_RECONCILE_THRESHOLD`) with the
 `weft_reconcile_passes_total`/`weft_reconcile_segments_reconciled_total` metrics
 
-#### **Hot/cold split in the background reconcile**
+## **Hot/cold split in the background reconcile**
 
 cold (non-hot-tail) segments
 
@@ -139,7 +139,7 @@ partitions each commit, defer the active partition until the split threshold".
 *(src: non-active squashed each commit, active squashed past the split threshold —
 https://questdb.com/docs/concepts/partitions/)*
 
-#### Read-planner
+## Read-planner
 
 use the persisted per-segment `time_sorted` to binary-search a
 

@@ -13,30 +13,30 @@ Before optimizing, make bottlenecks visible. **Acceptance:** for any slow benchm
 you can say where the time went (e.g. "52% value parsing, 18% segment read, 15% GPU
 transfer, 8% kernel, 7% JSON").
 
-#### `/debug/profile/current`
+## `/debug/profile/current`
 
 live p50/p95/p99 latency snapshot
 
-#### Tracing foundation
+## Tracing foundation
 
 a `RUST_LOG`-driven `fmt` subscriber (span-CLOSE events, busy/idle timing) with per-request engine spans on the flagship compute path: `interpolate.engine` (input/output points, spline, resolution) and `downsample.reduce` (candidate/in-window points, buckets, resolution)
 
-#### Per-request **root span** + per-stage child spans (partial coverage of ingest → serialization)
+## Per-request **root span** + per-stage child spans (partial coverage of ingest → serialization)
 
 a `request{method,path,request_id}` span (via `axum::middleware::from_fn`, `x-request-id` in/out) that every stage span nests under — `interpolate.parse`/`interpolate.compute`/`interpolate.serialize` under `interpolate.engine`, `downsample.parse` beside `downsample.reduce`, and `storage.ingest.parse`/`storage.ingest.seal` on the write path (the seal span surfaces the nested Turso `connect_with_encryption` control-plane spans)
 
-#### Per-stage spans on the **storage read path** (`storage.{range,value_range,point}.read`
+## Per-stage spans on the **storage read path** (`storage.{range,value_range,point}.read`
 
 + `.serialize`, uniform `format` dimension over JSON/CSV/Arrow/Parquet), the **ingest
 decode paths** (`storage.ingest.parse`/`normalize`/`seal` for ILP + CSV + JSON), and
 the **reconcile daemon** (`reconcile.tick{kind,...,aspects,segments}` on all five tick
 kinds) — all runtime-verified against the running binary
 
-#### Arrow/Parquet decode on ingest
+## Arrow/Parquet decode on ingest
 
 `storage.ingest.parquet` stage span (byte length + sort guard + `format="parquet"`), nesting under the request root span; runtime-verified against the running binary
 
-#### Remaining per-stage spans
+## Remaining per-stage spans
 
 auth · WAL append · commit · page skip · cache hit/miss ·
 
@@ -45,7 +45,7 @@ decompression · CPU interp · GPU upload/queue/kernel/readback. *(The **explici
 `control_plane.index.insert`/`.delete`/`control_plane.metadata.put`, each carrying
 `rows_changed`.)*
 
-#### **OTLP trace export** (pairs with `/metrics`)
+## **OTLP trace export** (pairs with `/metrics`)
 
 shipped — env-gated on
 
@@ -56,7 +56,7 @@ confirmed current on crates.io (May 2026): `opentelemetry` 0.32 + `opentelemetry
 0.32 (`rt-tokio`) + `opentelemetry-otlp` 0.32 (`grpc-tonic`, builds protoc-free) +
 `tracing-opentelemetry` 0.33. A misconfigured/absent collector does not block startup.
 
-#### **OTLP collector verification: delivery verified.**
+## **OTLP collector verification: delivery verified.**
 
 A Jaeger all-in-one collector
 
@@ -67,7 +67,7 @@ drives a declare/ingest/read cycle, and asserts via the Jaeger query API that
 (`storage.ingest.parse`/`seal`, `storage.range.read`/`serialize` observed nesting
 correctly). Re-runnable headlessly; the script (re)starts the container if absent.
 
-#### **`Statement::n_change()` write accounting (Turso 0.6) in ingest/instrumentation spans** —
+## **`Statement::n_change()` write accounting (Turso 0.6) in ingest/instrumentation spans** —
 
 the two control-plane writes on the seal path now *report* what they changed instead of
 discarding it: `SegmentIndexStore::insert` and `AspectMetadataStore::put` return libSQL's

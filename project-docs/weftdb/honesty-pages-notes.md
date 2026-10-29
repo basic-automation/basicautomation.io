@@ -9,7 +9,7 @@ group: Roadmap notes
 
 *The checklist for this section is in the [roadmap](https://github.com/basic-automation/weftdb/blob/main/ROADMAP.md). What follows is the writing that used to sit between its items.*
 
-#### Ship honesty pages
+## Ship honesty pages
 
 *When WeftDB beats general TSDBs* · *When WeftDB is not the
 
