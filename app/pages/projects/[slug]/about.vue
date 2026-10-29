@@ -68,8 +68,8 @@ const links = computed(() => {
 
 /**
  * The changelog strip: the most recent releases GitHub reports, newest first.
- * Pre-releases are in — for enlil, nisaba and Skidbladnir that is the whole
- * history — and marked, so "v0.1.1" doesn't read as a finished thing.
+ * Pre-releases are in — for enlil and Nanna that is the whole history — and
+ * marked, so "v0.1.1" doesn't read as a finished thing.
  */
 const releases = computed(() => meta.value?.releases ?? [])
 

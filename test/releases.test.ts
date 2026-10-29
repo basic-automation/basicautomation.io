@@ -292,6 +292,21 @@ describe('groupInstallers', () => {
 		expect(out[0]?.installers.map((i) => i.platform.id)).toEqual(['linux-deb'])
 	})
 
+	it('links a universal macOS build once, for both kinds of Mac', () => {
+		// Nisaba's v0.2.0 files, less the signatures and updater archives
+		// downloadableAssets would already have dropped.
+		const nisaba = ['Nisaba_0.2.0_x64-setup.exe', 'Nisaba_0.2.0_x64_en-US.msi', 'Nisaba_0.2.0_universal.dmg',
+			'Nisaba_0.2.0_amd64.deb', 'Nisaba_0.2.0_amd64.AppImage', 'Nisaba-0.2.0-1.x86_64.rpm']
+			.map((name) => ({ name, url: 'u', size: 1 }))
+		const [only] = groupInstallers(nisaba, ['Nisaba'])
+		expect(only?.installers.map((i) => [i.platform.id, i.asset.name])).toEqual([
+			['windows-x64', 'Nisaba_0.2.0_x64-setup.exe'],
+			['macos-universal', 'Nisaba_0.2.0_universal.dmg'],
+			['linux-deb', 'Nisaba_0.2.0_amd64.deb'],
+			['linux-appimage', 'Nisaba_0.2.0_amd64.AppImage'],
+		])
+	})
+
 	it('ignores a file it does not recognise rather than guessing its platform', () => {
 		const out = groupInstallers(
 			[{ name: 'Skidbladnir_1.0.0_x86_64.rpm', url: 'u', size: 1 }, { name: 'Skidbladnir_1.0.0_x64_en-US.msi', url: 'u', size: 1 }],

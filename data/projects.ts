@@ -488,6 +488,7 @@ assert_eq!(series.kinds()[32], PointKind::Extrapolated);`,
     metaDescription:
       'Keep one product list and let it publish everywhere you sell — prices, descriptions '
       + 'and stock in step across eBay, Squarespace, XMR Bazaar and Amazon.',
+    applicationCategory: 'BusinessApplication',
     problem:
       'Selling the same products in four places means keeping four product lists, and every sale '
       + 'quietly pulls them apart. You find out at the worst moment — when something sells twice '
@@ -535,11 +536,6 @@ assert_eq!(series.kinds()[32], PointKind::Extrapolated);`,
         body: 'Nisaba is MIT-licensed and free: no fees, no subscription and no paid tier.',
       },
     ],
-    install: {
-      label: 'installers are on GitHub (pre-release), or build it from source',
-      lang: 'shellscript',
-      code: 'cargo tauri build',
-    },
     // The real worked example for a desktop app is not code you write, it is
     // the one file you fill in before it can reach a storefront. Taken from
     // the repo's own config.example.toml.
@@ -567,9 +563,33 @@ default_low_stock_threshold = 5    # overridable per product in the app
 # and you edit them in the app.`,
     },
     links: [
-      { label: 'Download (pre-release)', href: 'https://github.com/basic-automation/nisaba/releases' },
+      { label: 'Download (Windows, macOS, Linux)', href: 'https://github.com/basic-automation/nisaba/releases/latest' },
       { label: 'Built with Tauri', href: 'https://v2.tauri.app' },
     ],
+    // One edition, and one macOS build for both kinds of Mac. Nothing is
+    // code-signed yet, so the first-launch lines are the same walk past
+    // SmartScreen and Gatekeeper as Skidbladnir's.
+    downloads: {
+      editions: [{ name: 'Nisaba', label: 'desktop app' }],
+      firstLaunch: [
+        {
+          os: 'Windows',
+          text: 'SmartScreen says "Windows protected your PC": click More info, then Run anyway. '
+            + 'It installs for your account only, without administrator rights.',
+        },
+        {
+          os: 'macOS',
+          text: 'Drag it to Applications and open it once, close the warning, then click Open '
+            + 'Anyway in System Settings > Privacy & Security. If macOS calls the app damaged, run '
+            + 'xattr -dr com.apple.quarantine /Applications/Nisaba.app in Terminal.',
+        },
+        {
+          os: 'Linux',
+          text: 'Ubuntu 22.04, Debian 12 or newer. Install the .deb with sudo apt install ./ followed '
+            + 'by the file\'s name, or make the AppImage executable (chmod +x) and run it.',
+        },
+      ],
+    },
   },
   {
     slug: 'skidbladnir',
