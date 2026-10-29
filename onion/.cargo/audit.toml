@@ -13,4 +13,14 @@ ignore = [
     # points). Revisit if the gateway ever runs a relay or a patched `rsa`
     # ships. https://rustsec.org/advisories/RUSTSEC-2023-0071.html
     "RUSTSEC-2023-0071",
+    # RUSTSEC-2026-0387, `crypto-bigint` 0.5.5: operations meant to be
+    # constant-time are not. It is in Cargo.lock only, never built: the lock
+    # records ssh-key-fork-arti 0.6.7's optional p256/p384/p521 0.13 (which
+    # pull elliptic-curve 0.13.8 and this crate), but those sit behind its
+    # `p256`/`p384`/`p521`/`crypto` features, which nothing enables — its
+    # `ecdsa` feature is only `dep:sec1`. Checked 2026-10-29: `cargo tree
+    # --target all -e all -i crypto-bigint@0.5.5` prints nothing, and the
+    # crate that is built is 0.7.10, past the fix. Revisit if any of those
+    # features turns on. https://rustsec.org/advisories/RUSTSEC-2026-0387.html
+    "RUSTSEC-2026-0387",
 ]
