@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { renderMarkdown } from '~~/shared/markdown/render'
+import { focusableTables, renderMarkdown } from '~~/shared/markdown/render'
 import { absolutize, lazyImages, stripLeadingLogo } from '~~/shared/markdown/readme'
 import { slugify } from '~~/shared/markdown/slug'
 
@@ -74,5 +74,18 @@ describe('what linear patterns cost', () => {
 	it('keeps a stray `<` out of the tag after it — GitHub slugs `a < <b>bold</b>` from the text "a < bold"', () => {
 		expect(slugify('a < <b>bold</b>')).toBe('a--bold')
 		expect(lazyImages('<<img src="x">')).toBe('<<img loading="lazy" decoding="async" src="x">')
+	})
+})
+
+describe('tables', () => {
+	it('can take focus, so a wide one that scrolls sideways is reachable by keyboard', async () => {
+		const html = await renderMarkdown('| a | b |\n| - | - |\n| 1 | 2 |\n', 'post')
+		expect(html).toContain('<table tabindex="0">')
+	})
+
+	it('leaves a table that sets its own tabindex, and one written as inline code', async () => {
+		expect(focusableTables('<table tabindex="-1" class="x">')).toBe('<table tabindex="-1" class="x">')
+		expect(focusableTables('<table class="x">')).toBe('<table tabindex="0" class="x">')
+		expect(await renderMarkdown('`<table>`', 'post')).not.toContain('tabindex')
 	})
 })
