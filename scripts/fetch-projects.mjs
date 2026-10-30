@@ -28,6 +28,7 @@ import { probeImageSize } from '../shared/markdown/image-probe.ts'
 import { paced } from '../shared/net/pace.ts'
 import { normaliseReleases, pickDownload, pickLatest } from '../shared/github/releases.ts'
 import { carryMissing } from '../shared/github/carry.ts'
+import { repoDocPage } from '../shared/markdown/repoDoc.ts'
 
 /**
  * The same image sizing the server does (`server/utils/readmeImages.ts`), so a
@@ -223,8 +224,35 @@ await writeFile(
 )
 
 console.log(`\nWrote ${OUT}`)
+
+// Docs pages mirrored from the repos (`repoDocs`). Written beside the hand-made
+// pages and committed with them; a file that cannot be fetched keeps the copy
+// already there, the same fallback the snapshot above gives a repo.
+let docFailures = 0
+for (const project of projects.filter((p) => p.repoDocs?.length)) {
+  const branch = repos[project.repo]?.defaultBranch || 'main'
+  console.log(`\nDocs for ${project.slug} from ${project.repo}@${branch}…`)
+  for (const doc of project.repoDocs) {
+    const file = resolve(HERE, `../project-docs/${project.slug}/${doc.slug}.md`)
+    try {
+      const md = await getText(
+        `https://api.github.com/repos/${ORG}/${project.repo}/contents/${doc.path}?ref=${encodeURIComponent(branch)}`,
+        'application/vnd.github.raw',
+      )
+      await writeFile(file, repoDocPage(md, doc, ORG, project.repo, branch))
+      console.log(`  ✓ ${doc.path} → project-docs/${project.slug}/${doc.slug}.md`)
+    }
+    catch (err) {
+      docFailures++
+      console.warn(`  ! ${doc.path} — ${err.message} (keeping the committed page)`)
+    }
+  }
+}
 if (failures) {
   console.warn(`${failures} of ${projects.length} failed; the previous snapshot was kept for those.`)
+}
+if (docFailures) {
+  console.warn(`${docFailures} mirrored docs page(s) could not be fetched; the committed copies were kept.`)
 }
 if (incompleteRepos) {
   // Non-zero exit, so a sync that quietly hollowed the fallback cannot be

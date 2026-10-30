@@ -17,6 +17,8 @@
  * uses the library, it is in the wrong file.
  */
 
+import type { RepoDoc } from '../shared/markdown/repoDoc.ts'
+
 /** A key in the Paleday Tailwind palette, used to tint a project's page. */
 export type Accent = 'magenta' | 'cyan' | 'blue' | 'green' | 'yellow' | 'orange' | 'red'
 
@@ -85,6 +87,9 @@ export interface Project {
   /** Has a docs tab: `project-docs/<slug>/*.md`, rendered at `/projects/<slug>/docs`.
    *  Set it only where that directory exists — the tab links to it. */
   docs?: boolean
+  /** Docs pages mirrored from files in the repo, written into `project-docs/<slug>/`
+   *  by `npm run sync` (see `shared/markdown/repoDoc.ts`). Needs `docs`. */
+  repoDocs?: RepoDoc[]
   /** Show the live Tor frame and the Tor Browser walkthrough on this page.
    *  Implied by `servesThisSite`; set it directly for a project that is about
    *  reaching a page over Tor rather than about publishing one. */
@@ -382,6 +387,32 @@ assert_eq!(series.kinds()[32], PointKind::Extrapolated);`,
     kind: 'Database',
     status: 'alpha',
     docs: true,
+    repoDocs: [
+      {
+        path: 'HONESTY.md',
+        slug: 'honesty',
+        title: 'Honesty pages',
+        summary: 'When WeftDB is not the right tool, how its benchmarks and accuracy figures are produced, and what exact does and does not mean.',
+        order: 8,
+        group: 'Benchmarks',
+      },
+      {
+        path: 'bench/reports/evi-15/README.md',
+        slug: 'cross-engine-report',
+        title: 'First cross-engine report: WeftDB vs DuckDB',
+        summary: 'Where the first report against DuckDB ran, how it was checked, and which of its verdicts held across two runs.',
+        order: 7,
+        group: 'Benchmarks',
+      },
+      {
+        path: 'bench/reports/evi-15/report.md',
+        slug: 'cross-engine-report-results',
+        title: 'First cross-engine report: full results',
+        summary: 'Every figure from the first report against DuckDB, with the generated honesty section: wins, losses, noise and what was not tested.',
+        order: 7.5,
+        group: 'Benchmarks',
+      },
+    ],
     accent: 'red',
     order: 5,
     features: [
