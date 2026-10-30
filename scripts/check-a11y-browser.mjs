@@ -27,7 +27,12 @@
  * be entirely hidden by content the author put over it — here, the sticky
  * glass masthead. axe has no rule for it. So every page is also walked the
  * way Shift+Tab walks it, from the bottom up, focusing each control and
- * hit-testing five points of it; one that none of the five reaches fails.
+ * hit-testing five points of the part of it inside the window; one that none
+ * of the five reaches fails. Only that part: Firefox does not scroll to a
+ * control that is already partly in view, so a tall one (a focusable table)
+ * can sit mostly above the window with its last rows showing under the
+ * masthead. Points off the window never hit anything, and five spread over
+ * the whole table called that hidden when 40 px of it showed.
  * Before `scroll-padding-top` in `main.css` the live site hid 1–7 focused
  * controls a page this way — release links, "read the full readme", the
  * status table's project names — and passed every axe rule.
@@ -170,8 +175,10 @@ try {
 					if (document.activeElement !== el) continue
 					await settle()
 					const r = el.getBoundingClientRect()
-					const seen = [[0.5, 0.5], [0.1, 0.1], [0.9, 0.1], [0.1, 0.9], [0.9, 0.9]].some(([fx, fy]) => {
-						const hit = document.elementFromPoint(r.left + r.width * fx, r.top + r.height * fy)
+					const left = Math.max(r.left, 0), top = Math.max(r.top, 0)
+					const width = Math.min(r.right, innerWidth) - left, height = Math.min(r.bottom, innerHeight) - top
+					const seen = width > 0 && height > 0 && [[0.5, 0.5], [0.1, 0.1], [0.9, 0.1], [0.1, 0.9], [0.9, 0.9]].some(([fx, fy]) => {
+						const hit = document.elementFromPoint(left + width * fx, top + height * fy)
 						return hit && (hit === el || el.contains(hit))
 					})
 					if (!seen) hidden.push(\`\${el.tagName.toLowerCase()} "\${(el.textContent || el.getAttribute('aria-label') || '').trim().replace(/\\s+/g, ' ').slice(0, 50)}" at y \${Math.round(r.top)}–\${Math.round(r.bottom)}\`)
