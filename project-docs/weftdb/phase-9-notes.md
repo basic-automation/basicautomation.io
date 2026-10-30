@@ -15,7 +15,7 @@ temporal point processes, forecasting export, embedding search over shape summar
 are **future integrations, not the first identity** — do not prematurely rebrand as a
 vector DB. *(Maps backlog Themes 5, 6, 8.)*
 
-#### *(Future)* ML/AI
+## *(Future)* ML/AI
 
 self-supervised event prediction, causal anomaly detection, temporal point processes, forecasting export, embedding search over shape summaries
 

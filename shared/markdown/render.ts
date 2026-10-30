@@ -71,10 +71,21 @@ export async function renderMarkdown(md: string, kind: 'readme' | 'post' = 'read
   // A README is folded away on its page, so its images wait until it is
   // opened; a post is the page, and its first image may be what a reader
   // sees first. See shared/markdown/readme.ts.
-  const parsed = collecting.parse(md) as string
+  //
+  // A table is its own sideways scroller (`.readme table` in main.css), so a
+  // wide one on a phone is a region a keyboard cannot reach unless it can take
+  // focus — Shiki gives every code block `tabindex="0"` for the same reason.
+  // Done before the fences go back in, and `<table>` in inline code arrives
+  // escaped, so only real tables match.
+  const parsed = focusableTables(collecting.parse(md) as string)
   const html = kind === 'readme' ? lazyImages(parsed) : parsed
   if (!fences.length) return html
 
   const rendered = await Promise.all(fences.map((f) => highlight(f.code, f.lang)))
   return html.replace(/\u0000FENCE(\d+)\u0000/g, (_, i) => rendered[Number(i)] ?? '')
+}
+
+/** `tabindex="0"` on every table that does not already set one. */
+export function focusableTables(html: string): string {
+  return html.replace(/<table(?![^>]*\btabindex=)([^>]*)>/gi, '<table tabindex="0"$1>')
 }

@@ -56,6 +56,11 @@ let cached: Map<string, Doc[]> | null = null
 async function load(): Promise<Map<string, Doc[]>> {
   if (cached) return cached
 
+  // Imported here rather than at the top: Nuxt 5's typecheck does not
+  // auto-import `useStorage`, and a top-level import would load Nitro's storage
+  // — a virtual module only a Nitro build provides — into the unit tests that
+  // import `toDoc`, which is pure.
+  const { useStorage } = await import('nitropack/runtime')
   const storage = useStorage(MOUNT)
   const byProject = new Map<string, Doc[]>()
 

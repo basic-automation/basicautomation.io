@@ -26,9 +26,15 @@ export interface Platform {
 	suffix: RegExp
 }
 
-/** In the order someone scans for their own machine: the common case first. */
+/**
+ * In the order someone scans for their own machine: the common case first.
+ * An app built once for both Macs (`--target universal-apple-darwin`, as
+ * Nisaba is) ships one `_universal.dmg` in place of the two per-architecture
+ * ones, so a release has either that line or the two below it.
+ */
 export const PLATFORMS: readonly Platform[] = [
 	{ id: 'windows-x64', os: 'windows', label: 'windows · 64-bit installer', short: 'windows', suffix: /_x64-setup\.exe$/i },
+	{ id: 'macos-universal', os: 'macos', label: 'macos · apple silicon and intel', short: 'macos', suffix: /_universal\.dmg$/i },
 	{ id: 'macos-arm64', os: 'macos', label: 'macos · apple silicon', short: 'macos apple silicon', suffix: /_aarch64\.dmg$/i },
 	{ id: 'macos-x64', os: 'macos', label: 'macos · intel', short: 'macos intel', suffix: /_x64\.dmg$/i },
 	{ id: 'linux-deb', os: 'linux', label: 'linux · .deb (debian, ubuntu)', short: '.deb', suffix: /_amd64\.deb$/i },
