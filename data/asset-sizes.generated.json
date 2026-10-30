@@ -1,5 +1,5 @@
 {
-  "note": "Written by scripts/build-asset-sizes.mjs. Intrinsic [width, height] per image, so an <img> can reserve its space. Run `npm run sizes` after adding or replacing one.",
+  "note": "Written by scripts/build-asset-sizes.mjs. Intrinsic [width, height] per image, so an <img> can reserve its space, and a hash of its bytes, so a replaced one gets a new URL. Run `npm run sizes` after adding or replacing one.",
   "sizes": {
     "/projects/artiqwest.svg": [
       336,
@@ -49,5 +49,19 @@
       267,
       168
     ]
+  },
+  "versions": {
+    "/projects/artiqwest.svg": "4f5cb7f0e4",
+    "/projects/enlil.svg": "5b09a3c65b",
+    "/projects/nanna.svg": "37087984a8",
+    "/projects/nisaba.svg": "74a412a44f",
+    "/projects/onyums.svg": "00938baeb0",
+    "/projects/shots/skidbladnir-hero-560.webp": "7234a46c14",
+    "/projects/shots/skidbladnir-hero-800.webp": "285dd54038",
+    "/projects/shots/skidbladnir-hero.webp": "769c613ce6",
+    "/projects/shots/skidbladnir-screenshot.webp": "66b76c3306",
+    "/projects/skidbladnir.svg": "15cd587dc0",
+    "/projects/splimes.svg": "aa663577b8",
+    "/projects/weftdb.svg": "412c80562e"
   }
 }

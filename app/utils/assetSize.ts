@@ -4,6 +4,7 @@ import generated from '~~/data/asset-sizes.generated.json'
 // `number[]` rather than a pair. Read defensively instead of asserting a shape
 // onto a generated file.
 const SIZES: Record<string, number[]> = generated.sizes
+const VERSIONS: Record<string, string> = generated.versions
 
 /**
  * The intrinsic `width` and `height` for one of this repo's own images, to
@@ -23,4 +24,20 @@ export function assetSize(src?: string): { width: number, height: number } | Rec
 	const d = src ? SIZES[src] : undefined
 	const [width, height] = d ?? []
 	return width && height ? { width, height } : {}
+}
+
+/**
+ * The URL to request one of this repo's own images by: its path with a hash of
+ * its bytes as `?v=`.
+ *
+ * These files are named rather than hashed, and served with a day's
+ * `Cache-Control` (`nuxt.config.ts`), so a logo replaced under the same name
+ * stayed on screen, old, for anyone whose browser had it. The hash makes the new
+ * file a new URL. The server ignores the query and serves the file at the path.
+ *
+ * An image not in the manifest comes back as it went in, like `assetSize`.
+ */
+export function assetUrl(src: string): string {
+	const v = VERSIONS[src]
+	return v ? `${src}?v=${v}` : src
 }
