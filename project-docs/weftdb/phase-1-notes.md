@@ -40,6 +40,14 @@ p50/p95/p99 + min/max/mean/stddev + bootstrap CIs
 
 DuckDB first, then ClickHouse, InfluxDB 3, QuestDB, TimescaleDB (+ IoTDB)
 
+## **DONE (2026-10-29) — DuckDB, the first external engine** (`weft-xbench`)
+
+A separate workspace, so DuckDB's C++ build stays out of the main one, with its lock seeded from the workspace's and checked in CI. It runs six arms: WeftDB in memory, stored (exact-decimal and `f64`, in 1,024-row segments and in one bulk segment), and DuckDB `DOUBLE` and `DECIMAL`. The phases are load with on-disk bytes, linear interpolation, and bucketed downsampling, each gated against the in-memory reference. Every run renders Markdown and HTML with a generated honesty section, where a win or loss counts only when the p50 bootstrap intervals are disjoint. It also runs nightly at `tiny` scale on CI. The stored WeftDB arm (`weftdb-stored`, `--stored` in `weft-bench`) shipped first.
+
+## **DONE (2026-10-30) — first cross-engine report**
+
+WeftDB against DuckDB on the reference SSD, over MCAR, block missingness and the UCI series at three scales; all 99 gates passed. DuckDB wins every load and the stored downsamples, and is 3–4× faster on exact-decimal grids at `medium`. WeftDB wins interpolation at `tiny` and `small` scale, and its store is smaller (about half of DuckDB's on the UCI series). A second full run showed that single-run intervals understate run-to-run variation. See the [cross-engine report](/projects/weftdb/docs/cross-engine-report).
+
 ## **Storage/read/aggregation workloads shipped (2026-07-14)**
 
 `point_lookup` (streaming point read, single/paged/batch, regular closed-form vs irregular), `range_fetch` (windowed range read), `compression` (realized bytes/point + value-column compression ratio + decode throughput), and `downsample` (the full reduction set: min/max/avg/sum/first/last + **p50/p90/p95/p99 percentiles** + **TWA**). Each is a parallel `run_*` runner over the `.weftseg`/`weft-reduce` hot path with a correctness gate, p50/p95/p99 latency, and a `--point-lookup`/`--range-fetch`/`--compression`/`--downsample` CLI mode; storage workloads take a `rows_per_page` paged-segment path. OHLC is open/high/low/close = first/max/min/last (already covered by the shipped reductions).
@@ -47,6 +55,10 @@ DuckDB first, then ClickHouse, InfluxDB 3, QuestDB, TimescaleDB (+ IoTDB)
 ## **DONE (2026-10-09) — `gap_fill` workload** (`--gap-fill`)
 
 TSM-Bench Q5's shape (`SAMPLE BY … FILL(LINEAR)`) over a seeded series with outages, timing reduce + `weft_reduce::fill` (new: `Fill::{Null, Previous, Linear, Value}`, dense grid, `count == 0` marks a synthesized bucket) and scoring the filled buckets against the clean signal. One day at 1 s → minutes: linear 4.70 ms, RMSE 0.87; prev RMSE 6.36.
+
+## **DONE (2026-10-29) — the nightly benchmark gate runs**
+
+A typo in `bench-regression.yml` (`$WORKLOAD_NAME__weftdb`, read by the shell as one undefined variable) meant the gate had never succeeded. Once it was fixed, the first green run uploaded the baseline it compares against.
 
 ## **NEXT — `?fill=` on the downsample endpoints** (`POST /api/v1/downsample`, `GET …/storage/{aspect}/downsample` and their columnar siblings), with a …
 
