@@ -69,7 +69,7 @@ const ago = useRelativeTime()
       </picture>
       <img
         v-else-if="project.logo"
-        :src="project.logo"
+        :src="assetUrl(project.logo)"
         :alt="project.name"
         :loading="loading"
         :fetchpriority="fetchpriority"

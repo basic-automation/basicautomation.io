@@ -13,8 +13,16 @@
  * Not computed at request time, because the pages are server-rendered per
  * request and reading six files per render to learn something that only changes
  * when someone commits a new logo is work for nothing.
+ *
+ * It records a short hash of each file's bytes beside its size, for the same
+ * reason in the other direction. These files are named, not hashed, and served
+ * with a day's `Cache-Control`, so a replaced logo kept the old one on screen
+ * for anyone who had seen it in the last day. A page puts the hash in the URL
+ * (`assetUrl` in `app/utils/assetSize.ts`), so a new file is a new URL, and
+ * `sizes:check` fails if a file changes without the manifest moving with it.
  */
 
+import { createHash } from 'node:crypto'
 import { readFile, writeFile } from 'node:fs/promises'
 import { fileURLToPath } from 'node:url'
 import { dirname, resolve } from 'node:path'
@@ -41,6 +49,7 @@ function sources() {
 
 async function measure() {
 	const sizes = {}
+	const versions = {}
 	const missing = []
 	for (const path of sources()) {
 		const file = resolve(ROOT, 'public', path.replace(/^\//, ''))
@@ -53,15 +62,16 @@ async function measure() {
 			// viewBoxes; the rounding moves the reserved aspect by well under a
 			// pixel at any size they are drawn at.
 			else sizes[path] = [Math.max(1, Math.round(d.width)), Math.max(1, Math.round(d.height))]
+			versions[path] = createHash('sha256').update(bytes).digest('hex').slice(0, 10)
 		}
 		catch {
 			missing.push(`${path}: no such file under public/`)
 		}
 	}
-	return { sizes, missing }
+	return { sizes, versions, missing }
 }
 
-const { sizes, missing } = await measure()
+const { sizes, versions, missing } = await measure()
 
 if (missing.length) {
 	console.error('Cannot measure:\n')
@@ -70,8 +80,9 @@ if (missing.length) {
 }
 
 const body = `${JSON.stringify({
-	note: 'Written by scripts/build-asset-sizes.mjs. Intrinsic [width, height] per image, so an <img> can reserve its space. Run `npm run sizes` after adding or replacing one.',
+	note: 'Written by scripts/build-asset-sizes.mjs. Intrinsic [width, height] per image, so an <img> can reserve its space, and a hash of its bytes, so a replaced one gets a new URL. Run `npm run sizes` after adding or replacing one.',
 	sizes,
+	versions,
 }, null, 2)}\n`
 
 if (process.argv.includes('--check')) {

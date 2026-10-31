@@ -257,7 +257,7 @@ useSeoMeta({
              blank box. -->
         <h1>
           <img
-            :src="project.logo"
+            :src="assetUrl(project.logo)"
             :alt="project.name"
             v-bind="assetSize(project.logo)"
             class="wordmark h-24 w-auto max-w-full text-4xl text-pn-fg-bright sm:h-36 sm:text-5xl lg:h-44"
